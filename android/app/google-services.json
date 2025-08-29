@@ -1,0 +1,55 @@
+{
+  "project_info": {
+    "project_number": "286252921212",
+    "firebase_url": "https://pln-jagagrid-97b30-default-rtdb.firebaseio.com",
+    "project_id": "pln-jagagrid-97b30",
+  "storage_bucket": "pln-jagagrid-97b30.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:286252921212:android:2cf0fda04f90b451d4b4f9",
+        "android_client_info": {
+          "package_name": "com.example.flutter_application_2"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "286252921212-aujpp93gfuvj1u1r82j4blbd9vbs0sen.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.example.flutter_application_2",
+            "certificate_hash": "216f8eb715d4fa3ad282c72357f57e225bb0e626"
+          }
+        },
+        {
+          "client_id": "286252921212-9cippqtnhospckv75ah2jh5lcm4i2g5n.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBosTSQQM62y924DdELq_5r8IWmHeyrzUE"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "286252921212-9cippqtnhospckv75ah2jh5lcm4i2g5n.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "286252921212-6jrk1247tdapteolpnk17judgvp0988q.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.example.flutterApplication2"
+              }
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
