@@ -27,17 +27,29 @@ class SettingsContent {
 
   static void handleSettingsTap(int index, BuildContext context) {
     switch (index) {
-
+      case 0:
+        // Handle Profile tap
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (context) => const ProfilePage()),
+        );
+        break;
+      case 1:
+        // Handle Tambah User tap
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (context) => const TambahUserPage()),
+        );
+        break;
       case 2:
-        // Assets JTM
+        // Handle Assets JTM tap - Panggil AssetsJTMPage yang sudah dibuat
         Navigator.push(
           context,
           MaterialPageRoute(builder: (context) => const AssetsJTMPage()),
         );
         break;
-
       case 3:
-        // Logout
+        // Handle Logout tap
         _showLogoutDialog(context);
         break;
     }
@@ -58,7 +70,8 @@ class SettingsContent {
             TextButton(
               onPressed: () {
                 Navigator.of(context).pop();
-                // TODO: tambahkan logika logout di sini
+                // Implement logout logic here
+                // Example: Navigator.pushReplacementNamed(context, '/login');
               },
               child: const Text('Logout'),
             ),
@@ -78,14 +91,14 @@ class SettingsPage extends StatefulWidget {
 }
 
 class _SettingsPageState extends State<SettingsPage> {
-  int _selectedIndex = 4; // Tab ke-5
+  int _selectedIndex = 4; // Assuming settings is the 5th tab (index 4)
 
   final List<Widget> _widgetOptions = [
     const HomePage(),
     const Page2(),
     const Page3(),
     const Page4(),
-    const SettingsMainContent(),
+    const SettingsMainContent(), // This page
   ];
 
   void _onItemTapped(int index) {
@@ -124,11 +137,26 @@ class _SettingsPageState extends State<SettingsPage> {
           currentIndex: _selectedIndex,
           onTap: _onItemTapped,
           items: const [
-            BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Home'),
-            BottomNavigationBarItem(icon: Icon(Icons.public), label: 'Page2'),
-            BottomNavigationBarItem(icon: Icon(Icons.bar_chart), label: 'Page3'),
-            BottomNavigationBarItem(icon: Icon(Icons.notifications_none), label: 'Page4'),
-            BottomNavigationBarItem(icon: Icon(Icons.person_outline), label: 'Page5'),
+            BottomNavigationBarItem(
+              icon: Icon(Icons.home),
+              label: 'Home',
+            ),
+            BottomNavigationBarItem(
+              icon: Icon(Icons.public),
+              label: 'Page2',
+            ),
+            BottomNavigationBarItem(
+              icon: Icon(Icons.bar_chart),
+              label: 'Page3',
+            ),
+            BottomNavigationBarItem(
+              icon: Icon(Icons.notifications_none),
+              label: 'Page4',
+            ),
+            BottomNavigationBarItem(
+              icon: Icon(Icons.person_outline),
+              label: 'Page5',
+            ),
           ],
         ),
       ),
@@ -150,7 +178,7 @@ class SettingsMainContent extends StatelessWidget {
   }
 }
 
-// Placeholder pages
+// Placeholder pages - replace with your actual pages
 class HomePage extends StatelessWidget {
   const HomePage({Key? key}) : super(key: key);
   @override
@@ -183,14 +211,24 @@ class Page4 extends StatelessWidget {
   }
 }
 
-// Halaman dummy
-class AssetsJTMPage extends StatelessWidget {
-  const AssetsJTMPage({Key? key}) : super(key: key);
+class ProfilePage extends StatelessWidget {
+  const ProfilePage({Key? key}) : super(key: key);
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Assets JTM')),
-      body: const Center(child: Text('Assets JTM Page')),
+      appBar: AppBar(title: const Text('Profile')),
+      body: const Center(child: Text('Profile Page')),
+    );
+  }
+}
+
+class TambahUserPage extends StatelessWidget {
+  const TambahUserPage({Key? key}) : super(key: key);
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: const Text('Tambah User')),
+      body: const Center(child: Text('Tambah User Page')),
     );
   }
 }
