@@ -26,6 +26,7 @@ class DataPohonService {
           
           String fileName = '${DateTime.now().millisecondsSinceEpoch}_${pohon.idPohon}.jpg';
           request.fields['fileName'] = fileName;
+          request.fields['folder'] = '/foto_pohon';
           request.files.add(await http.MultipartFile.fromPath('file', fotoFile.path));
 
           var streamedResponse = await request.send().timeout(const Duration(seconds: 30));
