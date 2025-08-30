@@ -2,11 +2,13 @@ import 'package:flutter/material.dart';
 
 // File: lib/page/settings/layoutsetting.dart
 class SettingsLayout extends StatelessWidget {
+  final String title;
   final List<SettingsItem> settingsItems;
   final Function(int) onItemTap;
 
   const SettingsLayout({
     Key? key,
+    required this.title,
     required this.settingsItems,
     required this.onItemTap,
   }) : super(key: key);
@@ -28,14 +30,14 @@ class SettingsLayout extends StatelessWidget {
         backgroundColor: Colors.transparent,
         body: Column(
           children: [
-            // Custom header area with Settings text positioned in the middle
+            // Custom header area with dynamic title positioned in the middle
             Container(
               height: 160, // Total height for the header area
               child: Center(
                 child: Text(
-                  'Settings',
+                  title,
                   style: TextStyle(
-                    color: Color(0xFFEFE62E), 
+                    color: Colors.white, 
                     fontSize: 24,
                     fontWeight: FontWeight.bold,
                   ),
@@ -94,7 +96,7 @@ class SettingsLayout extends StatelessWidget {
                       item.iconPath,
                       width: 24,
                       height: 24,
-                      color: const Color.fromARGB(255, 0, 0, 0),
+                      color: const Color.fromARGB(255, 255, 255, 255),
                     ),
                   ),
                 ),

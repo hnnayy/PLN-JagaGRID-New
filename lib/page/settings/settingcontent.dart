@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'layoutsetting.dart';
+import 'assets_jtm.dart'; // Import halaman assets_jtm
 
 // File: lib/page/settings/tambahuser.dart
 class SettingsContent {
@@ -10,7 +11,7 @@ class SettingsContent {
         iconPath: 'assets/icons/profile.png',
       ),
       const SettingsItem(
-        title: 'Settings Content',
+        title: 'Tambah User',
         iconPath: 'assets/icons/add.png',
       ),
       const SettingsItem(
@@ -34,14 +35,14 @@ class SettingsContent {
         );
         break;
       case 1:
-        // Handle Settings Content tap
+        // Handle Tambah User tap
         Navigator.push(
           context,
-          MaterialPageRoute(builder: (context) => const SettingsContentPage()),
+          MaterialPageRoute(builder: (context) => const TambahUserPage()),
         );
         break;
       case 2:
-        // Handle Assets JTM tap
+        // Handle Assets JTM tap - Panggil AssetsJTMPage yang sudah dibuat
         Navigator.push(
           context,
           MaterialPageRoute(builder: (context) => const AssetsJTMPage()),
@@ -170,6 +171,7 @@ class SettingsMainContent extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return SettingsLayout(
+      title: 'Settings', // Title sekarang di-pass dari sini
       settingsItems: SettingsContent.getSettingsItems(),
       onItemTap: (index) => SettingsContent.handleSettingsTap(index, context),
     );
@@ -220,24 +222,13 @@ class ProfilePage extends StatelessWidget {
   }
 }
 
-class SettingsContentPage extends StatelessWidget {
-  const SettingsContentPage({Key? key}) : super(key: key);
+class TambahUserPage extends StatelessWidget {
+  const TambahUserPage({Key? key}) : super(key: key);
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Settings Content')),
-      body: const Center(child: Text('Settings Content Page')),
-    );
-  }
-}
-
-class AssetsJTMPage extends StatelessWidget {
-  const AssetsJTMPage({Key? key}) : super(key: key);
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: const Text('Assets JTM')),
-      body: const Center(child: Text('Assets JTM Page')),
+      appBar: AppBar(title: const Text('Tambah User')),
+      body: const Center(child: Text('Tambah User Page')),
     );
   }
 }
