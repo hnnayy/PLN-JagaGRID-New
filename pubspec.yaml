@@ -12,13 +12,16 @@ dependencies:
     sdk: flutter
   firebase_core: ^4.0.0
   cloud_firestore: ^6.0.0
-  firebase_storage: ^13.0.0
   firebase_app_check: ^0.4.0
   provider: ^6.1.5+1
   image_picker: ^1.2.0
   cupertino_icons: ^1.0.8
-  url_launcher: ^6.3.2  # Untuk link jika diperlukan
-  google_maps_flutter: ^2.12.3  # Package untuk Google Maps
+  url_launcher: ^6.3.2
+  google_maps_flutter: ^2.12.3
+  http: ^1.2.2
+  flutter_dotenv: ^5.1.0  # Tetap, tapi jika error .env persist, comment sementara
+  cached_network_image: ^3.3.0
+  dropdown_search: ^6.0.1
 
 dev_dependencies:
   flutter_test:
@@ -30,17 +33,20 @@ flutter:
 
   assets:
     - assets/logo/logo.png
-    - assets/icons/
+    - assets/icons/  # Pastikan ini ada untuk ikon pohon-hijau.png dll
+    - assets/icons/pohon-hijau.png
+    - assets/icons/pohon-kuning.png
+    - assets/icons/pohon-merah.png
     - assets/icons/report.png
     - assets/icons/home.png
     - assets/icons/peta.png
-    - assets/icons/report.png
     - assets/icons/notification.png
     - assets/icons/profile.png
     - assets/icons/setting.png
     - assets/images/onboarding1.png
     - assets/images/onboarding2.png
     - assets/images/onboarding3.png
+    # - .env  # Comment ini jika error FileNotFoundError persist; gunakan hardcode sementara
   
   fonts:
     - family: Poppins

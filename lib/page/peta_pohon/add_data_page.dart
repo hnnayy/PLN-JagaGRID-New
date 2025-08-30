@@ -1,3 +1,4 @@
+// add_data_page.dart
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
@@ -26,10 +27,22 @@ class _AddDataPageState extends State<AddDataPage> {
   final _dateController = TextEditingController();
   final _treeNameController = TextEditingController();
   final _coordinatesController = TextEditingController();
-  final _explanationController = TextEditingController();
   final _noteController = TextEditingController();
-  final _priorityController = TextEditingController();
   File? _fotoPohon;
+
+  int? _selectedTujuan;
+  int? _selectedPrioritas;
+
+  final Map<int, String> _tujuanOptions = {
+    1: 'Tebang Pangkas',
+    2: 'Tebang Habis',
+  };
+
+  final Map<int, String> _prioritasOptions = {
+    1: 'Rendah',
+    2: 'Sedang',
+    3: 'Tinggi',
+  };
 
   InputDecoration _buildInputDecoration(String label, String hint, {Icon? suffixIcon}) {
     return InputDecoration(
@@ -40,8 +53,14 @@ class _AddDataPageState extends State<AddDataPage> {
       hintText: hint,
       hintStyle: const TextStyle(color: Colors.black54),
       suffixIcon: suffixIcon,
-      border: OutlineInputBorder(borderRadius: BorderRadius.circular(20), borderSide: BorderSide.none),
-      enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(20), borderSide: BorderSide.none),
+      border: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(20),
+        borderSide: const BorderSide(color: Colors.black54),
+      ),
+      enabledBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(20),
+        borderSide: const BorderSide(color: Colors.black54),
+      ),
       focusedBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(20),
         borderSide: const BorderSide(color: Colors.black54, width: 2.0),
@@ -64,9 +83,7 @@ class _AddDataPageState extends State<AddDataPage> {
     _dateController.dispose();
     _treeNameController.dispose();
     _coordinatesController.dispose();
-    _explanationController.dispose();
     _noteController.dispose();
-    _priorityController.dispose();
     super.dispose();
   }
 
@@ -238,20 +255,38 @@ class _AddDataPageState extends State<AddDataPage> {
                 },
               ),
               const SizedBox(height: 10),
-              TextFormField(
-                controller: _explanationController,
-                style: const TextStyle(color: Colors.black),
-                keyboardType: TextInputType.number,
-                decoration: _buildInputDecoration('Tujuan Penjadwalan', 'Masukkan tujuan penjadwalan (1 atau 2)'),
-                validator: (value) => value!.isEmpty ? 'Tujuan wajib diisi' : null,
+              DropdownButtonFormField<int>(
+                value: _selectedTujuan,
+                decoration: _buildInputDecoration('Tujuan Penjadwalan', 'Pilih tujuan penjadwalan'),
+                items: _tujuanOptions.entries.map((entry) {
+                  return DropdownMenuItem<int>(
+                    value: entry.key,
+                    child: Text(entry.value, style: const TextStyle(color: Colors.black)),
+                  );
+                }).toList(),
+                onChanged: (value) {
+                  setState(() {
+                    _selectedTujuan = value;
+                  });
+                },
+                validator: (value) => value == null ? 'Tujuan wajib diisi' : null,
               ),
               const SizedBox(height: 10),
-              TextFormField(
-                controller: _priorityController,
-                style: const TextStyle(color: Colors.black),
-                keyboardType: TextInputType.number,
-                decoration: _buildInputDecoration('Prioritas', 'Masukkan prioritas (1, 2, 3)'),
-                validator: (value) => value!.isEmpty ? 'Prioritas wajib diisi' : null,
+              DropdownButtonFormField<int>(
+                value: _selectedPrioritas,
+                decoration: _buildInputDecoration('Prioritas', 'Pilih prioritas'),
+                items: _prioritasOptions.entries.map((entry) {
+                  return DropdownMenuItem<int>(
+                    value: entry.key,
+                    child: Text(entry.value, style: const TextStyle(color: Colors.black)),
+                  );
+                }).toList(),
+                onChanged: (value) {
+                  setState(() {
+                    _selectedPrioritas = value;
+                  });
+                },
+                validator: (value) => value == null ? 'Prioritas wajib diisi' : null,
               ),
               const SizedBox(height: 10),
               TextFormField(
@@ -291,11 +326,11 @@ class _AddDataPageState extends State<AddDataPage> {
                             unitId: int.tryParse(_ulpController.text) ?? 0,
                             asetJtmId: int.tryParse(_kmsAsetController.text) ?? 0,
                             scheduleDate: DateTime(int.parse(dateParts[2]), int.parse(dateParts[1]), int.parse(dateParts[0])),
-                            prioritas: int.tryParse(_priorityController.text) ?? 1,
+                            prioritas: _selectedPrioritas ?? 1,
                             namaPohon: _treeNameController.text,
                             fotoPohon: '',
                             koordinat: _coordinatesController.text,
-                            tujuanPenjadwalan: int.tryParse(_explanationController.text) ?? 1,
+                            tujuanPenjadwalan: _selectedTujuan ?? 1,
                             catatan: _noteController.text,
                             createdBy: 1,
                             createdDate: DateTime.now(),
