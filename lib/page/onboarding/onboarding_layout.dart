@@ -1,4 +1,4 @@
-// onboarding_layout.dart (Main file dengan model)
+// onboarding_layout.dart (Main file dengan model) - RESPONSIVE VERSION
 import 'package:flutter/material.dart';
 import '../../constants/colors.dart';
 import '../../navigation_menu.dart';
@@ -93,13 +93,13 @@ class _OnboardingPageState extends State<OnboardingPage> {
       );
     } else {
       Navigator.of(context).pushReplacement(
-        MaterialPageRoute(builder: (context) => NavigationMenu()),
+        MaterialPageRoute(builder: (context) => const NavigationMenu()),
       );
     }
   }
 }
 
-// Widget Layout
+// Widget Layout - RESPONSIVE VERSION
 class OnboardingLayout extends StatelessWidget {
   final OnboardingContentModel content;
   final int currentIndex;
@@ -120,188 +120,241 @@ class OnboardingLayout extends StatelessWidget {
   Widget build(BuildContext context) {
     final bool isFirstPage = currentIndex == 0;
     final bool isLastPage = currentIndex == totalPages - 1;
+    
+    // Get screen size untuk responsive design
+    final screenHeight = MediaQuery.of(context).size.height;
+    final screenWidth = MediaQuery.of(context).size.width;
+    
+    // Responsive values berdasarkan ukuran layar
+    final titleFontSize = screenWidth < 350 ? 24.0 : (screenWidth < 400 ? 26.0 : 28.0);
+    final descriptionFontSize = screenWidth < 350 ? 13.0 : 14.0;
+    final imageSize = screenWidth < 350 ? 160.0 : (screenWidth < 400 ? 180.0 : 200.0);
+    final containerSize = imageSize + 80;
+    final horizontalPadding = screenWidth < 350 ? 16.0 : (screenWidth < 400 ? 20.0 : 24.0);
 
-    return Column(
-      children: [
-        // Content section (title + main content)
-        Expanded(
-          flex: 6,
-          child: Column(
-            children: [
-              // Top section with title
-              Expanded(
-                flex: 2,
-                child: Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.symmetric(horizontal: 24),
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        return SingleChildScrollView(
+          child: ConstrainedBox(
+            constraints: BoxConstraints(
+              minHeight: constraints.maxHeight,
+            ),
+            child: Column(
+              children: [
+                // Content section (title + main content)
+                Container(
+                  height: constraints.maxHeight * 0.85, // 85% dari tinggi layar
                   child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      Text(
-                        content.title,
-                        textAlign: TextAlign.center,
-                        style: TextStyle(
-                          fontFamily: 'Poppins',
-                          fontSize: 28,
-                          fontWeight: FontWeight.w600,
-                          color: AppColors.white,
-                          height: 1.2,
+                      // Top section with title - responsive flex
+                      Expanded(
+                        flex: screenHeight < 600 ? 2 : 3, // Lebih kecil untuk layar pendek
+                        child: Container(
+                          width: double.infinity,
+                          padding: EdgeInsets.symmetric(horizontal: horizontalPadding),
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              FittedBox(
+                                fit: BoxFit.scaleDown,
+                                child: Text(
+                                  content.title,
+                                  textAlign: TextAlign.center,
+                                  style: TextStyle(
+                                    fontFamily: 'Poppins',
+                                    fontSize: titleFontSize,
+                                    fontWeight: FontWeight.w600,
+                                    color: AppColors.yellow,
+                                    height: 1.2,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                      
+                      // Bottom section with content
+                      Expanded(
+                        flex: screenHeight < 600 ? 5 : 4, // Lebih besar untuk layar pendek
+                        child: Container(
+                          width: double.infinity,
+                          decoration: const BoxDecoration(
+                            color: AppColors.putihKebiruan,
+                            borderRadius: BorderRadius.only(
+                              topLeft: Radius.circular(32),
+                              topRight: Radius.circular(32),
+                            ),
+                          ),
+                          child: Padding(
+                            padding: EdgeInsets.all(horizontalPadding),
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                              children: [
+                                // Flexible spacing
+                                SizedBox(height: screenHeight < 600 ? 10 : 20),
+                                
+                                // Image with circular background - responsive
+                                Flexible(
+                                  flex: 3, // Kurangi sedikit untuk beri ruang lebih ke text
+                                  child: Container(
+                                    width: containerSize,
+                                    height: containerSize,
+                                    decoration: BoxDecoration(
+                                      color: AppColors.putihKebiruan.withOpacity(0.3),
+                                      shape: BoxShape.circle,
+                                    ),
+                                    child: Center(
+                                      child: Stack(
+                                        alignment: Alignment.center,
+                                        children: [
+                                          Image.asset(
+                                            content.imagePath,
+                                            width: imageSize,
+                                            height: imageSize,
+                                            fit: BoxFit.contain,
+                                          ),
+                                          // Additional icon if exists
+                                          if (content.additionalIcon != null) content.additionalIcon!,
+                                        ],
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                                
+                                // Flexible spacing
+                                SizedBox(height: screenHeight < 600 ? 15 : 25),
+                                
+                                // Description text - responsive (no text cutting)
+                                Flexible(
+                                  flex: 3, // Lebih besar untuk ruang text
+                                  child: Padding(
+                                    padding: EdgeInsets.symmetric(
+                                      horizontal: screenWidth < 350 ? 16 : 32
+                                    ),
+                                    child: Text(
+                                      content.description,
+                                      textAlign: TextAlign.center,
+                                      style: TextStyle(
+                                        fontFamily: 'Poppins',
+                                        fontSize: descriptionFontSize,
+                                        fontWeight: FontWeight.w400,
+                                        color: AppColors.darkGrey,
+                                        height: 1.4,
+                                      ),
+                                      // Hilangkan maxLines dan ellipsis agar text tidak terpotong
+                                    ),
+                                  ),
+                                ),
+                                
+                                // Flexible spacing
+                                SizedBox(height: screenHeight < 600 ? 10 : 20),
+                              ],
+                            ),
+                          ),
                         ),
                       ),
                     ],
                   ),
                 ),
-              ),
-              
-              // Bottom section with content
-              Expanded(
-                flex: 4,
-                child: Container(
+                
+                // Bottom navigation section - responsive
+                Container(
+                  height: constraints.maxHeight * 0.15, // 15% dari tinggi layar
                   width: double.infinity,
                   decoration: const BoxDecoration(
                     color: AppColors.putihKebiruan,
-                    borderRadius: BorderRadius.only(
-                      topLeft: Radius.circular(32),
-                      topRight: Radius.circular(32),
-                    ),
                   ),
                   child: Padding(
-                    padding: const EdgeInsets.all(24),
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
+                    padding: EdgeInsets.symmetric(
+                      horizontal: horizontalPadding,
+                      vertical: screenHeight < 600 ? 12 : 16,
+                    ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        // Image with circular background
-                        Container(
-                          width: 280,
-                          height: 280,
-                          decoration: BoxDecoration(
-                            color: AppColors.putihKebiruan.withOpacity(0.3),
-                            shape: BoxShape.circle,
-                          ),
-                          child: Center(
-                            child: Stack(
-                              alignment: Alignment.center,
-                              children: [
-                                Image.asset(
-                                  content.imagePath,
-                                  width: 200,
-                                  height: 200,
-                                  fit: BoxFit.contain,
+                        // Back button (only show if not first page)
+                        if (!isFirstPage)
+                          GestureDetector(
+                            onTap: onPrevious,
+                            child: Container(
+                              padding: EdgeInsets.symmetric(
+                                horizontal: screenWidth < 350 ? 16 : 20,
+                                vertical: screenHeight < 600 ? 8 : 10,
+                              ),
+                              decoration: BoxDecoration(
+                                color: AppColors.grey.withOpacity(0.2),
+                                borderRadius: BorderRadius.circular(20),
+                              ),
+                              child: FittedBox(
+                                child: Text(
+                                  'Kembali',
+                                  style: TextStyle(
+                                    fontFamily: 'Poppins',
+                                    fontSize: screenWidth < 350 ? 12 : 13,
+                                    fontWeight: FontWeight.w500,
+                                    color: AppColors.darkGrey,
+                                  ),
                                 ),
-                                // Additional icon if exists
-                                if (content.additionalIcon != null) content.additionalIcon!,
-                              ],
+                              ),
+                            ),
+                          )
+                        else
+                          SizedBox(width: screenWidth < 350 ? 60 : 80), // Responsive placeholder
+                        
+                        // Page indicators
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            for (int i = 0; i < totalPages; i++)
+                              Container(
+                                margin: const EdgeInsets.symmetric(horizontal: 3),
+                                width: screenWidth < 350 ? 6 : 7,
+                                height: screenWidth < 350 ? 6 : 7,
+                                decoration: BoxDecoration(
+                                  shape: BoxShape.circle,
+                                  color: i == currentIndex 
+                                      ? AppColors.tealGelap 
+                                      : AppColors.grey.withOpacity(0.3),
+                                ),
+                              ),
+                          ],
+                        ),
+                        
+                        // Next button
+                        GestureDetector(
+                          onTap: onNext,
+                          child: Container(
+                            padding: EdgeInsets.symmetric(
+                              horizontal: screenWidth < 350 ? 16 : 20,
+                              vertical: screenHeight < 600 ? 8 : 10,
+                            ),
+                            decoration: BoxDecoration(
+                              color: AppColors.tealGelap,
+                              borderRadius: BorderRadius.circular(20),
+                            ),
+                            child: FittedBox(
+                              child: Text(
+                                isLastPage ? 'Mulai' : 'Selanjutnya',
+                                style: TextStyle(
+                                  fontFamily: 'Poppins',
+                                  fontSize: screenWidth < 350 ? 12 : 13,
+                                  fontWeight: FontWeight.w600,
+                                  color: AppColors.yellow,
+                                ),
+                              ),
                             ),
                           ),
                         ),
-                        
-                        const SizedBox(height: 40),
-                        
-                        // Description text
-                        Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 32),
-                          child: Text(
-                            content.description,
-                            textAlign: TextAlign.center,
-                            style: TextStyle(
-                              fontFamily: 'Poppins',
-                              fontSize: 14,
-                              fontWeight: FontWeight.w400,
-                              color: AppColors.darkGrey,
-                              height: 1.5,
-                            ),
-                          ),
-                        ),
-                        
-                        const SizedBox(height: 60),
                       ],
-                    ),
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
-        
-        // Bottom navigation section
-        Container(
-          width: double.infinity,
-          decoration: const BoxDecoration(
-            color: AppColors.putihKebiruan,
-          ),
-          child: Padding(
-            padding: const EdgeInsets.all(24),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                // Back button (only show if not first page)
-                if (!isFirstPage)
-                  GestureDetector(
-                    onTap: onPrevious,
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-                      decoration: BoxDecoration(
-                        color: AppColors.grey.withOpacity(0.2),
-                        borderRadius: BorderRadius.circular(25),
-                      ),
-                      child: Text(
-                        'Kembali',
-                        style: TextStyle(
-                          fontFamily: 'Poppins',
-                          fontSize: 14,
-                          fontWeight: FontWeight.w500,
-                          color: AppColors.darkGrey,
-                        ),
-                      ),
-                    ),
-                  )
-                else
-                  const SizedBox(width: 80), // Placeholder for alignment
-                
-                // Page indicators
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    for (int i = 0; i < totalPages; i++)
-                      Container(
-                        margin: const EdgeInsets.symmetric(horizontal: 4),
-                        width: 8,
-                        height: 8,
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          color: i == currentIndex 
-                              ? AppColors.tealGelap 
-                              : AppColors.grey.withOpacity(0.3),
-                        ),
-                      ),
-                  ],
-                ),
-                
-                // Next button
-                GestureDetector(
-                  onTap: onNext,
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-                    decoration: BoxDecoration(
-                      color: AppColors.tealGelap,
-                      borderRadius: BorderRadius.circular(25),
-                    ),
-                    child: Text(
-                      isLastPage ? 'Mulai' : 'Selanjutnya',
-                      style: TextStyle(
-                        fontFamily: 'Poppins',
-                        fontSize: 14,
-                        fontWeight: FontWeight.w600,
-                        color: AppColors.white,
-                      ),
                     ),
                   ),
                 ),
               ],
             ),
           ),
-        ),
-      ],
+        );
+      },
     );
   }
 }
