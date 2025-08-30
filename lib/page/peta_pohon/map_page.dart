@@ -1,3 +1,4 @@
+// map_page.dart
 import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:provider/provider.dart';
@@ -20,8 +21,52 @@ class _MapPageState extends State<MapPage> {
 
   MapType _currentMapType = MapType.satellite;
 
+  Map<int, BitmapDescriptor> _priorityIcons = {};
+
+  @override
+  void initState() {
+    super.initState();
+    _loadMarkerIcons();
+  }
+
+  Future<void> _loadMarkerIcons() async {
+    // Remark: Icons berdasarkan prioritas
+    // - Prioritas 1 (Rendah): pohon-hijau.png
+    // - Prioritas 2 (Sedang): pohon-kuning.png
+    // - Prioritas 3 (Tinggi): pohon-merah.png
+    try {
+      _priorityIcons[1] = await BitmapDescriptor.fromAssetImage(
+        const ImageConfiguration(),
+        'assets/icons/pohon-hijau.png',
+      );
+    } catch (e) {
+      print('Error loading pohon-hijau.png: $e');
+      _priorityIcons[1] = BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueGreen);
+    }
+    try {
+      _priorityIcons[2] = await BitmapDescriptor.fromAssetImage(
+        const ImageConfiguration(),
+        'assets/icons/pohon-kuning.png',
+      );
+    } catch (e) {
+      print('Error loading pohon-kuning.png: $e');
+      _priorityIcons[2] = BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueYellow);
+    }
+    try {
+      _priorityIcons[3] = await BitmapDescriptor.fromAssetImage(
+        const ImageConfiguration(),
+        'assets/icons/pohon-merah.png',
+      );
+    } catch (e) {
+      print('Error loading pohon-merah.png: $e');
+      _priorityIcons[3] = BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueRed);
+    }
+    setState(() {}); // Refresh UI setelah load
+  }
+
   void _onMapCreated(GoogleMapController controller) {
     _mapController = controller;
+    setState(() {}); // Pastikan update setelah map created
   }
 
   void _focusToMarker(LatLng pos) {
@@ -135,7 +180,6 @@ class _MapPageState extends State<MapPage> {
                             onTap: () {
                               _searchController.clear();
                               setState(() { _searchResults.clear(); });
-                              // Fokus ke marker
                               final coords = pohon.koordinat.split(',');
                               if (coords.length == 2) {
                                 double? lat = double.tryParse(coords[0]);
@@ -211,11 +255,12 @@ class _MapPageState extends State<MapPage> {
                           print('SKIP pohon id=${pohon.id} karena gagal parsing koordinat');
                           continue;
                         }
+                        BitmapDescriptor icon = _priorityIcons[pohon.prioritas] ?? BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueGreen);
                         markers.add(Marker(
                           markerId: MarkerId(pohon.id),
                           position: LatLng(lat, lng),
                           infoWindow: InfoWindow(title: pohon.namaPohon),
-                          icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueGreen),
+                          icon: icon,
                         ));
                       }
                       print('DEBUG total marker: ${markers.length}');
@@ -224,7 +269,7 @@ class _MapPageState extends State<MapPage> {
                         onMapCreated: _onMapCreated,
                         initialCameraPosition: CameraPosition(
                           target: _initialPosition,
-                          zoom: 17.0, // zoom maksimal
+                          zoom: 17.0,
                         ),
                         mapType: _currentMapType,
                         minMaxZoomPreference: const MinMaxZoomPreference(15.0, 21.0),

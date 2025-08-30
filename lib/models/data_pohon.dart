@@ -1,3 +1,4 @@
+// data_pohon.dart
 class DataPohon {
   final String id;
   final String idPohon;  // UNIQUE constraint
@@ -16,7 +17,7 @@ class DataPohon {
   final String namaPohon;
   final String fotoPohon;  // Filepath/URL
   final String koordinat;
-  final int tujuanPenjadwalan;  // 1=Penebangan, 2=Pemangkasan
+  final int tujuanPenjadwalan;  // 1=Tebang Pangkas, 2=Tebang Habis
   final String catatan;
   final int createdBy;
   final DateTime createdDate;
