@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'layoutsetting.dart';
 import 'assets_jtm.dart'; // Import halaman assets_jtm
+import 'package:flutter_application_2/page/settings/profile/profile_page.dart';
+import 'package:flutter_application_2/page/settings/profile/form_add_user_page.dart'; // ✅ Versi terbaru
+import 'package:flutter_application_2/page/settings/profile/user_list_page.dart';
 
 // File: lib/page/settings/tambahuser.dart
 class SettingsContent {
@@ -28,28 +31,26 @@ class SettingsContent {
   static void handleSettingsTap(int index, BuildContext context) {
     switch (index) {
       case 0:
-        // Handle Profile tap
+        // ✅ SINKRONISASI: Gunakan ProfilePage yang sudah di-import
         Navigator.push(
           context,
           MaterialPageRoute(builder: (context) => const ProfilePage()),
         );
         break;
+
       case 1:
-        // Handle Tambah User tap
         Navigator.push(
           context,
-          MaterialPageRoute(builder: (context) => const TambahUserPage()),
+          MaterialPageRoute(builder: (context) => const UserListPage()),
         );
         break;
       case 2:
-        // Handle Assets JTM tap - Panggil AssetsJTMPage yang sudah dibuat
         Navigator.push(
           context,
           MaterialPageRoute(builder: (context) => const AssetsJTMPage()),
         );
         break;
       case 3:
-        // Handle Logout tap
         _showLogoutDialog(context);
         break;
     }
@@ -211,16 +212,19 @@ class Page4 extends StatelessWidget {
   }
 }
 
-class ProfilePage extends StatelessWidget {
-  const ProfilePage({Key? key}) : super(key: key);
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: const Text('Profile')),
-      body: const Center(child: Text('Profile Page')),
-    );
-  }
-}
+// ✅ HAPUS ProfilePage yang duplikat - gunakan yang ada di profile_page.dart
+// class ProfilePage extends StatelessWidget {
+//   const ProfilePage({Key? key}) : super(key: key);
+//   @override
+//   Widget build(BuildContext context) {
+//     return Scaffold(
+//       appBar: AppBar(title: const Text('Profile')),
+//       body: const Center(child: Text('Profile Page')),
+//     );
+//   }
+// }
+
+// ✅ HAPUS ProfilePageDetail - gunakan yang sudah di-import dari profile_page.dart
 
 class TambahUserPage extends StatelessWidget {
   const TambahUserPage({Key? key}) : super(key: key);
