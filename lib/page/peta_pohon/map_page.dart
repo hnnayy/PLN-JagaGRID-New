@@ -21,48 +21,15 @@ class _MapPageState extends State<MapPage> {
 
   MapType _currentMapType = MapType.satellite;
 
-  Map<int, BitmapDescriptor> _priorityIcons = {};
+  // Map<int, BitmapDescriptor> _priorityIcons = {}; // dihapus, tidak dipakai
 
   @override
   void initState() {
     super.initState();
-    _loadMarkerIcons();
+  // _loadMarkerIcons(); // dihapus, tidak dipakai
   }
 
-  Future<void> _loadMarkerIcons() async {
-    // Remark: Icons berdasarkan prioritas
-    // - Prioritas 1 (Rendah): pohon-hijau.png
-    // - Prioritas 2 (Sedang): pohon-kuning.png
-    // - Prioritas 3 (Tinggi): pohon-merah.png
-    try {
-      _priorityIcons[1] = await BitmapDescriptor.fromAssetImage(
-        const ImageConfiguration(),
-        'assets/icons/pohon-hijau.png',
-      );
-    } catch (e) {
-      print('Error loading pohon-hijau.png: $e');
-      _priorityIcons[1] = BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueGreen);
-    }
-    try {
-      _priorityIcons[2] = await BitmapDescriptor.fromAssetImage(
-        const ImageConfiguration(),
-        'assets/icons/pohon-kuning.png',
-      );
-    } catch (e) {
-      print('Error loading pohon-kuning.png: $e');
-      _priorityIcons[2] = BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueYellow);
-    }
-    try {
-      _priorityIcons[3] = await BitmapDescriptor.fromAssetImage(
-        const ImageConfiguration(),
-        'assets/icons/pohon-merah.png',
-      );
-    } catch (e) {
-      print('Error loading pohon-merah.png: $e');
-      _priorityIcons[3] = BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueRed);
-    }
-    setState(() {}); // Refresh UI setelah load
-  }
+  // Hapus _loadMarkerIcons, tidak perlu custom asset marker
 
   void _onMapCreated(GoogleMapController controller) {
     _mapController = controller;
@@ -130,100 +97,133 @@ class _MapPageState extends State<MapPage> {
                 ],
               ),
             ),
-            // Search bar
+            // Search Container
             Padding(
-              padding: const EdgeInsets.fromLTRB(20, 0, 20, 8),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  TextField(
-                    controller: _searchController,
-                    style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
-                    decoration: InputDecoration(
-                      hintText: 'Cari pohon (nama/id)...',
-                      hintStyle: const TextStyle(color: Colors.white70, fontFamily: 'Poppins'),
-                      filled: true,
-                      fillColor: AppColors.tealGelap,
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(20),
-                        borderSide: BorderSide.none,
-                      ),
-                      prefixIcon: const Icon(Icons.search, color: Colors.white),
-                      contentPadding: const EdgeInsets.symmetric(vertical: 0, horizontal: 16),
-                    ),
-                    onChanged: (query) {
-                      final provider = Provider.of<DataPohonProvider>(context, listen: false);
-                      setState(() {
-                        _searchResults = provider.pohonList.where((pohon) =>
-                          pohon.namaPohon.toLowerCase().contains(query.toLowerCase()) ||
-                          pohon.idPohon.toLowerCase().contains(query.toLowerCase())
-                        ).toList();
-                      });
-                    },
-                  ),
-                  if (_searchController.text.isNotEmpty && _searchResults.isNotEmpty)
-                    Container(
-                      margin: const EdgeInsets.only(top: 4),
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(12),
-                        boxShadow: [BoxShadow(color: Colors.black12, blurRadius: 4)],
-                      ),
-                      child: ListView.builder(
-                        shrinkWrap: true,
-                        itemCount: _searchResults.length,
-                        itemBuilder: (ctx, idx) {
-                          final pohon = _searchResults[idx];
-                          return ListTile(
-                            title: Text(pohon.namaPohon, style: const TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.bold)),
-                            subtitle: Text('ID: ${pohon.idPohon}'),
-                            onTap: () {
-                              _searchController.clear();
-                              setState(() { _searchResults.clear(); });
-                              final coords = pohon.koordinat.split(',');
-                              if (coords.length == 2) {
-                                double? lat = double.tryParse(coords[0]);
-                                double? lng = double.tryParse(coords[1]);
-                                if (lat != null && lng != null) {
-                                  _focusToMarker(LatLng(lat, lng));
-                                }
-                              }
-                            },
-                          );
+              padding: const EdgeInsets.fromLTRB(8, 0, 8, 6),
+              child: Container(
+                decoration: BoxDecoration(
+                  color: Colors.white.withOpacity(0.6),
+                  borderRadius: BorderRadius.circular(16),
+                  boxShadow: [BoxShadow(color: Colors.black12, blurRadius: 6, offset: Offset(0,2))],
+                ),
+                padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 12),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    SizedBox(
+                      height: 38,
+                      child: TextField(
+                        controller: _searchController,
+                        style: const TextStyle(color: Colors.black, fontWeight: FontWeight.bold, fontFamily: 'Poppins', fontSize: 14),
+                        decoration: InputDecoration(
+                          hintText: 'Cari pohon (nama/id/prioritas)',
+                          hintStyle: const TextStyle(color: Colors.black54, fontFamily: 'Poppins', fontSize: 14),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: BorderSide.none,
+                          ),
+                          prefixIcon: const Icon(Icons.search, color: Colors.black54, size: 20),
+                          contentPadding: const EdgeInsets.symmetric(vertical: 0, horizontal: 10),
+                        ),
+                        onChanged: (query) {
+                          final provider = Provider.of<DataPohonProvider>(context, listen: false);
+                          setState(() {
+                            final q = query.toLowerCase();
+                            _searchResults = provider.pohonList.where((pohon) {
+                              final nama = pohon.namaPohon.toLowerCase();
+                              final id = pohon.idPohon.toLowerCase();
+                              final prioritasStr = pohon.prioritas.toString();
+                              String prioritasLabel = '';
+                              if (pohon.prioritas == 1) prioritasLabel = 'rendah';
+                              else if (pohon.prioritas == 2) prioritasLabel = 'sedang';
+                              else if (pohon.prioritas == 3) prioritasLabel = 'tinggi';
+                              return nama.contains(q) || id.contains(q) || prioritasStr == q || prioritasLabel.contains(q);
+                            }).toList();
+                          });
                         },
                       ),
                     ),
-                  const SizedBox(height: 8),
-                  Row(
-                    children: [
-                      const Text('Tipe Peta:', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-                      const SizedBox(width: 12),
-                      Theme(
-                        data: Theme.of(context).copyWith(
-                          canvasColor: Colors.white,
-                          iconTheme: const IconThemeData(color: Colors.white),
+                    if (_searchController.text.isNotEmpty && _searchResults.isNotEmpty)
+                      Container(
+                        margin: const EdgeInsets.only(top: 4),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(10),
+                          boxShadow: [BoxShadow(color: Colors.black12, blurRadius: 4)],
                         ),
-                        child: DropdownButton<MapType>(
-                          value: _currentMapType,
-                          style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
-                          icon: const Icon(Icons.arrow_drop_down, color: Colors.white),
-                          dropdownColor: Colors.white,
-                          items: const [
-                            DropdownMenuItem(child: Text('Normal', style: TextStyle(color: Colors.black)), value: MapType.normal),
-                            DropdownMenuItem(child: Text('Satelit', style: TextStyle(color: Colors.black)), value: MapType.satellite),
-                            DropdownMenuItem(child: Text('Terrain', style: TextStyle(color: Colors.black)), value: MapType.terrain),
-                            DropdownMenuItem(child: Text('Hybrid', style: TextStyle(color: Colors.black)), value: MapType.hybrid),
-                          ],
-                          onChanged: (type) {
-                            setState(() {
-                              _currentMapType = type!;
-                            });
+                        child: ListView.builder(
+                          shrinkWrap: true,
+                          itemCount: _searchResults.length,
+                          itemBuilder: (ctx, idx) {
+                            final pohon = _searchResults[idx];
+                            String prioritasLabel = '-';
+                            if (pohon.prioritas == 1) prioritasLabel = 'Rendah';
+                            else if (pohon.prioritas == 2) prioritasLabel = 'Sedang';
+                            else if (pohon.prioritas == 3) prioritasLabel = 'Tinggi';
+                            return ListTile(
+                              title: Text(pohon.namaPohon, style: const TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.bold, fontSize: 14)),
+                              subtitle: Text('ID: ${pohon.idPohon}  |  Prioritas: $prioritasLabel', style: const TextStyle(fontFamily: 'Poppins', fontSize: 12)),
+                              onTap: () {
+                                _searchController.clear();
+                                setState(() { _searchResults.clear(); });
+                                final coords = pohon.koordinat.split(',');
+                                if (coords.length == 2) {
+                                  double? lat = double.tryParse(coords[0]);
+                                  double? lng = double.tryParse(coords[1]);
+                                  if (lat != null && lng != null) {
+                                    _focusToMarker(LatLng(lat, lng));
+                                  }
+                                }
+                              },
+                            );
                           },
                         ),
                       ),
-                    ],
-                  ),
-                ],
+                  ],
+                ),
+              ),
+            ),
+            // Tipe Peta Container
+            Padding(
+              padding: const EdgeInsets.fromLTRB(8, 0, 8, 4),
+              child: Container(
+                decoration: BoxDecoration(
+                  color: Colors.white.withOpacity(0.6),
+                  borderRadius: BorderRadius.circular(10),
+                  boxShadow: [BoxShadow(color: Colors.black12, blurRadius: 4, offset: Offset(0,2))],
+                ),
+                padding: const EdgeInsets.symmetric(vertical: 2, horizontal: 10),
+                child: Row(
+                  children: [
+                    const Icon(Icons.map, color: Colors.black54, size: 20),
+                    const SizedBox(width: 8),
+                    const Text('Tipe Peta:', style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold, fontFamily: 'Poppins', fontSize: 14)),
+                    const SizedBox(width: 12),
+                    Theme(
+                      data: Theme.of(context).copyWith(
+                        canvasColor: Colors.white,
+                        iconTheme: const IconThemeData(color: Colors.black),
+                      ),
+                      child: DropdownButton<MapType>(
+                        value: _currentMapType,
+                        style: const TextStyle(color: Colors.black, fontWeight: FontWeight.bold, fontFamily: 'Poppins', fontSize: 14),
+                        icon: const Icon(Icons.arrow_drop_down, color: Colors.black, size: 20),
+                        dropdownColor: Colors.white,
+                        items: const [
+                          DropdownMenuItem(child: Text('Normal', style: TextStyle(color: Colors.black, fontFamily: 'Poppins', fontSize: 14)), value: MapType.normal),
+                          DropdownMenuItem(child: Text('Satelit', style: TextStyle(color: Colors.black, fontFamily: 'Poppins', fontSize: 14)), value: MapType.satellite),
+                          DropdownMenuItem(child: Text('Terrain', style: TextStyle(color: Colors.black, fontFamily: 'Poppins', fontSize: 14)), value: MapType.terrain),
+                          DropdownMenuItem(child: Text('Hybrid', style: TextStyle(color: Colors.black, fontFamily: 'Poppins', fontSize: 14)), value: MapType.hybrid),
+                        ],
+                        onChanged: (type) {
+                          setState(() {
+                            _currentMapType = type!;
+                          });
+                        },
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ),
             // Map Fullscreen
@@ -255,7 +255,16 @@ class _MapPageState extends State<MapPage> {
                           print('SKIP pohon id=${pohon.id} karena gagal parsing koordinat');
                           continue;
                         }
-                        BitmapDescriptor icon = _priorityIcons[pohon.prioritas] ?? BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueGreen);
+                        BitmapDescriptor icon;
+                        if (pohon.prioritas == 1) {
+                          icon = BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueGreen);
+                        } else if (pohon.prioritas == 2) {
+                          icon = BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueYellow);
+                        } else if (pohon.prioritas == 3) {
+                          icon = BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueRed);
+                        } else {
+                          icon = BitmapDescriptor.defaultMarker;
+                        }
                         markers.add(Marker(
                           markerId: MarkerId(pohon.id),
                           position: LatLng(lat, lng),

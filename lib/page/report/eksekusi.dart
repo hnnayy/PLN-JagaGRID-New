@@ -1,0 +1,429 @@
+import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
+import 'dart:io';
+import 'package:provider/provider.dart';
+import '../../models/data_pohon.dart';
+import '../../models/eksekusi.dart';
+import '../../providers/eksekusi_provider.dart';
+import '../../constants/colors.dart';
+
+class EksekusiPage extends StatefulWidget {
+  final DataPohon pohon;
+
+  const EksekusiPage({super.key, required this.pohon});
+
+  @override
+  _EksekusiPageState createState() => _EksekusiPageState();
+}
+
+class _EksekusiPageState extends State<EksekusiPage> {
+  String _selectedAction = 'Pangkas';
+  final TextEditingController _heightController = TextEditingController(text: '2.8');
+  final TextEditingController _diameterController = TextEditingController(text: '200');
+  final TextEditingController _dateController = TextEditingController();
+  File? _selectedImage;
+  final ImagePicker _picker = ImagePicker();
+  DateTime _selectedDate = DateTime.now();
+
+  @override
+  void initState() {
+    super.initState();
+    _dateController.text = _formatDate(_selectedDate);
+  }
+
+  @override
+  void dispose() {
+    _heightController.dispose();
+    _diameterController.dispose();
+    _dateController.dispose();
+    super.dispose();
+  }
+
+  String _formatDate(DateTime date) {
+    return '${date.day}/${date.month}/${date.year}';
+  }
+
+  Future<void> _pickImage() async {
+    final XFile? image = await _picker.pickImage(source: ImageSource.camera);
+    if (image != null) {
+      setState(() {
+        _selectedImage = File(image.path);
+      });
+    }
+  }
+
+  Future<void> _selectDate(BuildContext context) async {
+    final DateTime? picked = await showDatePicker(
+      context: context,
+      initialDate: _selectedDate,
+      firstDate: DateTime(2000),
+      lastDate: DateTime(2101),
+      builder: (context, child) {
+        return Theme(
+          data: Theme.of(context).copyWith(
+            colorScheme: const ColorScheme.light(
+              primary: Color(0xFF125E72),
+              onPrimary: Colors.white,
+              onSurface: Colors.black87,
+            ),
+            textButtonTheme: TextButtonThemeData(
+              style: TextButton.styleFrom(foregroundColor: Color(0xFF125E72)),
+            ),
+          ),
+          child: child!,
+        );
+      },
+    );
+    if (picked != null && picked != _selectedDate) {
+      setState(() {
+        _selectedDate = picked;
+        _dateController.text = _formatDate(picked);
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final screenWidth = MediaQuery.of(context).size.width;
+    final screenHeight = MediaQuery.of(context).size.height;
+
+    return Scaffold(
+      appBar: AppBar(
+        backgroundColor: const Color(0xFF125E72),
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back, color: Colors.white),
+          onPressed: () => Navigator.of(context).pop(),
+        ),
+        title: Text(
+          'Eksekusi Pohon #${widget.pohon.idPohon}',
+          style: TextStyle(
+            color: AppColors.yellow,
+            fontSize: screenWidth * 0.05,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+      ),
+      body: SingleChildScrollView(
+        padding: EdgeInsets.all(screenWidth * 0.04),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Container(
+              padding: EdgeInsets.all(screenWidth * 0.03),
+              decoration: BoxDecoration(
+                color: Colors.grey[200],
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        'ID Pohon',
+                        style: TextStyle(fontSize: screenWidth * 0.04),
+                      ),
+                      Container(
+                        padding: EdgeInsets.symmetric(
+                          horizontal: screenWidth * 0.02,
+                          vertical: screenHeight * 0.005,
+                        ),
+                        decoration: BoxDecoration(
+                          color: AppColors.yellow,
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: Text(
+                          'Prioritas: ${widget.pohon.prioritas == 1 ? "Rendah" : widget.pohon.prioritas == 2 ? "Sedang" : "Tinggi"}',
+                          style: TextStyle(
+                            fontSize: screenWidth * 0.035,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.black,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  Text(
+                    widget.pohon.idPohon.isNotEmpty ? widget.pohon.idPohon : 'P023',
+                    style: TextStyle(fontSize: screenWidth * 0.04),
+                  ),
+                  Text(
+                    'Sector',
+                    style: TextStyle(fontSize: screenWidth * 0.04),
+                  ),
+                  Text(
+                    widget.pohon.up3.isNotEmpty && widget.pohon.ulp.isNotEmpty
+                        ? '${widget.pohon.up3}, ${widget.pohon.ulp}'
+                        : 'Parepare, Sulawesi Selatan',
+                    style: TextStyle(fontSize: screenWidth * 0.04),
+                  ),
+                  Text(
+                    'Vendor VB',
+                    style: TextStyle(fontSize: screenWidth * 0.04),
+                  ),
+                  Text(
+                    widget.pohon.vendor.isNotEmpty ? widget.pohon.vendor : 'PT PLN PERAMBAS',
+                    style: TextStyle(fontSize: screenWidth * 0.04),
+                  ),
+                  Text(
+                    'Tujuan Penindakan',
+                    style: TextStyle(
+                      fontSize: screenWidth * 0.04,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(0, 8, 0, 8),
+                    child: Text(
+                      widget.pohon.tujuanPenjadwalan == 1
+                          ? 'Penebangan'
+                          : widget.pohon.tujuanPenjadwalan == 2
+                              ? 'Pemangkasan'
+                              : 'Penanaman Ulang',
+                      style: TextStyle(fontSize: screenWidth * 0.04),
+                    ),
+                  ),
+                  const Padding(
+                    padding: EdgeInsets.fromLTRB(0, 8, 0, 8),
+                    child: Text(
+                      'Nama Pohon',
+                      style: TextStyle(fontSize: 16),
+                    ),
+                  ),
+                  Text(
+                    widget.pohon.namaPohon.isNotEmpty ? widget.pohon.namaPohon : 'Tidak tersedia',
+                    style: TextStyle(fontSize: screenWidth * 0.04),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 20),
+            Container(
+              padding: EdgeInsets.all(screenWidth * 0.03),
+              decoration: BoxDecoration(
+                color: Colors.grey[200],
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Konfirmasi Penanganan Pohon',
+                    style: TextStyle(
+                      fontSize: screenWidth * 0.04,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  Row(
+                    children: [
+                      const Icon(Icons.height, size: 20),
+                      const SizedBox(width: 5),
+                      const Text('Tinggi Pohon'),
+                      const SizedBox(width: 10),
+                      SizedBox(
+                        width: screenWidth * 0.2,
+                        child: TextField(
+                          controller: _heightController,
+                          decoration: const InputDecoration(
+                            border: OutlineInputBorder(),
+                          ),
+                          keyboardType: TextInputType.number,
+                        ),
+                      ),
+                      const Text(' m'),
+                    ],
+                  ),
+                  const SizedBox(height: 10),
+                  Row(
+                    children: [
+                      const Icon(Icons.aspect_ratio, size: 20),
+                      const SizedBox(width: 5),
+                      const Text('Diameter Pohon'),
+                      const SizedBox(width: 10),
+                      SizedBox(
+                        width: screenWidth * 0.2,
+                        child: TextField(
+                          controller: _diameterController,
+                          decoration: const InputDecoration(
+                            border: OutlineInputBorder(),
+                          ),
+                          keyboardType: TextInputType.number,
+                        ),
+                      ),
+                      const Text(' cm'),
+                    ],
+                  ),
+                  const SizedBox(height: 10),
+                  Row(
+                    children: [
+                      const Icon(Icons.calendar_today, size: 20),
+                      const SizedBox(width: 5),
+                      const Text('Tanggal Eksekusi'),
+                      const SizedBox(width: 10),
+                      SizedBox(
+                        width: screenWidth * 0.3,
+                        child: TextField(
+                          controller: _dateController,
+                          decoration: const InputDecoration(
+                            border: OutlineInputBorder(),
+                          ),
+                          readOnly: true,
+                          onTap: () => _selectDate(context),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 10),
+                  Row(
+                    children: [
+                      const Icon(Icons.camera_alt, size: 20),
+                      const SizedBox(width: 5),
+                      const Text('Foto Setelah Eksekusi'),
+                      const SizedBox(width: 10),
+                      ElevatedButton(
+                        onPressed: _pickImage,
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFF125E72),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                        ),
+                        child: Text(
+                          _selectedImage == null ? 'Ambil Foto' : 'Ganti Foto',
+                          style: TextStyle(
+                            fontSize: screenWidth * 0.035,
+                            color: Colors.white,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  if (_selectedImage != null) ...[
+                    const SizedBox(height: 10),
+                    Image.file(
+                      _selectedImage!,
+                      height: screenHeight * 0.2,
+                      width: screenWidth * 0.4,
+                      fit: BoxFit.cover,
+                    ),
+                  ],
+                  const SizedBox(height: 10),
+                  Row(
+                    children: [
+                      Radio<String>(
+                        value: 'Pangkas',
+                        groupValue: _selectedAction,
+                        onChanged: (value) {
+                          setState(() {
+                            _selectedAction = value!;
+                          });
+                        },
+                      ),
+                      const Text('Pangkas'),
+                      Radio<String>(
+                        value: 'Tebang',
+                        groupValue: _selectedAction,
+                        onChanged: (value) {
+                          setState(() {
+                            _selectedAction = value!;
+                          });
+                        },
+                      ),
+                      const Text('Tebang'),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 20),
+            Center(
+              child: ElevatedButton(
+                onPressed: () async {
+                  if (_selectedImage == null) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('Foto setelah eksekusi wajib diisi')),
+                    );
+                    return;
+                  }
+                  if (_heightController.text.isEmpty || _diameterController.text.isEmpty) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('Tinggi dan diameter pohon wajib diisi')),
+                    );
+                    return;
+                  }
+                  try {
+                    final dateParts = _dateController.text.split('/');
+                    final eksekusi = Eksekusi(
+                      id: 0, // Auto-incremented by database
+                      dataPohonId: int.tryParse(widget.pohon.id) ?? 0,
+                      statusEksekusi: _selectedAction == 'Pangkas' ? 2 : 3, // 2 = Pangkas, 3 = Tebang
+                      tanggalEksekusi: DateTime(
+                        int.parse(dateParts[2]),
+                        int.parse(dateParts[1]),
+                        int.parse(dateParts[0]),
+                      ),
+                      fotoSetelah: '', // Will be updated after upload
+                      createdBy: 1, // Hardcoded user ID
+                      createdDate: DateTime.now(),
+                      status: 1, // 1 = data pohon
+                      tinggiPohon: double.tryParse(_heightController.text) ?? 0.0,
+                      diameterPohon: double.tryParse(_diameterController.text) ?? 0.0,
+                    );
+
+                    await Provider.of<EksekusiProvider>(context, listen: false).addEksekusi(eksekusi, _selectedImage!);
+                    if (!mounted) return;
+                    await showDialog(
+                      context: context,
+                      builder: (ctx) => AlertDialog(
+                        title: const Text('Sukses!', style: TextStyle(color: Colors.green)),
+                        content: const Text('Data eksekusi berhasil disimpan.'),
+                        actions: [
+                          TextButton(
+                            onPressed: () => Navigator.of(ctx).pop(),
+                            child: const Text('OK'),
+                          ),
+                        ],
+                      ),
+                    );
+                    Navigator.of(context).pop();
+                  } catch (e) {
+                    await showDialog(
+                      context: context,
+                      builder: (ctx) => AlertDialog(
+                        title: const Text('Gagal!', style: TextStyle(color: Colors.red)),
+                        content: Text('Terjadi kesalahan saat menyimpan data:\n${e.toString()}'),
+                        actions: [
+                          TextButton(
+                            onPressed: () => Navigator.of(ctx).pop(),
+                            child: const Text('OK'),
+                          ),
+                        ],
+                      ),
+                    );
+                  }
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF125E72),
+                  minimumSize: Size(screenWidth * 0.5, 50),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                ),
+                child: Text(
+                  'Simpan',
+                  style: TextStyle(
+                    fontSize: screenWidth * 0.04,
+                    color: Colors.white,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}

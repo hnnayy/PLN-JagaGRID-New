@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
 import 'page/home_page.dart';
 import 'page/peta_pohon/map_page.dart';
+import 'page/report/treemapping_report.dart';
 import 'page/settings/settingcontent.dart' as settings;
+import 'package:flutter_application_2/page/notification/notification_page.dart';
+
 
 class NavigationMenu extends StatefulWidget {
   const NavigationMenu({Key? key}) : super(key: key);
@@ -16,10 +19,9 @@ class _NavigationMenuState extends State<NavigationMenu> {
   static final List<Widget> _widgetOptions = <Widget>[
     HomePage(),
     const MapPage(),
-    const Center(child: Text('Page 3')),
-    const Center(child: Text('Page 4')),
-    // Tampilkan konten setting di page 5
-    const settings.SettingsMainContent(),
+    TreeMappingReportPage(),
+    const NotificationPage(),            // ✅ Page 4 diganti dengan NotificationPage
+    const settings.SettingsMainContent(), // Page 5 Setting
   ];
 
   void _onItemTapped(int index) {
@@ -104,3 +106,4 @@ Widget _buildNavIcon(String assetPath, int index, {bool isSelected = false}) {
   }
 
 }
+
