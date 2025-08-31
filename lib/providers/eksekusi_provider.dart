@@ -1,30 +1,37 @@
-import 'package:flutter/material.dart';
 import 'dart:io';
+import 'package:flutter/material.dart';
 import '../models/eksekusi.dart';
 import '../services/eksekusi_service.dart';
 
 class EksekusiProvider with ChangeNotifier {
-  final EksekusiService _eksekusiService = EksekusiService();
+  final EksekusiService _service = EksekusiService();
+  List<Eksekusi> _eksekusiList = [];
 
-  Future<void> addEksekusi(Eksekusi eksekusi, File image) async {
-    try {
-      final imageUrl = await _eksekusiService.uploadImage(image);
-      final updatedEksekusi = Eksekusi(
-        id: eksekusi.id,
-        dataPohonId: eksekusi.dataPohonId,
-        statusEksekusi: eksekusi.statusEksekusi,
-        tanggalEksekusi: eksekusi.tanggalEksekusi,
-        fotoSetelah: imageUrl,
-        createdBy: eksekusi.createdBy,
-        createdDate: eksekusi.createdDate,
-        status: eksekusi.status,
-        tinggiPohon: eksekusi.tinggiPohon,
-        diameterPohon: eksekusi.diameterPohon,
-      );
-      await _eksekusiService.addEksekusi(updatedEksekusi);
+  List<Eksekusi> get eksekusiList => _eksekusiList;
+
+  EksekusiProvider() {
+    _loadEksekusi();
+  }
+
+  Future<void> _loadEksekusi() async {
+    _service.getAllEksekusi().listen((list) {
+      _eksekusiList = list;
+      for (var eksekusi in list) {
+        print('Eksekusi ID: ${eksekusi.id}, fotoSetelah: ${eksekusi.fotoSetelah ?? "Null"}, tipe: ${eksekusi.fotoSetelah.runtimeType}');
+      }
       notifyListeners();
+    });
+  }
+
+  Future<void> addEksekusi(Eksekusi eksekusi, File? image) async {
+    try {
+      print('Memulai proses penyimpanan eksekusi dengan ID pohon: ${eksekusi.dataPohonId}...');
+      await _service.addEksekusi(eksekusi, image);
+      print('Proses penyimpanan selesai.');
+      await _loadEksekusi(); // Muat ulang data setelah penambahan
     } catch (e) {
-      throw Exception('Error in provider: $e');
+      print('Error adding eksekusi: $e');
+      rethrow;
     }
   }
 }

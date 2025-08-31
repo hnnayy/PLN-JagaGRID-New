@@ -1,10 +1,12 @@
-import 'package:firebase_app_check/firebase_app_check.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:flutter_dotenv/flutter_dotenv.dart';
+// import 'package:flutter_dotenv/flutter_dotenv.dart'; // Opsional, aktifkan kalau sudah pakai .env
+import 'package:firebase_app_check/firebase_app_check.dart'; // Aktifkan lagi kalau mau App Check
+
 import 'firebase_options.dart';
 import 'providers/data_pohon_provider.dart';
+import 'providers/eksekusi_provider.dart'; // jangan lupa provider tambahan
 import 'page/splash_screen.dart';
 import 'page/peta_pohon/map_page.dart';
 import 'page/peta_pohon/add_data_page.dart';
@@ -20,11 +22,12 @@ void main() async {
       options: DefaultFirebaseOptions.currentPlatform,
     );
 
+    // AppCheck → bisa di-comment kalau lagi debugging
     await FirebaseAppCheck.instance.activate(
-      androidProvider: AndroidProvider.debug, // gunakan playIntegrity di prod
+      androidProvider: AndroidProvider.debug, // ganti playIntegrity di production
     );
 
-    print('✅ Firebase and App Check initialized successfully');
+    print('✅ Firebase initialized successfully + App Check active');
   } catch (e) {
     print('❌ Error initializing Firebase/AppCheck: $e');
   }
@@ -40,6 +43,7 @@ class MyApp extends StatelessWidget {
     return MultiProvider(
       providers: [
         ChangeNotifierProvider(create: (_) => DataPohonProvider()),
+        ChangeNotifierProvider(create: (_) => EksekusiProvider()), // provider tambahan
       ],
       child: MaterialApp(
         debugShowCheckedModeBanner: false,
