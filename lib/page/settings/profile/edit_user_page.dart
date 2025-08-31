@@ -3,7 +3,7 @@ import 'package:dropdown_search/dropdown_search.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 class EditUserPage extends StatefulWidget {
-  final Map<String, dynamic> user; // pakai dynamic biar fleksibel
+  final Map<String, dynamic> user; // data user lama
   final String docId;              // ID dokumen di Firestore
 
   const EditUserPage({
@@ -62,7 +62,7 @@ class _EditUserPageState extends State<EditUserPage> {
 
     try {
       await FirebaseFirestore.instance
-          .collection("data_pohon")   // ✅ sesuai struktur Firestore kamu
+          .collection("users")   // ✅ sudah diarahkan ke "users"
           .doc(widget.docId)
           .update(updatedUser);
 

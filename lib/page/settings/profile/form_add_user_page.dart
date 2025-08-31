@@ -61,9 +61,9 @@ class _FormAddUserPageState extends State<FormAddUserPage> {
           "password": passwordController.text.trim(),
         };
 
-        // 🔥 Simpan ke Firestore
+        // 🔥 Simpan ke koleksi users (sinkron dengan EditUserPage)
         final docRef = await FirebaseFirestore.instance
-            .collection("data_pohon")
+            .collection("users")
             .add(newUser);
 
         // Tambahkan docId ke map biar bisa dipakai di EditUserPage
