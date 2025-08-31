@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
-import 'layoutsetting.dart'; // Import layout yang sudah ada
+import '../layoutsetting.dart'; // Import layout yang sudah ada
+import '../assets_jtm/add_assets.dart'; // Import halaman add assets yang baru dibuat
+import '../assets_jtm/daftar_jtm.dart'; // Import halaman daftar JTM yang baru dibuat
 
 // File: lib/page/settings/assets_jtm.dart
 class AssetsJTMPage extends StatelessWidget {
@@ -81,16 +83,16 @@ class AssetsJTMPage extends StatelessWidget {
                                 Navigator.push(
                                   context,
                                   MaterialPageRoute(
-                                    builder: (context) => const TambahAssetsJTMPage(),
+                                    builder: (context) => const AddAssetsPage(),
                                   ),
                                 );
                                 break;
                               case 1:
-                                // Navigasi ke halaman Daftar Assets JTM
+                                // Navigasi ke halaman Daftar Assets JTM (daftar_jtm.dart)
                                 Navigator.push(
                                   context,
                                   MaterialPageRoute(
-                                    builder: (context) => const DaftarAssetsJTMPage(),
+                                    builder: (context) => DaftarJTMPage(),
                                   ),
                                 );
                                 break;
@@ -144,128 +146,6 @@ class AssetsJTMPage extends StatelessWidget {
               ),
             ),
           ],
-        ),
-      ),
-    );
-  }
-}
-
-// Halaman untuk Tambah Assets JTM
-class TambahAssetsJTMPage extends StatelessWidget {
-  const TambahAssetsJTMPage({Key? key}) : super(key: key);
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      decoration: const BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topCenter,
-          end: Alignment.bottomCenter,
-          colors: [
-            Color(0xFF125E72), 
-            Color(0xFF14A2B9),
-          ],
-        ),
-      ),
-      child: Scaffold(
-        backgroundColor: Colors.transparent,
-        appBar: AppBar(
-          backgroundColor: Colors.transparent,
-          elevation: 0,
-          leading: IconButton(
-            icon: const Icon(Icons.arrow_back, color: Colors.white),
-            onPressed: () => Navigator.pop(context),
-          ),
-          title: const Text(
-            'Tambah Assets JTM',
-            style: TextStyle(
-              color: Colors.white,
-              fontSize: 20,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-          centerTitle: true,
-        ),
-        body: Container(
-          margin: const EdgeInsets.only(top: 20),
-          decoration: const BoxDecoration(
-            color: Color(0xFFF5F7FA),
-            borderRadius: BorderRadius.only(
-              topLeft: Radius.circular(32),
-              topRight: Radius.circular(32),
-            ),
-          ),
-          child: const Center(
-            child: Text(
-              'Form Tambah Assets JTM\n(Konten form akan ditambahkan di sini)',
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                fontSize: 16,
-                color: Color(0xFF2C3E50),
-              ),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-// Halaman untuk Daftar Assets JTM
-class DaftarAssetsJTMPage extends StatelessWidget {
-  const DaftarAssetsJTMPage({Key? key}) : super(key: key);
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      decoration: const BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topCenter,
-          end: Alignment.bottomCenter,
-          colors: [
-            Color(0xFF125E72), 
-            Color(0xFF14A2B9),
-          ],
-        ),
-      ),
-      child: Scaffold(
-        backgroundColor: Colors.transparent,
-        appBar: AppBar(
-          backgroundColor: Colors.transparent,
-          elevation: 0,
-          leading: IconButton(
-            icon: const Icon(Icons.arrow_back, color: Colors.white),
-            onPressed: () => Navigator.pop(context),
-          ),
-          title: const Text(
-            'Daftar Assets JTM',
-            style: TextStyle(
-              color: Colors.white,
-              fontSize: 20,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-          centerTitle: true,
-        ),
-        body: Container(
-          margin: const EdgeInsets.only(top: 20),
-          decoration: const BoxDecoration(
-            color: Color(0xFFF5F7FA),
-            borderRadius: BorderRadius.only(
-              topLeft: Radius.circular(32),
-              topRight: Radius.circular(32),
-            ),
-          ),
-          child: const Center(
-            child: Text(
-              'List Assets JTM\n(Konten daftar akan ditambahkan di sini)',
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                fontSize: 16,
-                color: Color(0xFF2C3E50),
-              ),
-            ),
-          ),
         ),
       ),
     );
