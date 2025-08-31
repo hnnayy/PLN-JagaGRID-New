@@ -1,3 +1,4 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'dart:io';
@@ -356,23 +357,24 @@ class _EksekusiPageState extends State<EksekusiPage> {
                   try {
                     final dateParts = _dateController.text.split('/');
                     final eksekusi = Eksekusi(
-                      id: 0, // Auto-incremented by database
+                      id: '', // String kosong, akan diisi oleh Firestore
                       dataPohonId: int.tryParse(widget.pohon.id) ?? 0,
-                      statusEksekusi: _selectedAction == 'Pangkas' ? 2 : 3, // 2 = Pangkas, 3 = Tebang
-                      tanggalEksekusi: DateTime(
+                      statusEksekusi: _selectedAction == 'Pangkas' ? 2 : 3,
+                      tanggalEksekusi: Timestamp.fromDate(DateTime(
                         int.parse(dateParts[2]),
                         int.parse(dateParts[1]),
                         int.parse(dateParts[0]),
-                      ),
-                      fotoSetelah: '', // Will be updated after upload
-                      createdBy: 1, // Hardcoded user ID
-                      createdDate: DateTime.now(),
-                      status: 1, // 1 = data pohon
+                      )),
+                      fotoSetelah: null, // Biarkan null, akan diatur oleh EksekusiService
+                      createdBy: 1,
+                      createdDate: Timestamp.now(),
+                      status: 1,
                       tinggiPohon: double.tryParse(_heightController.text) ?? 0.0,
                       diameterPohon: double.tryParse(_diameterController.text) ?? 0.0,
                     );
 
-                    await Provider.of<EksekusiProvider>(context, listen: false).addEksekusi(eksekusi, _selectedImage!);
+                    print('Mencoba menyimpan eksekusi: ${eksekusi.toMap()}');
+                    await Provider.of<EksekusiProvider>(context, listen: false).addEksekusi(eksekusi, _selectedImage);
                     if (!mounted) return;
                     await showDialog(
                       context: context,
@@ -387,8 +389,9 @@ class _EksekusiPageState extends State<EksekusiPage> {
                         ],
                       ),
                     );
-                    Navigator.of(context).pop();
+                    Navigator.of(context).pop(); // Kembali ke halaman sebelumnya
                   } catch (e) {
+                    print('Error di EksekusiPage: $e');
                     await showDialog(
                       context: context,
                       builder: (ctx) => AlertDialog(
