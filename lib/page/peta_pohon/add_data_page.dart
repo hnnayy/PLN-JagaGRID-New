@@ -1,4 +1,3 @@
-// add_data_page.dart
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
@@ -25,13 +24,14 @@ class _AddDataPageState extends State<AddDataPage> {
   final _kmsAsetController = TextEditingController();
   final _vendorController = TextEditingController();
   final _dateController = TextEditingController();
-  final _treeNameController = TextEditingController();
+  final _initialHeightController = TextEditingController(); // Tambahan untuk tinggi awal
   final _coordinatesController = TextEditingController();
   final _noteController = TextEditingController();
   File? _fotoPohon;
 
   int? _selectedTujuan;
   int? _selectedPrioritas;
+  String? _selectedNamaPohon; // Diganti dari _treeNameController
 
   final Map<int, String> _tujuanOptions = {
     1: 'Tebang Pangkas',
@@ -81,7 +81,7 @@ class _AddDataPageState extends State<AddDataPage> {
     _kmsAsetController.dispose();
     _vendorController.dispose();
     _dateController.dispose();
-    _treeNameController.dispose();
+    _initialHeightController.dispose();
     _coordinatesController.dispose();
     _noteController.dispose();
     super.dispose();
@@ -201,12 +201,27 @@ class _AddDataPageState extends State<AddDataPage> {
                 },
               ),
               const SizedBox(height: 10),
+              DropdownButtonFormField<String>(
+                value: _selectedNamaPohon,
+                decoration: _buildInputDecoration('Nama Pohon', 'Pilih nama pohon'),
+                items: DataPohon.growthRates.keys.map((String species) {
+                  return DropdownMenuItem<String>(
+                    value: species,
+                    child: Text(species, style: const TextStyle(color: Colors.black)),
+                  );
+                }).toList(),
+                onChanged: (String? newValue) {
+                  setState(() => _selectedNamaPohon = newValue);
+                },
+                validator: (value) => value == null ? 'Nama pohon wajib diisi' : null,
+              ),
+              const SizedBox(height: 10),
               TextFormField(
-                controller: _treeNameController,
+                controller: _initialHeightController,
                 style: const TextStyle(color: Colors.black),
-                keyboardType: TextInputType.text,
-                decoration: _buildInputDecoration('Nama Pohon', 'Masukkan nama pohon'),
-                validator: (value) => value!.isEmpty ? 'Nama wajib diisi' : null,
+                keyboardType: TextInputType.number,
+                decoration: _buildInputDecoration('Tinggi Awal (meter)', 'Masukkan tinggi awal'),
+                validator: (value) => value!.isEmpty ? 'Tinggi wajib diisi' : null,
               ),
               const SizedBox(height: 10),
               GestureDetector(
@@ -327,13 +342,16 @@ class _AddDataPageState extends State<AddDataPage> {
                             asetJtmId: int.tryParse(_kmsAsetController.text) ?? 0,
                             scheduleDate: DateTime(int.parse(dateParts[2]), int.parse(dateParts[1]), int.parse(dateParts[0])),
                             prioritas: _selectedPrioritas ?? 1,
-                            namaPohon: _treeNameController.text,
+                            namaPohon: _selectedNamaPohon ?? '',
                             fotoPohon: '',
                             koordinat: _coordinatesController.text,
                             tujuanPenjadwalan: _selectedTujuan ?? 1,
                             catatan: _noteController.text,
                             createdBy: 1,
                             createdDate: DateTime.now(),
+                            growthRate: DataPohon.growthRates[_selectedNamaPohon!]!,
+                            initialHeight: double.parse(_initialHeightController.text),
+                            notificationDate: DateTime.now(), // Akan dihitung di service
                           );
 
                           await Provider.of<DataPohonProvider>(context, listen: false).addPohon(pohon, _fotoPohon);

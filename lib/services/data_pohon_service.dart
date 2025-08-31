@@ -45,7 +45,21 @@ class DataPohonService {
         print('Tidak ada gambar yang diunggah, fotoUrl akan null.');
       }
 
-      final dataToSave = pohon.toMap()..update('foto_pohon', (_) => fotoUrl, ifAbsent: () => fotoUrl);
+      // Hitung scheduleDate dan notificationDate berdasarkan growthRate dan initialHeight
+      double growthRate = DataPohon.growthRates[pohon.namaPohon]! / 100; // cm to meters
+      double timeToRiskYears = (3.0 - pohon.initialHeight) / growthRate;
+      if (pohon.prioritas == 3) timeToRiskYears *= 0.8; // High
+      else if (pohon.prioritas == 1) timeToRiskYears *= 1.2; // Low
+      int timeToRiskDays = (timeToRiskYears * 365).round();
+      DateTime estimatedRiskDate = DateTime.now().add(Duration(days: timeToRiskDays));
+      DateTime notificationDate = estimatedRiskDate.subtract(const Duration(days: 3));
+
+      final dataToSave = pohon.toMap()
+        ..update('foto_pohon', (_) => fotoUrl, ifAbsent: () => fotoUrl)
+        ..update('schedule_date', (_) => estimatedRiskDate.toIso8601String())
+        ..update('notification_date', (_) => notificationDate.toIso8601String())
+        ..update('growth_rate', (_) => DataPohon.growthRates[pohon.namaPohon]!, ifAbsent: () => 0.0)
+        ..update('initial_height', (_) => pohon.initialHeight, ifAbsent: () => 0.0);
       final docRef = await _db.collection('data_pohon').add(dataToSave).timeout(const Duration(seconds: 30));
       await docRef.update({'id': docRef.id});
       print('Data berhasil disimpan dengan ID: ${docRef.id} dan fotoUrl: ${fotoUrl ?? "null"}');
@@ -59,7 +73,6 @@ class DataPohonService {
     return _db.collection('data_pohon').snapshots().map(
       (snapshot) => snapshot.docs.map((doc) {
         final data = doc.data();
-        // Pastikan semua nilai dikonversi dengan aman sebelum masuk ke DataPohon.fromMap
         return DataPohon.fromMap({
           'id': doc.id,
           'id_pohon': data['id_pohon'] as String? ?? '',
@@ -82,6 +95,9 @@ class DataPohonService {
           'catatan': data['catatan'] as String? ?? '',
           'createdby': (data['createdby'] as int?) ?? 0,
           'createddate': (data['createddate'] as String?) ?? DateTime.now().toIso8601String(),
+          'growth_rate': (data['growth_rate'] as num?)?.toDouble() ?? 0.0,
+          'initial_height': (data['initial_height'] as num?)?.toDouble() ?? 0.0,
+          'notification_date': (data['notification_date'] as String?) ?? DateTime.now().toIso8601String(),
         });
       }).toList(),
     );
