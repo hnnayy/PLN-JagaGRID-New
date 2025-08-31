@@ -8,11 +8,11 @@ import 'providers/data_pohon_provider.dart';
 import 'page/splash_screen.dart';
 import 'page/peta_pohon/map_page.dart';
 import 'page/peta_pohon/add_data_page.dart';
+import 'providers/eksekusi_provider.dart'; // Tambahan untuk EksekusiProvider
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-
-  try {
+try {
     // Optional: load .env
     // await dotenv.load(fileName: ".env");
 
@@ -29,6 +29,16 @@ void main() async {
     print('❌ Error initializing Firebase/AppCheck: $e');
   }
 
+  try {
+    await Firebase.initializeApp(
+      options: DefaultFirebaseOptions.currentPlatform,
+    );
+    await FirebaseAppCheck.instance.activate(
+      androidProvider: AndroidProvider.debug,
+    );
+  } catch (e) {
+    print('Error initializing Firebase or App Check: $e');
+  }
   runApp(const MyApp());
 }
 
@@ -40,10 +50,11 @@ class MyApp extends StatelessWidget {
     return MultiProvider(
       providers: [
         ChangeNotifierProvider(create: (_) => DataPohonProvider()),
+        ChangeNotifierProvider(create: (_) => EksekusiProvider()), // Pastikan EksekusiProvider tersedia
       ],
       child: MaterialApp(
         debugShowCheckedModeBanner: false,
-        home: const SplashScreen(),
+        home: SplashScreen(),
         routes: {
           '/map': (context) => const MapPage(),
           '/addData': (context) => const AddDataPage(),
