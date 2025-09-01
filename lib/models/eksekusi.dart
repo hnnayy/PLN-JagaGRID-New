@@ -2,7 +2,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 
 class Eksekusi {
   final String id;
-  final int dataPohonId;
+  final String dataPohonId; // Diubah dari int ke String untuk merujuk ke id DataPohon
   final int statusEksekusi;
   final Timestamp tanggalEksekusi;
   final String? fotoSetelah; // Diubah menjadi nullable untuk menangani null
@@ -42,11 +42,11 @@ class Eksekusi {
 
   factory Eksekusi.fromMap(Map<String, dynamic> map) {
     return Eksekusi(
-      id: map['id'] as String? ?? '', // Penanganan null
-      dataPohonId: map['data_pohon_id'] as int? ?? 0,
+      id: map['id'] as String? ?? '',
+      dataPohonId: map['data_pohon_id'] as String? ?? '', // Diubah ke String
       statusEksekusi: map['status_eksekusi'] as int? ?? 1,
       tanggalEksekusi: map['tanggal_eksekusi'] as Timestamp? ?? Timestamp.now(),
-      fotoSetelah: map['foto_setelah'] as String?, // Terima null
+      fotoSetelah: map['foto_setelah'] as String?,
       createdBy: map['createdby'] as int? ?? 0,
       createdDate: map['createddate'] as Timestamp? ?? Timestamp.now(),
       status: map['status'] as int? ?? 1,

@@ -358,7 +358,7 @@ class _EksekusiPageState extends State<EksekusiPage> {
                     final dateParts = _dateController.text.split('/');
                     final eksekusi = Eksekusi(
                       id: '', // String kosong, akan diisi oleh Firestore
-                      dataPohonId: int.tryParse(widget.pohon.id) ?? 0,
+                      dataPohonId: widget.pohon.id, // Gunakan langsung widget.pohon.id sebagai String
                       statusEksekusi: _selectedAction == 'Pangkas' ? 2 : 3,
                       tanggalEksekusi: Timestamp.fromDate(DateTime(
                         int.parse(dateParts[2]),

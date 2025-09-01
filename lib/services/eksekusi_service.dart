@@ -13,6 +13,13 @@ class EksekusiService {
 
   Future<void> addEksekusi(Eksekusi eksekusi, File? image) async {
     try {
+      // Validasi apakah dataPohonId merujuk ke id yang ada di data_pohon
+      final dataPohonSnapshot = await _db.collection('data_pohon').doc(eksekusi.dataPohonId).get();
+      if (!dataPohonSnapshot.exists) {
+        print('Error: dataPohonId ${eksekusi.dataPohonId} tidak ditemukan di koleksi data_pohon');
+        throw Exception('Referensi dataPohonId tidak valid');
+      }
+
       String? fotoUrl; // Tetap nullable
       if (image != null) {
         if (!await image.exists()) {
