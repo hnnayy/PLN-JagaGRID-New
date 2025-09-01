@@ -45,12 +45,45 @@ class _EksekusiPageState extends State<EksekusiPage> {
   }
 
   Future<void> _pickImage() async {
-    final XFile? image = await _picker.pickImage(source: ImageSource.camera);
-    if (image != null) {
-      setState(() {
-        _selectedImage = File(image.path);
-      });
-    }
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text('Pilih Sumber Foto'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              ListTile(
+                leading: const Icon(Icons.camera_alt),
+                title: const Text('Ambil Foto'),
+                onTap: () async {
+                  Navigator.of(context).pop();
+                  final XFile? image = await _picker.pickImage(source: ImageSource.camera);
+                  if (image != null) {
+                    setState(() {
+                      _selectedImage = File(image.path);
+                    });
+                  }
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.photo_library),
+                title: const Text('Pilih dari Galeri'),
+                onTap: () async {
+                  Navigator.of(context).pop();
+                  final XFile? image = await _picker.pickImage(source: ImageSource.gallery);
+                  if (image != null) {
+                    setState(() {
+                      _selectedImage = File(image.path);
+                    });
+                  }
+                },
+              ),
+            ],
+          ),
+        );
+      },
+    );
   }
 
   Future<void> _selectDate(BuildContext context) async {
@@ -292,7 +325,7 @@ class _EksekusiPageState extends State<EksekusiPage> {
                           ),
                         ),
                         child: Text(
-                          _selectedImage == null ? 'Ambil Foto' : 'Ganti Foto',
+                          _selectedImage == null ? 'Pilih Foto' : 'Ganti Foto',
                           style: TextStyle(
                             fontSize: screenWidth * 0.035,
                             color: Colors.white,
