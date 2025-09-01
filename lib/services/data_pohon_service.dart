@@ -70,36 +70,39 @@ class DataPohonService {
   }
 
   Stream<List<DataPohon>> getAllDataPohon() {
-    return _db.collection('data_pohon').snapshots().map(
-      (snapshot) => snapshot.docs.map((doc) {
-        final data = doc.data();
-        return DataPohon.fromMap({
-          'id': doc.id,
-          'id_pohon': data['id_pohon'] as String? ?? '',
-          'up3': data['up3'] as String? ?? '',
-          'ulp': data['ulp'] as String? ?? '',
-          'penyulang': data['penyulang'] as String? ?? '',
-          'zona_proteksi': data['zona_proteksi'] as String? ?? '',
-          'section': data['section'] as String? ?? '',
-          'kms_aset': data['kms_aset'] as String? ?? '',
-          'vendor': data['vendor'] as String? ?? '',
-          'parent_id': (data['parent_id'] as int?) ?? 0,
-          'unit_id': (data['unit_id'] as int?) ?? 0,
-          'aset_jtm_id': (data['aset_jtm_id'] as int?) ?? 0,
-          'schedule_date': (data['schedule_date'] as String?) ?? DateTime.now().toIso8601String(),
-          'prioritas': (data['prioritas'] as int?) ?? 1,
-          'nama_pohon': data['nama_pohon'] as String? ?? '',
-          'foto_pohon': data['foto_pohon'] as String? ?? '',
-          'koordinat': data['koordinat'] as String? ?? '',
-          'tujuan_penjadwalan': (data['tujuan_penjadwalan'] as int?) ?? 1,
-          'catatan': data['catatan'] as String? ?? '',
-          'createdby': (data['createdby'] as int?) ?? 0,
-          'createddate': (data['createddate'] as String?) ?? DateTime.now().toIso8601String(),
-          'growth_rate': (data['growth_rate'] as num?)?.toDouble() ?? 0.0,
-          'initial_height': (data['initial_height'] as num?)?.toDouble() ?? 0.0,
-          'notification_date': (data['notification_date'] as String?) ?? DateTime.now().toIso8601String(),
-        });
-      }).toList(),
-    );
+    return _db.collection('data_pohon')
+        .orderBy('createddate', descending: true) // Sort by createddate, newest first
+        .snapshots()
+        .map(
+          (snapshot) => snapshot.docs.map((doc) {
+            final data = doc.data();
+            return DataPohon.fromMap({
+              'id': doc.id,
+              'id_pohon': data['id_pohon'] as String? ?? '',
+              'up3': data['up3'] as String? ?? '',
+              'ulp': data['ulp'] as String? ?? '',
+              'penyulang': data['penyulang'] as String? ?? '',
+              'zona_proteksi': data['zona_proteksi'] as String? ?? '',
+              'section': data['section'] as String? ?? '',
+              'kms_aset': data['kms_aset'] as String? ?? '',
+              'vendor': data['vendor'] as String? ?? '',
+              'parent_id': (data['parent_id'] as int?) ?? 0,
+              'unit_id': (data['unit_id'] as int?) ?? 0,
+              'aset_jtm_id': (data['aset_jtm_id'] as int?) ?? 0,
+              'schedule_date': (data['schedule_date'] as String?) ?? DateTime.now().toIso8601String(),
+              'prioritas': (data['prioritas'] as int?) ?? 1,
+              'nama_pohon': data['nama_pohon'] as String? ?? '',
+              'foto_pohon': data['foto_pohon'] as String? ?? '',
+              'koordinat': data['koordinat'] as String? ?? '',
+              'tujuan_penjadwalan': (data['tujuan_penjadwalan'] as int?) ?? 1,
+              'catatan': data['catatan'] as String? ?? '',
+              'createdby': (data['createdby'] as int?) ?? 0,
+              'createddate': (data['createddate'] as String?) ?? DateTime.now().toIso8601String(),
+              'growth_rate': (data['growth_rate'] as num?)?.toDouble() ?? 0.0,
+              'initial_height': (data['initial_height'] as num?)?.toDouble() ?? 0.0,
+              'notification_date': (data['notification_date'] as String?) ?? DateTime.now().toIso8601String(),
+            });
+          }).toList(),
+        );
   }
 }
