@@ -1,15 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:cached_network_image/cached_network_image.dart';
-import 'package:provider/provider.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
-import 'dart:developer' as developer;
 import '../../models/data_pohon.dart';
-import '../../models/eksekusi.dart';
-import '../../providers/eksekusi_provider.dart';
 import '../../constants/colors.dart';
-import '../../services/eksekusi_service.dart';
 import 'eksekusi.dart';
+import 'riwayat_eksekusi.dart'; // Import the RiwayatEksekusiPage
+import 'dart:developer' as developer;
 
 class TreeMappingDetailPage extends StatefulWidget {
   final DataPohon? pohon;
@@ -25,11 +21,11 @@ class _TreeMappingDetailPageState extends State<TreeMappingDetailPage> {
   late LatLng _initialPosition;
   MapType _currentMapType = MapType.satellite;
   Set<Marker> _markers = {};
-  final EksekusiService _eksekusiService = EksekusiService();
 
   @override
   void initState() {
     super.initState();
+    // Gunakan koordinat dari pohon jika tersedia, fallback ke Parepare
     if (widget.pohon != null && widget.pohon!.koordinat.isNotEmpty) {
       try {
         final coords = widget.pohon!.koordinat.split(',');
@@ -39,37 +35,25 @@ class _TreeMappingDetailPageState extends State<TreeMappingDetailPage> {
           _initialPosition = LatLng(lat, lng);
         } else {
           developer.log('Koordinat tidak valid: ${widget.pohon!.koordinat}', name: 'TreeMappingDetailPage');
-          _initialPosition = const LatLng(-4.0167, 120.1833);
+          _initialPosition = const LatLng(-4.0167, 120.1833); // Fallback
         }
       } catch (e) {
         developer.log('Error parsing koordinat: $e', name: 'TreeMappingDetailPage');
-        _initialPosition = const LatLng(-4.0167, 120.1833);
+        _initialPosition = const LatLng(-4.0167, 120.1833); // Fallback
       }
     } else {
       developer.log('Koordinat kosong atau pohon null', name: 'TreeMappingDetailPage');
-      _initialPosition = const LatLng(-4.0167, 120.1833);
+      _initialPosition = const LatLng(-4.0167, 120.1833); // Parepare, Sulawesi Selatan
     }
 
     _markers.add(
       Marker(
-        markerId: MarkerId('tree_${widget.pohon?.id ?? "unknown"}'),
+        markerId: MarkerId('tree_${widget.pohon?.idPohon ?? "unknown"}'),
         position: _initialPosition,
         infoWindow: InfoWindow(title: 'Pohon ID #${widget.pohon?.idPohon ?? "unknown"}'),
         icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueGreen),
       ),
     );
-
-    // Load eksekusi data when the page initializes
-    _loadEksekusi();
-  }
-
-  Future<void> _loadEksekusi() async {
-    try {
-      final eksekusiProvider = Provider.of<EksekusiProvider>(context, listen: false);
-      eksekusiProvider.setEksekusiStream(_eksekusiService.getAllEksekusi());
-    } catch (e) {
-      developer.log('Error loading eksekusi: $e', name: 'TreeMappingDetailPage');
-    }
   }
 
   @override
@@ -86,7 +70,6 @@ class _TreeMappingDetailPageState extends State<TreeMappingDetailPage> {
   Widget build(BuildContext context) {
     final screenWidth = MediaQuery.of(context).size.width;
     final screenHeight = MediaQuery.of(context).size.height;
-    final double fontSize = screenWidth * 0.04; // Calculate font size dynamically
 
     return Scaffold(
       appBar: AppBar(
@@ -95,13 +78,18 @@ class _TreeMappingDetailPageState extends State<TreeMappingDetailPage> {
           icon: const Icon(Icons.arrow_back, color: Colors.white),
           onPressed: () => Navigator.of(context).pop(),
         ),
-        title: Text(
-          'Pohon ID #${widget.pohon?.idPohon ?? "unknown"}',
-          style: TextStyle(
-            color: AppColors.yellow,
-            fontSize: fontSize, // Use the dynamic font size
-            fontWeight: FontWeight.bold,
-          ),
+        title: Row(
+          mainAxisAlignment: MainAxisAlignment.start,
+          children: [
+            Text(
+              'Pohon ID #${widget.pohon?.idPohon ?? "unknown"}',
+              style: TextStyle(
+                color: AppColors.yellow,
+                fontSize: screenWidth * 0.05,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ],
         ),
       ),
       body: widget.pohon == null
@@ -109,6 +97,7 @@ class _TreeMappingDetailPageState extends State<TreeMappingDetailPage> {
           : SafeArea(
               child: Stack(
                 children: [
+                  // Map Section
                   Column(
                     children: [
                       Padding(
@@ -127,7 +116,7 @@ class _TreeMappingDetailPageState extends State<TreeMappingDetailPage> {
                               ),
                               child: DropdownButton<MapType>(
                                 value: _currentMapType,
-                                style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold, fontSize: fontSize),
+                                style: const TextStyle(color: Colors.black, fontWeight: FontWeight.bold),
                                 icon: const Icon(Icons.arrow_drop_down, color: Colors.black),
                                 dropdownColor: Colors.white,
                                 items: const [
@@ -176,690 +165,500 @@ class _TreeMappingDetailPageState extends State<TreeMappingDetailPage> {
                       ),
                     ],
                   ),
-                  Consumer<EksekusiProvider>(
-                    builder: (context, eksekusiProvider, child) {
-                      final eksekusiList = eksekusiProvider.eksekusiList;
-                      developer.log('eksekusiList: $eksekusiList', name: 'TreeMappingDetailPage');
-                      final latestEksekusi = widget.pohon != null
-                          ? eksekusiList.firstWhere(
-                              (eksekusi) => eksekusi.dataPohonId == widget.pohon!.id,
-                              orElse: () => Eksekusi(
-                                id: '',
-                                dataPohonId: widget.pohon!.id,
-                                statusEksekusi: 0,
-                                tanggalEksekusi: Timestamp.now(),
-                                fotoSetelah: '',
-                                createdBy: 0,
-                                createdDate: Timestamp.now(),
-                                status: 0,
-                                tinggiPohon: 0.0,
-                                diameterPohon: 0.0,
-                              ),
-                            )
-                          : null;
-                      final relatedEksekusi = widget.pohon != null
-                          ? eksekusiList.where((eksekusi) => eksekusi.dataPohonId == widget.pohon!.id).toList()
-                          : <Eksekusi>[];
-                      developer.log('relatedEksekusi: $relatedEksekusi', name: 'TreeMappingDetailPage');
-
-                      return DraggableScrollableSheet(
-                        initialChildSize: 0.1,
-                        minChildSize: 0.1,
-                        maxChildSize: 0.9,
-                        builder: (BuildContext context, ScrollController scrollController) {
-                          return Container(
-                            decoration: const BoxDecoration(
-                              color: Colors.white,
-                              borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: Colors.black26,
-                                  blurRadius: 10,
-                                  offset: Offset(0, -2),
-                                ),
-                              ],
+                  // Draggable Sheet with Details
+                  DraggableScrollableSheet(
+                    initialChildSize: 0.1,
+                    minChildSize: 0.1,
+                    maxChildSize: 0.9,
+                    builder: (BuildContext context, ScrollController scrollController) {
+                      return Container(
+                        decoration: const BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black26,
+                              blurRadius: 10,
+                              offset: Offset(0, -2),
                             ),
-                            child: Column(
-                              children: [
-                                Expanded(
-                                  child: ListView(
-                                    controller: scrollController,
-                                    padding: const EdgeInsets.all(0),
-                                    physics: const AlwaysScrollableScrollPhysics(),
-                                    children: [
-                                      Center(
-                                        child: Container(
-                                          margin: const EdgeInsets.symmetric(vertical: 8),
-                                          width: screenWidth * 0.15,
-                                          height: 5,
-                                          decoration: BoxDecoration(
-                                            color: Colors.grey[300],
-                                            borderRadius: BorderRadius.circular(10),
-                                          ),
+                          ],
+                        ),
+                        child: Column(
+                          children: [
+                            Expanded(
+                              child: ListView(
+                                controller: scrollController,
+                                padding: const EdgeInsets.all(0),
+                                physics: const AlwaysScrollableScrollPhysics(),
+                                children: [
+                                  Center(
+                                    child: Container(
+                                      margin: const EdgeInsets.symmetric(vertical: 8),
+                                      width: screenWidth * 0.15,
+                                      height: 5,
+                                      decoration: BoxDecoration(
+                                        color: Colors.grey[300],
+                                        borderRadius: BorderRadius.circular(10),
+                                      ),
+                                    ),
+                                  ),
+                                  if (scrollController.hasClients && scrollController.position.pixels < 50)
+                                    Padding(
+                                      padding: const EdgeInsets.fromLTRB(16, 0, 16, 32),
+                                      child: Text(
+                                        'Pohon ID #${widget.pohon!.idPohon}',
+                                        style: TextStyle(
+                                          fontSize: screenWidth * 0.045,
+                                          fontWeight: FontWeight.bold,
                                         ),
                                       ),
-                                      Padding(
-                                        padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
-                                        child: Text(
-                                          'Pohon ID #${widget.pohon!.idPohon}',
-                                          style: TextStyle(
-                                            fontSize: fontSize,
-                                            fontWeight: FontWeight.bold,
+                                    )
+                                  else
+                                    Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Padding(
+                                          padding: const EdgeInsets.fromLTRB(16, 0, 16, 32),
+                                          child: Text(
+                                            'Pohon ID #${widget.pohon!.idPohon}',
+                                            style: TextStyle(
+                                              fontSize: screenWidth * 0.045,
+                                              fontWeight: FontWeight.bold,
+                                            ),
                                           ),
                                         ),
-                                      ),
-                                      Container(
-                                        margin: const EdgeInsets.symmetric(horizontal: 16.0),
-                                        padding: const EdgeInsets.all(16.0),
-                                        decoration: BoxDecoration(
-                                          color: Colors.lightBlue[50],
-                                          border: Border.all(color: Colors.grey[300]!),
-                                          borderRadius: BorderRadius.circular(12),
-                                        ),
-                                        child: Column(
-                                          crossAxisAlignment: CrossAxisAlignment.start,
-                                          children: [
-                                            ClipRRect(
+                                        Center(
+                                          child: Padding(
+                                            padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                                            child: ClipRRect(
                                               borderRadius: BorderRadius.circular(12),
                                               child: CachedNetworkImage(
                                                 imageUrl: widget.pohon!.fotoPohon.isNotEmpty
                                                     ? widget.pohon!.fotoPohon
-                                                    : 'https://via.placeholder.com/150?text=Foto+Sebelum',
-                                                width: screenWidth * 0.8,
+                                                    : 'https://via.placeholder.com/150?text=Foto+Pohon',
+                                                width: screenWidth * 0.7,
                                                 height: screenHeight * 0.25,
                                                 fit: BoxFit.cover,
                                                 placeholder: (context, url) => Container(
-                                                  width: screenWidth * 0.8,
+                                                  width: screenWidth * 0.7,
                                                   height: screenHeight * 0.25,
                                                   color: Colors.grey,
                                                   child: const Center(child: CircularProgressIndicator()),
                                                 ),
                                                 errorWidget: (context, url, error) => Container(
-                                                  width: screenWidth * 0.8,
+                                                  width: screenWidth * 0.7,
                                                   height: screenHeight * 0.25,
                                                   color: Colors.grey,
                                                   child: const Center(child: Text('Gambar Tidak Tersedia')),
                                                 ),
                                               ),
                                             ),
-                                            const SizedBox(height: 16),
-                                            Row(
-                                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                              children: [
-                                                Text(
-                                                  'Sektor',
-                                                  style: TextStyle(
-                                                    fontSize: fontSize,
-                                                    fontWeight: FontWeight.bold,
-                                                  ),
+                                          ),
+                                        ),
+                                        Padding(
+                                          padding: const EdgeInsets.all(16.0),
+                                          child: Center(
+                                            child: Container(
+                                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                                              decoration: BoxDecoration(
+                                                color: const Color(0xFFFFD700), // Yellow color from the image
+                                                borderRadius: BorderRadius.circular(8),
+                                              ),
+                                              child: Text(
+                                                'Prioritas: ${widget.pohon!.prioritas == 1 ? "Rendah" : widget.pohon!.prioritas == 2 ? "Sedang" : "Tinggi"}',
+                                                style: TextStyle(
+                                                  fontSize: screenWidth * 0.04,
+                                                  color: Colors.black,
+                                                  fontWeight: FontWeight.bold,
                                                 ),
-                                                Text(
+                                                textAlign: TextAlign.center,
+                                              ),
+                                            ),
+                                          ),
+                                        ),
+                                        Padding(
+                                          padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+                                          child: Row(
+                                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                            crossAxisAlignment: CrossAxisAlignment.start,
+                                            children: [
+                                              Text(
+                                                'ID Pohon',
+                                                style: TextStyle(
+                                                  fontSize: screenWidth * 0.04,
+                                                  fontWeight: FontWeight.bold,
+                                                ),
+                                              ),
+                                              Flexible(
+                                                child: Text(
+                                                  widget.pohon!.idPohon.isNotEmpty ? widget.pohon!.idPohon : 'P023',
+                                                  style: TextStyle(
+                                                    fontSize: screenWidth * 0.04,
+                                                  ),
+                                                  softWrap: true,
+                                                  textAlign: TextAlign.end,
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                        Padding(
+                                          padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
+                                          child: Row(
+                                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                            crossAxisAlignment: CrossAxisAlignment.start,
+                                            children: [
+                                              Text(
+                                                'Sektor',
+                                                style: TextStyle(
+                                                  fontSize: screenWidth * 0.04,
+                                                  fontWeight: FontWeight.bold,
+                                                ),
+                                              ),
+                                              Flexible(
+                                                child: Text(
                                                   widget.pohon!.up3.isNotEmpty && widget.pohon!.ulp.isNotEmpty
                                                       ? '${widget.pohon!.up3}, ${widget.pohon!.ulp}'
                                                       : 'Parepare, Sulawesi Selatan',
                                                   style: TextStyle(
-                                                    fontSize: fontSize,
+                                                    fontSize: screenWidth * 0.04,
                                                   ),
+                                                  softWrap: true,
+                                                  textAlign: TextAlign.end,
                                                 ),
-                                              ],
-                                            ),
-                                            const SizedBox(height: 8),
-                                            Row(
-                                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                              children: [
-                                                Text(
-                                                  'Vendor VB',
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                        Padding(
+                                          padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
+                                          child: Row(
+                                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                            crossAxisAlignment: CrossAxisAlignment.start,
+                                            children: [
+                                              Text(
+                                                'Vendor VB',
+                                                style: TextStyle(
+                                                  fontSize: screenWidth * 0.04,
+                                                  fontWeight: FontWeight.bold,
+                                                ),
+                                              ),
+                                              Flexible(
+                                                child: Text(
+                                                  widget.pohon!.vendor.isNotEmpty ? widget.pohon!.vendor : 'PT PLN PERAMBAS',
                                                   style: TextStyle(
-                                                    fontSize: fontSize,
-                                                    fontWeight: FontWeight.bold,
+                                                    fontSize: screenWidth * 0.04,
                                                   ),
+                                                  softWrap: true,
+                                                  textAlign: TextAlign.end,
                                                 ),
-                                                Text(
-                                                  widget.pohon!.vendor.isNotEmpty
-                                                      ? widget.pohon!.vendor
-                                                      : 'PT PLN PERAMBAS',
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                        Padding(
+                                          padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
+                                          child: Row(
+                                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                            crossAxisAlignment: CrossAxisAlignment.start,
+                                            children: [
+                                              Text(
+                                                'Nama Pohon',
+                                                style: TextStyle(
+                                                  fontSize: screenWidth * 0.04,
+                                                  fontWeight: FontWeight.bold,
+                                                ),
+                                              ),
+                                              Flexible(
+                                                child: Text(
+                                                  widget.pohon!.namaPohon.isNotEmpty ? widget.pohon!.namaPohon : 'Tidak tersedia',
                                                   style: TextStyle(
-                                                    fontSize: fontSize,
+                                                    fontSize: screenWidth * 0.04,
                                                   ),
+                                                  softWrap: true,
+                                                  textAlign: TextAlign.end,
                                                 ),
-                                              ],
-                                            ),
-                                            const SizedBox(height: 8),
-                                            Row(
-                                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                              children: [
-                                                Text(
-                                                  'Nama Pohon',
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                        Padding(
+                                          padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
+                                          child: Row(
+                                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                            crossAxisAlignment: CrossAxisAlignment.start,
+                                            children: [
+                                              Text(
+                                                'Penyulang',
+                                                style: TextStyle(
+                                                  fontSize: screenWidth * 0.04,
+                                                  fontWeight: FontWeight.bold,
+                                                ),
+                                              ),
+                                              Flexible(
+                                                child: Text(
+                                                  widget.pohon!.penyulang.isNotEmpty ? widget.pohon!.penyulang : 'Tidak tersedia',
                                                   style: TextStyle(
-                                                    fontSize: fontSize,
-                                                    fontWeight: FontWeight.bold,
+                                                    fontSize: screenWidth * 0.04,
                                                   ),
+                                                  softWrap: true,
+                                                  textAlign: TextAlign.end,
                                                 ),
-                                                Text(
-                                                  widget.pohon!.namaPohon.isNotEmpty
-                                                      ? widget.pohon!.namaPohon
-                                                      : 'Tidak tersedia',
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                        Padding(
+                                          padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
+                                          child: Row(
+                                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                            crossAxisAlignment: CrossAxisAlignment.start,
+                                            children: [
+                                              Text(
+                                                'Zona Proteksi',
+                                                style: TextStyle(
+                                                  fontSize: screenWidth * 0.04,
+                                                  fontWeight: FontWeight.bold,
+                                                ),
+                                              ),
+                                              Flexible(
+                                                child: Text(
+                                                  widget.pohon!.zonaProteksi.isNotEmpty ? widget.pohon!.zonaProteksi : 'Tidak tersedia',
                                                   style: TextStyle(
-                                                    fontSize: fontSize,
+                                                    fontSize: screenWidth * 0.04,
                                                   ),
+                                                  softWrap: true,
+                                                  textAlign: TextAlign.end,
                                                 ),
-                                              ],
-                                            ),
-                                            const SizedBox(height: 8),
-                                            Row(
-                                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                              children: [
-                                                Text(
-                                                  'Penyulang',
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                        Padding(
+                                          padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
+                                          child: Row(
+                                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                            crossAxisAlignment: CrossAxisAlignment.start,
+                                            children: [
+                                              Text(
+                                                'Section',
+                                                style: TextStyle(
+                                                  fontSize: screenWidth * 0.04,
+                                                  fontWeight: FontWeight.bold,
+                                                ),
+                                              ),
+                                              Flexible(
+                                                child: Text(
+                                                  widget.pohon!.section.isNotEmpty ? widget.pohon!.section : 'Tidak tersedia',
                                                   style: TextStyle(
-                                                    fontSize: fontSize,
-                                                    fontWeight: FontWeight.bold,
+                                                    fontSize: screenWidth * 0.04,
                                                   ),
+                                                  softWrap: true,
+                                                  textAlign: TextAlign.end,
                                                 ),
-                                                Text(
-                                                  widget.pohon!.penyulang.isNotEmpty
-                                                      ? widget.pohon!.penyulang
-                                                      : 'Tidak tersedia',
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                        Padding(
+                                          padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
+                                          child: Row(
+                                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                            crossAxisAlignment: CrossAxisAlignment.start,
+                                            children: [
+                                              Text(
+                                                'KMS Aset',
+                                                style: TextStyle(
+                                                  fontSize: screenWidth * 0.04,
+                                                  fontWeight: FontWeight.bold,
+                                                ),
+                                              ),
+                                              Flexible(
+                                                child: Text(
+                                                  widget.pohon!.kmsAset.isNotEmpty ? widget.pohon!.kmsAset : 'Tidak tersedia',
                                                   style: TextStyle(
-                                                    fontSize: fontSize,
+                                                    fontSize: screenWidth * 0.04,
                                                   ),
+                                                  softWrap: true,
+                                                  textAlign: TextAlign.end,
                                                 ),
-                                              ],
-                                            ),
-                                            const SizedBox(height: 8),
-                                            Row(
-                                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                              children: [
-                                                Text(
-                                                  'Zona Proteksi',
-                                                  style: TextStyle(
-                                                    fontSize: fontSize,
-                                                    fontWeight: FontWeight.bold,
-                                                  ),
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                        Padding(
+                                          padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
+                                          child: Row(
+                                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                            crossAxisAlignment: CrossAxisAlignment.start,
+                                            children: [
+                                              Text(
+                                                'Tanggal Penjadwalan',
+                                                style: TextStyle(
+                                                  fontSize: screenWidth * 0.04,
+                                                  fontWeight: FontWeight.bold,
                                                 ),
-                                                Text(
-                                                  widget.pohon!.zonaProteksi.isNotEmpty
-                                                      ? widget.pohon!.zonaProteksi
-                                                      : 'Tidak tersedia',
-                                                  style: TextStyle(
-                                                    fontSize: fontSize,
-                                                  ),
-                                                ),
-                                              ],
-                                            ),
-                                            const SizedBox(height: 8),
-                                            Row(
-                                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                              children: [
-                                                Text(
-                                                  'Section',
-                                                  style: TextStyle(
-                                                    fontSize: fontSize,
-                                                    fontWeight: FontWeight.bold,
-                                                  ),
-                                                ),
-                                                Text(
-                                                  widget.pohon!.section.isNotEmpty
-                                                      ? widget.pohon!.section
-                                                      : 'Tidak tersedia',
-                                                  style: TextStyle(
-                                                    fontSize: fontSize,
-                                                  ),
-                                                ),
-                                              ],
-                                            ),
-                                            const SizedBox(height: 8),
-                                            Row(
-                                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                              children: [
-                                                Text(
-                                                  'KMS Aset',
-                                                  style: TextStyle(
-                                                    fontSize: fontSize,
-                                                    fontWeight: FontWeight.bold,
-                                                  ),
-                                                ),
-                                                Text(
-                                                  widget.pohon!.kmsAset.isNotEmpty
-                                                      ? widget.pohon!.kmsAset
-                                                      : 'Tidak tersedia',
-                                                  style: TextStyle(
-                                                    fontSize: fontSize,
-                                                  ),
-                                                ),
-                                              ],
-                                            ),
-                                            const SizedBox(height: 8),
-                                            Row(
-                                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                              children: [
-                                                Text(
-                                                  'Tanggal Penjadwalan',
-                                                  style: TextStyle(
-                                                    fontSize: fontSize,
-                                                    fontWeight: FontWeight.bold,
-                                                  ),
-                                                ),
-                                                Text(
+                                              ),
+                                              Flexible(
+                                                child: Text(
                                                   '${widget.pohon!.scheduleDate.day}/${widget.pohon!.scheduleDate.month}/${widget.pohon!.scheduleDate.year}',
                                                   style: TextStyle(
-                                                    fontSize: fontSize,
+                                                    fontSize: screenWidth * 0.04,
                                                   ),
+                                                  softWrap: true,
+                                                  textAlign: TextAlign.end,
                                                 ),
-                                              ],
-                                            ),
-                                            const SizedBox(height: 8),
-                                            Row(
-                                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                              children: [
-                                                Text(
-                                                  'Tujuan Penindakan',
-                                                  style: TextStyle(
-                                                    fontSize: fontSize,
-                                                    fontWeight: FontWeight.bold,
-                                                  ),
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                        Padding(
+                                          padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
+                                          child: Row(
+                                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                            crossAxisAlignment: CrossAxisAlignment.start,
+                                            children: [
+                                              Text(
+                                                'Tujuan Penindakan',
+                                                style: TextStyle(
+                                                  fontSize: screenWidth * 0.04,
+                                                  fontWeight: FontWeight.bold,
                                                 ),
-                                                Text(
+                                              ),
+                                              Flexible(
+                                                child: Text(
                                                   widget.pohon!.tujuanPenjadwalan == 1
                                                       ? 'Penebangan'
                                                       : widget.pohon!.tujuanPenjadwalan == 2
                                                           ? 'Pemangkasan'
                                                           : 'Penanaman ulang strategis',
                                                   style: TextStyle(
-                                                    fontSize: fontSize,
+                                                    fontSize: screenWidth * 0.04,
                                                   ),
+                                                  softWrap: true,
+                                                  textAlign: TextAlign.end,
                                                 ),
-                                              ],
-                                            ),
-                                            const SizedBox(height: 8),
-                                            Row(
-                                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                              children: [
-                                                Text(
-                                                  'Deskripsi',
-                                                  style: TextStyle(
-                                                    fontSize: fontSize,
-                                                    fontWeight: FontWeight.bold,
-                                                  ),
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                        Padding(
+                                          padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
+                                          child: Row(
+                                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                            crossAxisAlignment: CrossAxisAlignment.start,
+                                            children: [
+                                              Text(
+                                                'Deskripsi',
+                                                style: TextStyle(
+                                                  fontSize: screenWidth * 0.04,
+                                                  fontWeight: FontWeight.bold,
                                                 ),
-                                                Text(
+                                              ),
+                                              Flexible(
+                                                child: Text(
                                                   widget.pohon!.tujuanPenjadwalan == 1
                                                       ? 'Pohon akan ditebang.'
                                                       : widget.pohon!.tujuanPenjadwalan == 2
                                                           ? 'Pohon akan dipangkas.'
                                                           : 'Pohon ini berada di lokasi strategis untuk penanaman ulang.',
                                                   style: TextStyle(
-                                                    fontSize: fontSize,
+                                                    fontSize: screenWidth * 0.04,
                                                   ),
+                                                  softWrap: true,
+                                                  textAlign: TextAlign.end,
                                                 ),
-                                              ],
-                                            ),
-                                            const SizedBox(height: 8),
-                                            Row(
-                                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                              children: [
-                                                Text(
-                                                  'Catatan Tambahan',
-                                                  style: TextStyle(
-                                                    fontSize: fontSize,
-                                                    fontWeight: FontWeight.bold,
-                                                  ),
-                                                ),
-                                                Text(
-                                                  widget.pohon!.catatan.isNotEmpty
-                                                      ? widget.pohon!.catatan
-                                                      : 'Perlu perhatian khusus',
-                                                  style: TextStyle(
-                                                    fontSize: fontSize,
-                                                  ),
-                                                ),
-                                              ],
-                                            ),
-                                          ],
-                                        ),
-                                      ),
-                                      Container(
-                                        padding: const EdgeInsets.all(16.0),
-                                        child: Column(
-                                          crossAxisAlignment: CrossAxisAlignment.start,
-                                          children: [
-                                            Text(
-                                              latestEksekusi != null && latestEksekusi.fotoSetelah != null && latestEksekusi.fotoSetelah!.isNotEmpty
-                                                  ? 'Sudah Dieksekusi'
-                                                  : 'Belum Dieksekusi',
-                                              style: TextStyle(
-                                                fontSize: fontSize,
-                                                fontWeight: FontWeight.bold,
-                                                color: latestEksekusi != null && latestEksekusi.fotoSetelah != null && latestEksekusi.fotoSetelah!.isNotEmpty
-                                                    ? Colors.green
-                                                    : Colors.red,
-                                              ),
-                                            ),
-                                          ],
-                                        ),
-                                      ),
-                                      if (latestEksekusi != null && latestEksekusi.id.isNotEmpty && latestEksekusi.fotoSetelah != null && latestEksekusi.fotoSetelah!.isNotEmpty)
-                                        Container(
-                                          margin: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
-                                          padding: const EdgeInsets.all(16.0),
-                                          decoration: BoxDecoration(
-                                            color: Colors.lightGreen[50],
-                                            border: Border.all(color: Colors.grey[300]!),
-                                            borderRadius: BorderRadius.circular(12),
-                                          ),
-                                          child: Column(
-                                            crossAxisAlignment: CrossAxisAlignment.start,
-                                            children: [
-                                              Text(
-                                                'Eksekusi Terbaru',
-                                                style: TextStyle(
-                                                  fontSize: fontSize * 1.125, // Slightly larger for title
-                                                  fontWeight: FontWeight.bold,
-                                                ),
-                                              ),
-                                              const SizedBox(height: 8),
-                                              ClipRRect(
-                                                borderRadius: BorderRadius.circular(12),
-                                                child: CachedNetworkImage(
-                                                  imageUrl: latestEksekusi.fotoSetelah!,
-                                                  width: screenWidth * 0.8,
-                                                  height: screenHeight * 0.25,
-                                                  fit: BoxFit.cover,
-                                                  placeholder: (context, url) => Container(
-                                                    width: screenWidth * 0.8,
-                                                    height: screenHeight * 0.25,
-                                                    color: Colors.grey,
-                                                    child: const Center(child: CircularProgressIndicator()),
-                                                  ),
-                                                  errorWidget: (context, url, error) => Container(
-                                                    width: screenWidth * 0.8,
-                                                    height: screenHeight * 0.25,
-                                                    color: Colors.grey,
-                                                    child: const Center(child: Text('Gambar Tidak Tersedia')),
-                                                  ),
-                                                ),
-                                              ),
-                                              const SizedBox(height: 16),
-                                              Row(
-                                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                                children: [
-                                                  Text(
-                                                    'Tanggal Eksekusi',
-                                                    style: TextStyle(
-                                                      fontSize: fontSize,
-                                                      fontWeight: FontWeight.bold,
-                                                    ),
-                                                  ),
-                                                  Text(
-                                                    '${latestEksekusi.tanggalEksekusi.toDate().day}/${latestEksekusi.tanggalEksekusi.toDate().month}/${latestEksekusi.tanggalEksekusi.toDate().year}',
-                                                    style: TextStyle(
-                                                      fontSize: fontSize,
-                                                    ),
-                                                  ),
-                                                ],
-                                              ),
-                                              const SizedBox(height: 8),
-                                              Row(
-                                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                                children: [
-                                                  Text(
-                                                    'Tinggi Pohon',
-                                                    style: TextStyle(
-                                                      fontSize: fontSize,
-                                                      fontWeight: FontWeight.bold,
-                                                    ),
-                                                  ),
-                                                  Text(
-                                                    '${latestEksekusi.tinggiPohon} m',
-                                                    style: TextStyle(
-                                                      fontSize: fontSize,
-                                                    ),
-                                                  ),
-                                                ],
-                                              ),
-                                              const SizedBox(height: 8),
-                                              Row(
-                                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                                children: [
-                                                  Text(
-                                                    'Diameter',
-                                                    style: TextStyle(
-                                                      fontSize: fontSize,
-                                                      fontWeight: FontWeight.bold,
-                                                    ),
-                                                  ),
-                                                  Text(
-                                                    '${latestEksekusi.diameterPohon} cm',
-                                                    style: TextStyle(
-                                                      fontSize: fontSize,
-                                                    ),
-                                                  ),
-                                                ],
-                                              ),
-                                              const SizedBox(height: 8),
-                                              Row(
-                                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                                children: [
-                                                  Text(
-                                                    'Status Eksekusi',
-                                                    style: TextStyle(
-                                                      fontSize: fontSize,
-                                                      fontWeight: FontWeight.bold,
-                                                    ),
-                                                  ),
-                                                  Text(
-                                                    latestEksekusi.statusEksekusi == 1
-                                                        ? 'Penebangan'
-                                                        : latestEksekusi.statusEksekusi == 2
-                                                            ? 'Pemangkasan'
-                                                            : 'Lainnya',
-                                                    style: TextStyle(
-                                                      fontSize: fontSize,
-                                                    ),
-                                                  ),
-                                                ],
                                               ),
                                             ],
                                           ),
                                         ),
-                                      Container(
-                                        margin: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
-                                        padding: const EdgeInsets.all(16.0),
-                                        decoration: BoxDecoration(
-                                          color: Colors.lightBlue[50],
-                                          border: Border.all(color: Colors.grey[300]!),
-                                          borderRadius: BorderRadius.circular(12),
-                                        ),
-                                        child: Column(
-                                          crossAxisAlignment: CrossAxisAlignment.start,
-                                          children: [
-                                            Text(
-                                              'Riwayat Eksekusi',
-                                              style: TextStyle(
-                                                fontSize: fontSize * 1.125, // Slightly larger for title
-                                                fontWeight: FontWeight.bold,
-                                              ),
-                                            ),
-                                            const SizedBox(height: 16),
-                                            if (relatedEksekusi.isEmpty)
-                                              const Text(
-                                                'Belum ada riwayat eksekusi',
+                                        Padding(
+                                          padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
+                                          child: Row(
+                                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                            crossAxisAlignment: CrossAxisAlignment.start,
+                                            children: [
+                                              Text(
+                                                'Catatan Tambahan',
                                                 style: TextStyle(
-                                                  fontSize: 16.0, // Default size if screenWidth is unavailable
-                                                  color: Colors.grey,
+                                                  fontSize: screenWidth * 0.04,
+                                                  fontWeight: FontWeight.bold,
                                                 ),
-                                              )
-                                            else
-                                              Column(
-                                                children: relatedEksekusi.map((eksekusi) {
-                                                  developer.log('Rendering eksekusi: $eksekusi', name: 'TreeMappingDetailPage');
-                                                  return Container(
-                                                    margin: const EdgeInsets.only(bottom: 16.0),
-                                                    padding: const EdgeInsets.all(12.0),
-                                                    decoration: BoxDecoration(
-                                                      color: Colors.white,
-                                                      border: Border.all(color: Colors.grey[300]!),
-                                                      borderRadius: BorderRadius.circular(8),
-                                                    ),
-                                                    child: Column(
-                                                      crossAxisAlignment: CrossAxisAlignment.start,
-                                                      children: [
-                                                        Text(
-                                                          'ID',
-                                                          style: TextStyle(
-                                                            fontSize: fontSize,
-                                                            fontWeight: FontWeight.bold,
-                                                          ),
-                                                        ),
-                                                        Text(
-                                                          '${eksekusi.id ?? 'Tidak tersedia'}',
-                                                          style: TextStyle(
-                                                            fontSize: fontSize,
-                                                          ),
-                                                        ),
-                                                        const SizedBox(height: 8),
-                                                        Text(
-                                                          'Tanggal Eksekusi',
-                                                          style: TextStyle(
-                                                            fontSize: fontSize,
-                                                            fontWeight: FontWeight.bold,
-                                                          ),
-                                                        ),
-                                                        Text(
-                                                          eksekusi.tanggalEksekusi != null
-                                                              ? '${eksekusi.tanggalEksekusi!.toDate().day}/${eksekusi.tanggalEksekusi!.toDate().month}/${eksekusi.tanggalEksekusi!.toDate().year}'
-                                                              : 'Tidak tersedia',
-                                                          style: TextStyle(
-                                                            fontSize: fontSize,
-                                                          ),
-                                                        ),
-                                                        const SizedBox(height: 8),
-                                                        Text(
-                                                          'Tinggi Pohon',
-                                                          style: TextStyle(
-                                                            fontSize: fontSize,
-                                                            fontWeight: FontWeight.bold,
-                                                          ),
-                                                        ),
-                                                        Text(
-                                                          '${eksekusi.tinggiPohon ?? 'Tidak tersedia'} m',
-                                                          style: TextStyle(
-                                                            fontSize: fontSize,
-                                                          ),
-                                                        ),
-                                                        const SizedBox(height: 8),
-                                                        Text(
-                                                          'Diameter',
-                                                          style: TextStyle(
-                                                            fontSize: fontSize,
-                                                            fontWeight: FontWeight.bold,
-                                                          ),
-                                                        ),
-                                                        Text(
-                                                          '${eksekusi.diameterPohon ?? 'Tidak tersedia'} cm',
-                                                          style: TextStyle(
-                                                            fontSize: fontSize,
-                                                          ),
-                                                        ),
-                                                        const SizedBox(height: 8),
-                                                        Text(
-                                                          'Status Eksekusi',
-                                                          style: TextStyle(
-                                                            fontSize: fontSize,
-                                                            fontWeight: FontWeight.bold,
-                                                          ),
-                                                        ),
-                                                        Text(
-                                                          eksekusi.statusEksekusi == 1
-                                                              ? 'Penebangan'
-                                                              : eksekusi.statusEksekusi == 2
-                                                                  ? 'Pemangkasan'
-                                                                  : 'Lainnya',
-                                                          style: TextStyle(
-                                                            fontSize: fontSize,
-                                                          ),
-                                                        ),
-                                                        const SizedBox(height: 8),
-                                                        Text(
-                                                          'Foto Setelah',
-                                                          style: TextStyle(
-                                                            fontSize: fontSize,
-                                                            fontWeight: FontWeight.bold,
-                                                          ),
-                                                        ),
-                                                        if (eksekusi.fotoSetelah != null && eksekusi.fotoSetelah!.isNotEmpty)
-                                                          ClipRRect(
-                                                            borderRadius: BorderRadius.circular(12),
-                                                            child: CachedNetworkImage(
-                                                              imageUrl: eksekusi.fotoSetelah!,
-                                                              width: screenWidth * 0.8,
-                                                              height: screenHeight * 0.25,
-                                                              fit: BoxFit.cover,
-                                                              placeholder: (context, url) => Container(
-                                                                width: screenWidth * 0.8,
-                                                                height: screenHeight * 0.25,
-                                                                color: Colors.grey,
-                                                                child: const Center(child: CircularProgressIndicator()),
-                                                              ),
-                                                              errorWidget: (context, url, error) => Container(
-                                                                width: screenWidth * 0.8,
-                                                                height: screenHeight * 0.25,
-                                                                color: Colors.grey,
-                                                                child: const Center(child: Text('Gambar Tidak Tersedia')),
-                                                              ),
-                                                            ),
-                                                          )
-                                                        else
-                                                          Container(
-                                                            width: screenWidth * 0.8,
-                                                            height: screenHeight * 0.25,
-                                                            color: Colors.grey,
-                                                            child: const Center(child: Text('Gambar Tidak Tersedia')),
-                                                          ),
-                                                      ],
-                                                    ),
-                                                  );
-                                                }).toList(),
                                               ),
-                                          ],
-                                        ),
-                                      ),
-                                      Padding(
-                                        padding: const EdgeInsets.all(16.0),
-                                        child: ElevatedButton(
-                                          onPressed: () async {
-                                            Navigator.push(
-                                              context,
-                                              MaterialPageRoute(
-                                                  builder: (context) => EksekusiPage(pohon: widget.pohon!)),
-                                            );
-                                            // Refresh eksekusi data after returning
-                                            await _loadEksekusi();
-                                          },
-                                          style: ElevatedButton.styleFrom(
-                                            backgroundColor: const Color(0xFF0B5F6D),
-                                            minimumSize: Size(screenWidth * 0.9, screenHeight * 0.06),
-                                            shape: RoundedRectangleBorder(
-                                              borderRadius: BorderRadius.circular(10),
-                                            ),
-                                          ),
-                                          child: Text(
-                                            'Eksekusi',
-                                            style: TextStyle(
-                                              fontSize: fontSize,
-                                              color: Colors.white,
-                                              fontWeight: FontWeight.bold,
-                                            ),
+                                              Flexible(
+                                                child: Text(
+                                                  widget.pohon!.catatan.isNotEmpty ? widget.pohon!.catatan : 'Perlu perhatian khusus untuk pemeliharaan.',
+                                                  style: TextStyle(
+                                                    fontSize: screenWidth * 0.04,
+                                                  ),
+                                                  softWrap: true,
+                                                  textAlign: TextAlign.end,
+                                                ),
+                                              ),
+                                            ],
                                           ),
                                         ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              ],
+                                        Padding(
+                                          padding: const EdgeInsets.all(16.0),
+                                          child: Column(
+                                            children: [
+                                              ElevatedButton(
+                                                onPressed: () {
+                                                  Navigator.push(
+                                                    context,
+                                                    MaterialPageRoute(builder: (context) => EksekusiPage(pohon: widget.pohon!)),
+                                                  );
+                                                },
+                                                style: ElevatedButton.styleFrom(
+                                                  backgroundColor: const Color(0xFF0B5F6D),
+                                                  minimumSize: Size(screenWidth * 0.9, screenHeight * 0.06),
+                                                  shape: RoundedRectangleBorder(
+                                                    borderRadius: BorderRadius.circular(10),
+                                                  ),
+                                                ),
+                                                child: Text(
+                                                  'Eksekusi',
+                                                  style: TextStyle(
+                                                    fontSize: screenWidth * 0.04,
+                                                    color: Colors.white,
+                                                    fontWeight: FontWeight.bold,
+                                                  ),
+                                                ),
+                                              ),
+                                              const SizedBox(height: 10),
+                                              ElevatedButton(
+                                                onPressed: () {
+                                                  Navigator.push(
+                                                    context,
+                                                    MaterialPageRoute(builder: (context) => RiwayatEksekusiPage(pohon: widget.pohon!)),
+                                                  );
+                                                },
+                                                style: ElevatedButton.styleFrom(
+                                                  backgroundColor: const Color(0xFF0B5F6D),
+                                                  minimumSize: Size(screenWidth * 0.9, screenHeight * 0.06),
+                                                  shape: RoundedRectangleBorder(
+                                                    borderRadius: BorderRadius.circular(10),
+                                                  ),
+                                                ),
+                                                child: Text(
+                                                  'Lihat Riwayat Eksekusi',
+                                                  style: TextStyle(
+                                                    fontSize: screenWidth * 0.04,
+                                                    color: Colors.white,
+                                                    fontWeight: FontWeight.bold,
+                                                  ),
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                ],
+                              ),
                             ),
-                          );
-                        },
+                          ],
+                        ),
                       );
                     },
                   ),
