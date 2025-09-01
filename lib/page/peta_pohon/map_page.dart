@@ -268,7 +268,14 @@ class _MapPageState extends State<MapPage> {
                         markers.add(Marker(
                           markerId: MarkerId(pohon.id),
                           position: LatLng(lat, lng),
-                          infoWindow: InfoWindow(title: pohon.namaPohon),
+                          infoWindow: InfoWindow(
+                            title: pohon.namaPohon,
+                            snippet: pohon.tujuanPenjadwalan == 1
+                                ? 'Tebang Pangkas'
+                                : pohon.tujuanPenjadwalan == 2
+                                    ? 'Tebang Habis'
+                                    : '-',
+                          ),
                           icon: icon,
                         ));
                       }

@@ -1,4 +1,3 @@
-// data_pohon.dart
 class DataPohon {
   final String id;
   final String idPohon;  // UNIQUE constraint
@@ -21,6 +20,22 @@ class DataPohon {
   final String catatan;
   final int createdBy;
   final DateTime createdDate;
+  final double growthRate; // cm/tahun, dari lookup table
+  final double initialHeight; // meter, dari input manual
+  final DateTime notificationDate; // 3 hari sebelum scheduleDate
+
+  static const Map<String, double> growthRates = {
+    'Mangrove': 75.0,
+    'Jabon Merah': 150.0,
+    'Kesambi': 40.0,
+    'Akasia': 150.0,
+    'Bambu': 100.0,
+    'Kelapa Sawit': 75.0,
+    'Jati': 40.0,
+    'Lontar': 60.0,
+    'Pule': 90.0,
+    'Mahoni': 75.0,
+  };
 
   DataPohon({
     required this.id,
@@ -44,6 +59,9 @@ class DataPohon {
     required this.catatan,
     required this.createdBy,
     required this.createdDate,
+    required this.growthRate,
+    required this.initialHeight,
+    required this.notificationDate,
   });
 
   Map<String, dynamic> toMap() {
@@ -69,6 +87,9 @@ class DataPohon {
       'catatan': catatan,
       'createdby': createdBy,
       'createddate': createdDate.toIso8601String(),
+      'growth_rate': growthRate,
+      'initial_height': initialHeight,
+      'notification_date': notificationDate.toIso8601String(),
     };
   }
 
@@ -95,6 +116,9 @@ class DataPohon {
       catatan: map['catatan'] ?? '',
       createdBy: map['createdby'] ?? 0,
       createdDate: DateTime.parse(map['createddate']),
+      growthRate: (map['growth_rate'] as num?)?.toDouble() ?? 0.0,
+      initialHeight: (map['initial_height'] as num?)?.toDouble() ?? 0.0,
+      notificationDate: DateTime.parse(map['notification_date']),
     );
   }
 }
