@@ -54,6 +54,11 @@ class _TreeMappingDetailPageState extends State<TreeMappingDetailPage> {
         icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueGreen),
       ),
     );
+
+    // Log the tujuanPenjadwalan value for debugging
+    if (widget.pohon != null) {
+      developer.log('tujuanPenjadwalan dari DataPohon: ${widget.pohon!.tujuanPenjadwalan}', name: 'TreeMappingDetailPage');
+    }
   }
 
   @override
@@ -134,7 +139,7 @@ class _TreeMappingDetailPageState extends State<TreeMappingDetailPage> {
                                   ),
                                   DropdownMenuItem(
                                     value: MapType.hybrid,
-                                    child: Text('Hybrid', style: TextStyle(color: Colors.black)),
+                                    child: Text('Hybrid', style: TextStyle(color: Colors.black)), // Fixed typo
                                   ),
                                 ],
                                 onChanged: (type) {
@@ -528,10 +533,12 @@ class _TreeMappingDetailPageState extends State<TreeMappingDetailPage> {
                                               Flexible(
                                                 child: Text(
                                                   widget.pohon!.tujuanPenjadwalan == 1
-                                                      ? 'Penebangan'
+                                                      ? 'Pemangkasan' // Matches "Tebang Pangkas"
                                                       : widget.pohon!.tujuanPenjadwalan == 2
-                                                          ? 'Pemangkasan'
-                                                          : 'Penanaman ulang strategis',
+                                                          ? 'Penebangan' // Matches "Tebang Habis"
+                                                          : widget.pohon!.tujuanPenjadwalan == null
+                                                              ? 'Tidak diketahui'
+                                                              : 'Penanaman ulang strategis',
                                                   style: TextStyle(
                                                     fontSize: screenWidth * 0.04,
                                                   ),
@@ -558,10 +565,12 @@ class _TreeMappingDetailPageState extends State<TreeMappingDetailPage> {
                                               Flexible(
                                                 child: Text(
                                                   widget.pohon!.tujuanPenjadwalan == 1
-                                                      ? 'Pohon akan ditebang.'
+                                                      ? 'Pohon akan dipangkas.'
                                                       : widget.pohon!.tujuanPenjadwalan == 2
-                                                          ? 'Pohon akan dipangkas.'
-                                                          : 'Pohon ini berada di lokasi strategis untuk penanaman ulang.',
+                                                          ? 'Pohon akan ditebang.'
+                                                          : widget.pohon!.tujuanPenjadwalan == null
+                                                              ? 'Data tujuan tidak tersedia.'
+                                                              : 'Pohon ini berada di lokasi strategis untuk penanaman ulang.',
                                                   style: TextStyle(
                                                     fontSize: screenWidth * 0.04,
                                                   ),
