@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
+// di add_assets.dart
+import 'package:flutter_application_2/models/asset_model.dart';
+import 'package:flutter_application_2/services/asset_service.dart';
 
-// File: lib/page/add_assets.dart
+
 class AddAssetsPage extends StatefulWidget {
   const AddAssetsPage({Key? key}) : super(key: key);
 
@@ -10,24 +13,25 @@ class AddAssetsPage extends StatefulWidget {
 
 class _AddAssetsPageState extends State<AddAssetsPage> {
   final _formKey = GlobalKey<FormState>();
-  
-  // Controllers untuk text fields
+  final AssetService _assetService = AssetService();
+
+  // Controllers
   final TextEditingController _panjangKmsController = TextEditingController();
   final TextEditingController _roleController = TextEditingController();
   final TextEditingController _vendorVbController = TextEditingController();
-  
+
   // Dropdown values
   String? _selectedSection;
   String? _selectedUlp;
   String? _selectedPenyulang;
   String? _selectedZonaProteksi;
   String? _selectedHealthIndex;
-  
+
   // Dropdown options
   final List<String> _sectionOptions = ['LBS', 'FCO'];
   final List<String> _ulpOptions = [
     'ULP BARRU',
-    'MATTIROTASI', 
+    'MATTIROTASI',
     'PAJALESANG',
     'PANGSID',
     'RAPPANG',
@@ -46,7 +50,7 @@ class _AddAssetsPageState extends State<AddAssetsPage> {
           begin: Alignment.topCenter,
           end: Alignment.bottomCenter,
           colors: [
-            Color(0xFF125E72), 
+            Color(0xFF125E72),
             Color(0xFF14A2B9),
           ],
         ),
@@ -89,7 +93,6 @@ class _AddAssetsPageState extends State<AddAssetsPage> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        // Section Dropdown
                         _buildDropdownField(
                           label: 'Section',
                           value: _selectedSection,
@@ -101,50 +104,9 @@ class _AddAssetsPageState extends State<AddAssetsPage> {
                           },
                           hint: 'Pilih Section',
                         ),
-                        
                         const SizedBox(height: 16),
-                        
-                        // UP3 Display (Static)
-                        Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            const Text(
-                              'UP3',
-                              style: TextStyle(
-                                color: Color(0xFF2C3E50),
-                                fontSize: 14,
-                                fontWeight: FontWeight.w500,
-                              ),
-                            ),
-                            const SizedBox(height: 8),
-                            Container(
-                              width: double.infinity,
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 12,
-                                vertical: 16,
-                              ),
-                              decoration: BoxDecoration(
-                                color: Colors.grey.withOpacity(0.1),
-                                borderRadius: BorderRadius.circular(8),
-                                border: Border.all(
-                                  color: Colors.grey.withOpacity(0.3),
-                                  width: 1,
-                                ),
-                              ),
-                              child: const Text(
-                                'UP3 PAREPARE',
-                                style: TextStyle(
-                                  color: Color(0xFF2C3E50),
-                                  fontSize: 14,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                        
+                        _buildStaticField('UP3', 'UP3 PAREPARE'),
                         const SizedBox(height: 16),
-                        
-                        // ULP Dropdown
                         _buildDropdownField(
                           label: 'ULP',
                           value: _selectedUlp,
@@ -156,10 +118,7 @@ class _AddAssetsPageState extends State<AddAssetsPage> {
                           },
                           hint: 'Pilih ULP',
                         ),
-                        
                         const SizedBox(height: 16),
-                        
-                        // Penyulang Dropdown
                         _buildDropdownField(
                           label: 'Penyulang',
                           value: _selectedPenyulang,
@@ -171,10 +130,7 @@ class _AddAssetsPageState extends State<AddAssetsPage> {
                           },
                           hint: 'Pilih Penyulang',
                         ),
-                        
                         const SizedBox(height: 16),
-                        
-                        // Zona Proteksi Dropdown
                         _buildDropdownField(
                           label: 'Zona Proteksi',
                           value: _selectedZonaProteksi,
@@ -186,29 +142,20 @@ class _AddAssetsPageState extends State<AddAssetsPage> {
                           },
                           hint: 'Pilih Zona Proteksi',
                         ),
-                        
                         const SizedBox(height: 16),
-                        
-                        // Panjang KMS Text Field
                         _buildTextField(
                           label: 'Panjang KMS',
                           controller: _panjangKmsController,
                           hint: 'Masukkan Panjang KMS',
                           keyboardType: TextInputType.number,
                         ),
-                        
                         const SizedBox(height: 16),
-                        
-                        // Role Text Field
                         _buildTextField(
                           label: 'Role',
                           controller: _roleController,
                           hint: 'Masukkan Role',
                         ),
-                        
                         const SizedBox(height: 16),
-                        
-                        // Health Index Dropdown
                         _buildDropdownField(
                           label: 'Health Index',
                           value: _selectedHealthIndex,
@@ -220,26 +167,20 @@ class _AddAssetsPageState extends State<AddAssetsPage> {
                           },
                           hint: 'Pilih Health Index',
                         ),
-                        
                         const SizedBox(height: 16),
-                        
-                        // Vendor VB Text Field
                         _buildTextField(
                           label: 'Vendor VB',
                           controller: _vendorVbController,
                           hint: 'Masukkan Vendor VB',
                         ),
-                        
                         const SizedBox(height: 32),
-                        
-                        // Simpan Button
                         SizedBox(
                           width: double.infinity,
                           height: 50,
                           child: ElevatedButton(
                             onPressed: _handleSimpan,
                             style: ElevatedButton.styleFrom(
-                              backgroundColor: const Color(0xFF125E72), 
+                              backgroundColor: const Color(0xFF125E72),
                               foregroundColor: Colors.white,
                               elevation: 0,
                               shape: RoundedRectangleBorder(
@@ -266,7 +207,7 @@ class _AddAssetsPageState extends State<AddAssetsPage> {
       ),
     );
   }
-  
+
   Widget _buildDropdownField({
     required String label,
     required String? value,
@@ -277,14 +218,12 @@ class _AddAssetsPageState extends State<AddAssetsPage> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          label,
-          style: const TextStyle(
-            color: Color(0xFF2C3E50),
-            fontSize: 14,
-            fontWeight: FontWeight.w500,
-          ),
-        ),
+        Text(label,
+            style: const TextStyle(
+              color: Color(0xFF2C3E50),
+              fontSize: 14,
+              fontWeight: FontWeight.w500,
+            )),
         const SizedBox(height: 8),
         Container(
           width: double.infinity,
@@ -300,38 +239,22 @@ class _AddAssetsPageState extends State<AddAssetsPage> {
           child: DropdownButtonHideUnderline(
             child: DropdownButton<String>(
               value: value,
-              hint: Text(
-                hint,
-                style: TextStyle(
-                  color: Colors.grey[600],
-                  fontSize: 14,
-                ),
-              ),
+              hint: Text(hint,
+                  style: TextStyle(color: Colors.grey[600], fontSize: 14)),
               isExpanded: true,
-              items: items.map((String item) {
-                return DropdownMenuItem<String>(
-                  value: item,
-                  child: Text(
-                    item,
-                    style: const TextStyle(
-                      color: Color(0xFF2C3E50),
-                      fontSize: 14,
-                    ),
-                  ),
-                );
-              }).toList(),
+              items: items
+                  .map((item) =>
+                      DropdownMenuItem<String>(value: item, child: Text(item)))
+                  .toList(),
               onChanged: onChanged,
-              icon: const Icon(
-                Icons.keyboard_arrow_down,
-                color: Colors.black54,
-              ),
+              icon: const Icon(Icons.keyboard_arrow_down, color: Colors.black54),
             ),
           ),
         ),
       ],
     );
   }
-  
+
   Widget _buildTextField({
     required String label,
     required TextEditingController controller,
@@ -341,14 +264,12 @@ class _AddAssetsPageState extends State<AddAssetsPage> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          label,
-          style: const TextStyle(
-            color: Color(0xFF2C3E50),
-            fontSize: 14,
-            fontWeight: FontWeight.w500,
-          ),
-        ),
+        Text(label,
+            style: const TextStyle(
+              color: Color(0xFF2C3E50),
+              fontSize: 14,
+              fontWeight: FontWeight.w500,
+            )),
         const SizedBox(height: 8),
         Container(
           decoration: BoxDecoration(
@@ -362,27 +283,15 @@ class _AddAssetsPageState extends State<AddAssetsPage> {
           child: TextFormField(
             controller: controller,
             keyboardType: keyboardType,
-            style: const TextStyle(
-              color: Color(0xFF2C3E50),
-              fontSize: 14,
-            ),
             decoration: InputDecoration(
               hintText: hint,
-              hintStyle: TextStyle(
-                color: Colors.grey[600],
-                fontSize: 14,
-              ),
               border: InputBorder.none,
-              contentPadding: const EdgeInsets.symmetric(
-                horizontal: 12,
-                vertical: 16,
-              ),
+              contentPadding:
+                  const EdgeInsets.symmetric(horizontal: 12, vertical: 16),
             ),
             validator: (value) {
-              if (label == 'Panjang KMS' || label == 'Role' || label == 'Vendor VB') {
-                if (value == null || value.isEmpty) {
-                  return 'Field $label tidak boleh kosong';
-                }
+              if (value == null || value.isEmpty) {
+                return 'Field $label tidak boleh kosong';
               }
               return null;
             },
@@ -391,46 +300,76 @@ class _AddAssetsPageState extends State<AddAssetsPage> {
       ],
     );
   }
-  
-  void _handleSimpan() {
+
+  Widget _buildStaticField(String label, String value) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(label,
+            style: const TextStyle(
+              color: Color(0xFF2C3E50),
+              fontSize: 14,
+              fontWeight: FontWeight.w500,
+            )),
+        const SizedBox(height: 8),
+        Container(
+          width: double.infinity,
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 16),
+          decoration: BoxDecoration(
+            color: Colors.grey.withOpacity(0.1),
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(color: Colors.grey.withOpacity(0.3)),
+          ),
+          child: Text(value,
+              style: const TextStyle(color: Color(0xFF2C3E50), fontSize: 14)),
+        ),
+      ],
+    );
+  }
+
+  Future<void> _handleSimpan() async {
     if (_formKey.currentState?.validate() ?? false) {
-      // Validasi dropdown yang wajib
-      if (_selectedSection == null) {
-        _showSnackBar('Pilih Section terlebih dahulu');
+      if (_selectedSection == null ||
+          _selectedUlp == null ||
+          _selectedPenyulang == null ||
+          _selectedZonaProteksi == null ||
+          _selectedHealthIndex == null) {
+        _showSnackBar('Lengkapi semua dropdown terlebih dahulu');
         return;
       }
-      if (_selectedUlp == null) {
-        _showSnackBar('Pilih ULP terlebih dahulu');
-        return;
+
+      try {
+        final newAsset = AssetModel(
+          id: '',
+          wilayah: "SULSELBAR",
+          subWilayah: "PAREPARE",
+          section: _selectedSection!,
+          up3: "UP3 PAREPARE",
+          ulp: _selectedUlp!,
+          penyulang: _selectedPenyulang!,
+          zonaProteksi: _selectedZonaProteksi!,
+          panjangKms: double.tryParse(_panjangKmsController.text) ?? 0.0,
+          status: _selectedHealthIndex!,
+          role: _roleController.text,
+          vendorVb: _vendorVbController.text,
+          createdAt: DateTime.now(),
+        );
+
+        await _assetService.addAsset(newAsset);
+
+        _showSnackBar('Data berhasil disimpan!');
+        _clearForm();
+        Navigator.pop(context);
+      } catch (e) {
+        _showSnackBar('Gagal simpan: $e');
       }
-      if (_selectedPenyulang == null) {
-        _showSnackBar('Pilih Penyulang terlebih dahulu');
-        return;
-      }
-      if (_selectedZonaProteksi == null) {
-        _showSnackBar('Pilih Zona Proteksi terlebih dahulu');
-        return;
-      }
-      if (_selectedHealthIndex == null) {
-        _showSnackBar('Pilih Health Index terlebih dahulu');
-        return;
-      }
-      
-      // Jika validasi berhasil
-      _showSnackBar('Data berhasil disimpan!');
-      
-      // Di sini Anda bisa menambahkan logika untuk menyimpan data
-      // Misalnya ke database, API, dll.
-      
-      // Clear form setelah berhasil simpan
-      _clearForm();
-      
-      // Kembali ke halaman sebelumnya
-      Navigator.pop(context);
     }
   }
-  
+
   void _clearForm() {
+    _panjangKmsController.clear();
+    _roleController.clear();
+    _vendorVbController.clear();
     setState(() {
       _selectedSection = null;
       _selectedUlp = null;
@@ -438,28 +377,11 @@ class _AddAssetsPageState extends State<AddAssetsPage> {
       _selectedZonaProteksi = null;
       _selectedHealthIndex = null;
     });
-    _panjangKmsController.clear();
-    _roleController.clear();
-    _vendorVbController.clear();
   }
-  
+
   void _showSnackBar(String message) {
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(message),
-        duration: const Duration(seconds: 2),
-        backgroundColor: message.contains('berhasil') 
-            ? Colors.green 
-            : Colors.red,
-      ),
+      SnackBar(content: Text(message)),
     );
-  }
-  
-  @override
-  void dispose() {
-    _panjangKmsController.dispose();
-    _roleController.dispose();
-    _vendorVbController.dispose();
-    super.dispose();
   }
 }
