@@ -1,387 +1,350 @@
 import 'package:flutter/material.dart';
-// di add_assets.dart
 import 'package:flutter_application_2/models/asset_model.dart';
 import 'package:flutter_application_2/services/asset_service.dart';
 
-
 class AddAssetsPage extends StatefulWidget {
-  const AddAssetsPage({Key? key}) : super(key: key);
+  const AddAssetsPage({super.key});
 
   @override
   State<AddAssetsPage> createState() => _AddAssetsPageState();
 }
 
 class _AddAssetsPageState extends State<AddAssetsPage> {
+  final _assetService = AssetService();
   final _formKey = GlobalKey<FormState>();
-  final AssetService _assetService = AssetService();
 
-  // Controllers
+  // Controller untuk form tambah asset
+  final TextEditingController _wilayahController = TextEditingController();
+  final TextEditingController _subWilayahController = TextEditingController();
+  final TextEditingController _sectionController = TextEditingController();
+  final TextEditingController _up3Controller = TextEditingController();
+  final TextEditingController _ulpController = TextEditingController();
+  final TextEditingController _penyulangController = TextEditingController();
+  final TextEditingController _zonaProteksiController = TextEditingController();
   final TextEditingController _panjangKmsController = TextEditingController();
-  final TextEditingController _roleController = TextEditingController();
-  final TextEditingController _vendorVbController = TextEditingController();
+  final TextEditingController _statusController = TextEditingController();
+  final TextEditingController _roleController = TextEditingController(); // Tambahan
+  final TextEditingController _vendorVbController = TextEditingController(); // Tambahan
 
-  // Dropdown values
-  String? _selectedSection;
-  String? _selectedUlp;
-  String? _selectedPenyulang;
-  String? _selectedZonaProteksi;
-  String? _selectedHealthIndex;
+  bool _isLoading = false;
 
-  // Dropdown options
-  final List<String> _sectionOptions = ['LBS', 'FCO'];
-  final List<String> _ulpOptions = [
-    'ULP BARRU',
-    'MATTIROTASI',
-    'PAJALESANG',
-    'PANGSID',
-    'RAPPANG',
-    'SOPPENG',
-    'TANRU TEDONG'
-  ];
-  final List<String> _penyulangOptions = ['LAJOA', 'TAKALALLA'];
-  final List<String> _zonaProteksiOptions = ['REC_TEPPOE', 'P_TAKALALLA'];
-  final List<String> _healthIndexOptions = ['SEMPURNA', 'SEHAT', 'SAKIT'];
+  Future<void> _tambahAsset() async {
+    if (!_formKey.currentState!.validate()) {
+      return;
+    }
 
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      decoration: const BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topCenter,
-          end: Alignment.bottomCenter,
-          colors: [
-            Color(0xFF125E72),
-            Color(0xFF14A2B9),
-          ],
-        ),
-      ),
-      child: Scaffold(
-        backgroundColor: Colors.transparent,
-        appBar: AppBar(
-          backgroundColor: Colors.transparent,
-          elevation: 0,
-          leading: IconButton(
-            icon: const Icon(Icons.arrow_back, color: Colors.white),
-            onPressed: () => Navigator.pop(context),
-          ),
-          title: const Text(
-            'Tambah Assets JTM',
-            style: TextStyle(
-              color: Colors.white,
-              fontSize: 20,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-          centerTitle: true,
-        ),
-        body: Column(
-          children: [
-            const SizedBox(height: 20),
-            Expanded(
-              child: Container(
-                decoration: const BoxDecoration(
-                  color: Color(0xFFF5F7FA),
-                  borderRadius: BorderRadius.only(
-                    topLeft: Radius.circular(32),
-                    topRight: Radius.circular(32),
-                  ),
-                ),
-                child: SingleChildScrollView(
-                  padding: const EdgeInsets.all(20.0),
-                  child: Form(
-                    key: _formKey,
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        _buildDropdownField(
-                          label: 'Section',
-                          value: _selectedSection,
-                          items: _sectionOptions,
-                          onChanged: (value) {
-                            setState(() {
-                              _selectedSection = value;
-                            });
-                          },
-                          hint: 'Pilih Section',
-                        ),
-                        const SizedBox(height: 16),
-                        _buildStaticField('UP3', 'UP3 PAREPARE'),
-                        const SizedBox(height: 16),
-                        _buildDropdownField(
-                          label: 'ULP',
-                          value: _selectedUlp,
-                          items: _ulpOptions,
-                          onChanged: (value) {
-                            setState(() {
-                              _selectedUlp = value;
-                            });
-                          },
-                          hint: 'Pilih ULP',
-                        ),
-                        const SizedBox(height: 16),
-                        _buildDropdownField(
-                          label: 'Penyulang',
-                          value: _selectedPenyulang,
-                          items: _penyulangOptions,
-                          onChanged: (value) {
-                            setState(() {
-                              _selectedPenyulang = value;
-                            });
-                          },
-                          hint: 'Pilih Penyulang',
-                        ),
-                        const SizedBox(height: 16),
-                        _buildDropdownField(
-                          label: 'Zona Proteksi',
-                          value: _selectedZonaProteksi,
-                          items: _zonaProteksiOptions,
-                          onChanged: (value) {
-                            setState(() {
-                              _selectedZonaProteksi = value;
-                            });
-                          },
-                          hint: 'Pilih Zona Proteksi',
-                        ),
-                        const SizedBox(height: 16),
-                        _buildTextField(
-                          label: 'Panjang KMS',
-                          controller: _panjangKmsController,
-                          hint: 'Masukkan Panjang KMS',
-                          keyboardType: TextInputType.number,
-                        ),
-                        const SizedBox(height: 16),
-                        _buildTextField(
-                          label: 'Role',
-                          controller: _roleController,
-                          hint: 'Masukkan Role',
-                        ),
-                        const SizedBox(height: 16),
-                        _buildDropdownField(
-                          label: 'Health Index',
-                          value: _selectedHealthIndex,
-                          items: _healthIndexOptions,
-                          onChanged: (value) {
-                            setState(() {
-                              _selectedHealthIndex = value;
-                            });
-                          },
-                          hint: 'Pilih Health Index',
-                        ),
-                        const SizedBox(height: 16),
-                        _buildTextField(
-                          label: 'Vendor VB',
-                          controller: _vendorVbController,
-                          hint: 'Masukkan Vendor VB',
-                        ),
-                        const SizedBox(height: 32),
-                        SizedBox(
-                          width: double.infinity,
-                          height: 50,
-                          child: ElevatedButton(
-                            onPressed: _handleSimpan,
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: const Color(0xFF125E72),
-                              foregroundColor: Colors.white,
-                              elevation: 0,
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(8),
-                              ),
-                            ),
-                            child: const Text(
-                              'Simpan',
-                              style: TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
+    setState(() {
+      _isLoading = true;
+    });
+
+    try {
+      final newAsset = AssetModel(
+        id: '', // Firestore akan generate otomatis
+        wilayah: _wilayahController.text,
+        subWilayah: _subWilayahController.text,
+        section: _sectionController.text,
+        up3: _up3Controller.text,
+        ulp: _ulpController.text,
+        penyulang: _penyulangController.text,
+        zonaProteksi: _zonaProteksiController.text,
+        panjangKms: double.tryParse(_panjangKmsController.text) ?? 0,
+        status: _statusController.text,
+        role: _roleController.text.isNotEmpty ? _roleController.text : "-", // Update
+        vendorVb: _vendorVbController.text.isNotEmpty ? _vendorVbController.text : "-", // Update
+        createdAt: DateTime.now(),
+      );
+
+      await _assetService.addAsset(newAsset);
+
+      if (mounted) {
+        // Tampilkan dialog sukses
+        showDialog(
+          context: context,
+          builder: (BuildContext context) {
+            return AlertDialog(
+              icon: const Icon(
+                Icons.check_circle,
+                color: Colors.green,
+                size: 48,
               ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildDropdownField({
-    required String label,
-    required String? value,
-    required List<String> items,
-    required ValueChanged<String?> onChanged,
-    required String hint,
-  }) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(label,
-            style: const TextStyle(
-              color: Color(0xFF2C3E50),
-              fontSize: 14,
-              fontWeight: FontWeight.w500,
-            )),
-        const SizedBox(height: 8),
-        Container(
-          width: double.infinity,
-          padding: const EdgeInsets.symmetric(horizontal: 12),
-          decoration: BoxDecoration(
-            color: Colors.grey.withOpacity(0.1),
-            borderRadius: BorderRadius.circular(8),
-            border: Border.all(
-              color: Colors.grey.withOpacity(0.3),
-              width: 1,
-            ),
-          ),
-          child: DropdownButtonHideUnderline(
-            child: DropdownButton<String>(
-              value: value,
-              hint: Text(hint,
-                  style: TextStyle(color: Colors.grey[600], fontSize: 14)),
-              isExpanded: true,
-              items: items
-                  .map((item) =>
-                      DropdownMenuItem<String>(value: item, child: Text(item)))
-                  .toList(),
-              onChanged: onChanged,
-              icon: const Icon(Icons.keyboard_arrow_down, color: Colors.black54),
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildTextField({
-    required String label,
-    required TextEditingController controller,
-    required String hint,
-    TextInputType? keyboardType,
-  }) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(label,
-            style: const TextStyle(
-              color: Color(0xFF2C3E50),
-              fontSize: 14,
-              fontWeight: FontWeight.w500,
-            )),
-        const SizedBox(height: 8),
-        Container(
-          decoration: BoxDecoration(
-            color: Colors.grey.withOpacity(0.1),
-            borderRadius: BorderRadius.circular(8),
-            border: Border.all(
-              color: Colors.grey.withOpacity(0.3),
-              width: 1,
-            ),
-          ),
-          child: TextFormField(
-            controller: controller,
-            keyboardType: keyboardType,
-            decoration: InputDecoration(
-              hintText: hint,
-              border: InputBorder.none,
-              contentPadding:
-                  const EdgeInsets.symmetric(horizontal: 12, vertical: 16),
-            ),
-            validator: (value) {
-              if (value == null || value.isEmpty) {
-                return 'Field $label tidak boleh kosong';
-              }
-              return null;
-            },
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildStaticField(String label, String value) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(label,
-            style: const TextStyle(
-              color: Color(0xFF2C3E50),
-              fontSize: 14,
-              fontWeight: FontWeight.w500,
-            )),
-        const SizedBox(height: 8),
-        Container(
-          width: double.infinity,
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 16),
-          decoration: BoxDecoration(
-            color: Colors.grey.withOpacity(0.1),
-            borderRadius: BorderRadius.circular(8),
-            border: Border.all(color: Colors.grey.withOpacity(0.3)),
-          ),
-          child: Text(value,
-              style: const TextStyle(color: Color(0xFF2C3E50), fontSize: 14)),
-        ),
-      ],
-    );
-  }
-
-  Future<void> _handleSimpan() async {
-    if (_formKey.currentState?.validate() ?? false) {
-      if (_selectedSection == null ||
-          _selectedUlp == null ||
-          _selectedPenyulang == null ||
-          _selectedZonaProteksi == null ||
-          _selectedHealthIndex == null) {
-        _showSnackBar('Lengkapi semua dropdown terlebih dahulu');
-        return;
-      }
-
-      try {
-        final newAsset = AssetModel(
-          id: '',
-          wilayah: "SULSELBAR",
-          subWilayah: "PAREPARE",
-          section: _selectedSection!,
-          up3: "UP3 PAREPARE",
-          ulp: _selectedUlp!,
-          penyulang: _selectedPenyulang!,
-          zonaProteksi: _selectedZonaProteksi!,
-          panjangKms: double.tryParse(_panjangKmsController.text) ?? 0.0,
-          status: _selectedHealthIndex!,
-          role: _roleController.text,
-          vendorVb: _vendorVbController.text,
-          createdAt: DateTime.now(),
+              title: const Text("Berhasil!"),
+              content: const Text("Asset berhasil ditambahkan"),
+              actions: [
+                TextButton(
+                  onPressed: () {
+                    Navigator.of(context).pop(); // Tutup dialog
+                    _clearForm(); // Clear form setelah berhasil
+                  },
+                  child: const Text("OK"),
+                ),
+              ],
+            );
+          },
         );
-
-        await _assetService.addAsset(newAsset);
-
-        _showSnackBar('Data berhasil disimpan!');
-        _clearForm();
-        Navigator.pop(context);
-      } catch (e) {
-        _showSnackBar('Gagal simpan: $e');
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text("Error: ${e.toString()}"),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
       }
     }
   }
 
   void _clearForm() {
+    _wilayahController.clear();
+    _subWilayahController.clear();
+    _sectionController.clear();
+    _up3Controller.clear();
+    _ulpController.clear();
+    _penyulangController.clear();
+    _zonaProteksiController.clear();
     _panjangKmsController.clear();
-    _roleController.clear();
-    _vendorVbController.clear();
-    setState(() {
-      _selectedSection = null;
-      _selectedUlp = null;
-      _selectedPenyulang = null;
-      _selectedZonaProteksi = null;
-      _selectedHealthIndex = null;
-    });
+    _statusController.clear();
+    _roleController.clear(); // Tambahan
+    _vendorVbController.clear(); // Tambahan
   }
 
-  void _showSnackBar(String message) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(message)),
+  @override
+  void dispose() {
+    _wilayahController.dispose();
+    _subWilayahController.dispose();
+    _sectionController.dispose();
+    _up3Controller.dispose();
+    _ulpController.dispose();
+    _penyulangController.dispose();
+    _zonaProteksiController.dispose();
+    _panjangKmsController.dispose();
+    _statusController.dispose();
+    _roleController.dispose(); // Tambahan
+    _vendorVbController.dispose(); // Tambahan
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text("Tambah Asset JTM"),
+        backgroundColor: const Color(0xFF125E72),
+        foregroundColor: Colors.white,
+        actions: [
+          TextButton(
+            onPressed: _clearForm,
+            child: const Text(
+              "Clear",
+              style: TextStyle(color: Colors.white),
+            ),
+          ),
+        ],
+      ),
+      body: Form(
+        key: _formKey,
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Card(
+                elevation: 4,
+                child: Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        "Informasi Asset",
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                          color: const Color(0xFF125E72),
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      TextFormField(
+                        controller: _wilayahController,
+                        decoration: const InputDecoration(
+                          labelText: "Wilayah *",
+                          border: OutlineInputBorder(),
+                        ),
+                        validator: (value) {
+                          if (value == null || value.isEmpty) {
+                            return 'Wilayah harus diisi';
+                          }
+                          return null;
+                        },
+                      ),
+                      const SizedBox(height: 16),
+                      TextFormField(
+                        controller: _subWilayahController,
+                        decoration: const InputDecoration(
+                          labelText: "Sub Wilayah *",
+                          border: OutlineInputBorder(),
+                        ),
+                        validator: (value) {
+                          if (value == null || value.isEmpty) {
+                            return 'Sub Wilayah harus diisi';
+                          }
+                          return null;
+                        },
+                      ),
+                      const SizedBox(height: 16),
+                      TextFormField(
+                        controller: _sectionController,
+                        decoration: const InputDecoration(
+                          labelText: "Section *",
+                          border: OutlineInputBorder(),
+                        ),
+                        validator: (value) {
+                          if (value == null || value.isEmpty) {
+                            return 'Section harus diisi';
+                          }
+                          return null;
+                        },
+                      ),
+                      const SizedBox(height: 16),
+                      TextFormField(
+                        controller: _up3Controller,
+                        decoration: const InputDecoration(
+                          labelText: "UP3",
+                          border: OutlineInputBorder(),
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      TextFormField(
+                        controller: _ulpController,
+                        decoration: const InputDecoration(
+                          labelText: "ULP",
+                          border: OutlineInputBorder(),
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      TextFormField(
+                        controller: _penyulangController,
+                        decoration: const InputDecoration(
+                          labelText: "Penyulang",
+                          border: OutlineInputBorder(),
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      TextFormField(
+                        controller: _zonaProteksiController,
+                        decoration: const InputDecoration(
+                          labelText: "Zona Proteksi",
+                          border: OutlineInputBorder(),
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      TextFormField(
+                        controller: _panjangKmsController,
+                        decoration: const InputDecoration(
+                          labelText: "Panjang (KMS)",
+                          border: OutlineInputBorder(),
+                          suffixText: "km",
+                        ),
+                        keyboardType: TextInputType.numberWithOptions(decimal: true),
+                        validator: (value) {
+                          if (value != null && value.isNotEmpty) {
+                            if (double.tryParse(value) == null) {
+                              return 'Masukkan angka yang valid';
+                            }
+                          }
+                          return null;
+                        },
+                      ),
+                      const SizedBox(height: 16),
+                      TextFormField(
+                        controller: _statusController,
+                        decoration: const InputDecoration(
+                          labelText: "Status",
+                          border: OutlineInputBorder(),
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      // Tambahan inputan Role
+                      TextFormField(
+                        controller: _roleController,
+                        decoration: const InputDecoration(
+                          labelText: "Role",
+                          border: OutlineInputBorder(),
+                          hintText: "Contoh: Supervisor",
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      // Tambahan inputan Vendor VB
+                      TextFormField(
+                        controller: _vendorVbController,
+                        decoration: const InputDecoration(
+                          labelText: "Vendor VB",
+                          border: OutlineInputBorder(),
+                          hintText: "Nama vendor atau perusahaan",
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(height: 24),
+              Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton(
+                      onPressed: _isLoading ? null : () => Navigator.pop(context),
+                      style: OutlinedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                        side: const BorderSide(color: Color(0xFF125E72)),
+                      ),
+                      child: const Text(
+                        "Batal",
+                        style: TextStyle(color: Color(0xFF125E72)),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: ElevatedButton(
+                      onPressed: _isLoading ? null : _tambahAsset,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFF125E72),
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                      ),
+                      child: _isLoading
+                          ? const SizedBox(
+                              height: 20,
+                              width: 20,
+                              child: CircularProgressIndicator(
+                                color: Colors.white,
+                                strokeWidth: 2,
+                              ),
+                            )
+                          : const Text("Simpan Asset"),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
+              const Text(
+                "* Field wajib diisi",
+                style: TextStyle(
+                  fontSize: 12,
+                  color: Colors.grey,
+                  fontStyle: FontStyle.italic,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }

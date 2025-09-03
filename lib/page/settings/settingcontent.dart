@@ -1,7 +1,7 @@
 // File: lib/page/settings/settingcontent.dart
 import 'package:flutter/material.dart';
 import 'layoutsetting.dart';
-import 'assets_jtm/daftar_asset.dart'; // ✅ Halaman daftar asset JTM
+import 'assets_jtm/assets_jtm.dart'; // ✅ Import halaman Assets JTM menu utama
 import 'package:flutter_application_2/page/settings/profile/profile_page.dart';
 import 'package:flutter_application_2/page/settings/profile/user_list_page.dart';
 
@@ -45,9 +45,10 @@ class SettingsContent {
         );
         break;
       case 2:
+        // Navigasi ke halaman Assets JTM (menu utama)
         Navigator.push(
           context,
-          MaterialPageRoute(builder: (_) => const DaftarAssetPage()),
+          MaterialPageRoute(builder: (_) => const AssetsJTMPage()),
         );
         break;
       case 3:
