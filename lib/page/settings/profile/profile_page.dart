@@ -27,9 +27,9 @@ class _ProfilePageState extends State<ProfilePage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFF4A90A4),
+      backgroundColor: const Color(0xFF125E72),
       appBar: AppBar(
-        backgroundColor: const Color(0xFF4A90A4),
+        backgroundColor: const Color(0xFF125E72),
         elevation: 0,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back, color: Colors.white),
@@ -38,9 +38,9 @@ class _ProfilePageState extends State<ProfilePage> {
         title: const Text(
           'Profile',
           style: TextStyle(
-            color: Colors.yellow,
+            color: Colors.white,
             fontSize: 20,
-            fontWeight: FontWeight.w500,
+            fontWeight: FontWeight.bold,
           ),
         ),
         centerTitle: true,
@@ -148,7 +148,7 @@ class _ProfilePageState extends State<ProfilePage> {
                             child: ElevatedButton(
                               onPressed: _saveProfile,
                               style: ElevatedButton.styleFrom(
-                                backgroundColor: const Color(0xFF4A90A4),
+                                backgroundColor: const Color(0xFF125E72),
                                 padding: const EdgeInsets.symmetric(vertical: 16),
                                 shape: RoundedRectangleBorder(
                                   borderRadius: BorderRadius.circular(12),
@@ -159,11 +159,6 @@ class _ProfilePageState extends State<ProfilePage> {
                                 mainAxisAlignment: MainAxisAlignment.center,
                                 mainAxisSize: MainAxisSize.min,
                                 children: [
-                                  Icon(
-                                    Icons.save_outlined,
-                                    color: Colors.white,
-                                    size: 20,
-                                  ),
                                   SizedBox(width: 8),
                                   Flexible(
                                     child: Text(
@@ -260,7 +255,7 @@ class _ProfilePageState extends State<ProfilePage> {
             focusedBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12),
               borderSide: const BorderSide(
-                color: Color(0xFF4A90A4),
+                color: Color(0xFF125E72),
                 width: 2,
               ),
             ),
