@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
+// ...existing code...
+import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../providers/notification_provider.dart';
 
 class NotificationPage extends StatelessWidget {
@@ -7,7 +8,6 @@ class NotificationPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final notifications = Provider.of<NotificationProvider>(context).notifications;
     return Scaffold(
       backgroundColor: const Color(0xFF2E5D6F),
       appBar: AppBar(
@@ -32,30 +32,39 @@ class NotificationPage extends StatelessWidget {
             topRight: Radius.circular(32),
           ),
         ),
-        child: notifications.isEmpty
-            ? const Center(child: Text('Belum ada notifikasi'))
-            : ListView.builder(
-                padding: const EdgeInsets.fromLTRB(20, 24, 20, 16),
-                itemCount: notifications.length,
-                itemBuilder: (context, i) {
-                  final notif = notifications[i];
-                  return _buildNotificationItem(notif);
-                },
-              ),
+        child: StreamBuilder<QuerySnapshot>(
+          stream: FirebaseFirestore.instance.collection('notification').orderBy('date', descending: true).snapshots(),
+          builder: (context, snapshot) {
+            if (snapshot.hasError) {
+              return const Center(child: Text('Terjadi kesalahan mengambil notifikasi'));
+            }
+            if (snapshot.connectionState == ConnectionState.waiting) {
+              return const Center(child: CircularProgressIndicator());
+            }
+            final docs = snapshot.data?.docs ?? [];
+            if (docs.isEmpty) {
+              return const Center(child: Text('Belum ada notifikasi'));
+            }
+            return ListView.builder(
+              padding: const EdgeInsets.fromLTRB(20, 24, 20, 16),
+              itemCount: docs.length,
+              itemBuilder: (context, i) {
+                final data = docs[i].data() as Map<String, dynamic>;
+                final notif = AppNotification(
+                  title: data['title'] ?? '',
+                  message: data['message'] ?? '',
+                  date: DateTime.tryParse(data['date'] ?? '') ?? DateTime.now(),
+                );
+                return _buildNotificationItem(notif);
+              },
+            );
+          },
+        ),
       ),
     );
   }
 
-  Widget _buildSectionTitle(String title) {
-    return Text(
-      title,
-      style: const TextStyle(
-        fontWeight: FontWeight.w600,
-        fontSize: 16,
-        color: Colors.black87,
-      ),
-    );
-  }
+  // ...existing code...
 
   Widget _buildNotificationItem(AppNotification notif) {
     return Container(
@@ -134,9 +143,20 @@ class NotificationPage extends StatelessWidget {
   }
 
   String _formatDate(DateTime date) {
-    // Format: HH:mm - dd MMM yyyy
     final months = [
-      '', 'Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'
+      '',
+      'Jan',
+      'Feb',
+      'Mar',
+      'Apr',
+      'Mei',
+      'Jun',
+      'Jul',
+      'Agu',
+      'Sep',
+      'Okt',
+      'Nov',
+      'Des'
     ];
     return '${date.hour.toString().padLeft(2, '0')}:${date.minute.toString().padLeft(2, '0')} - ${date.day} ${months[date.month]} ${date.year}';
   }

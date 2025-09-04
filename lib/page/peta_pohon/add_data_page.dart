@@ -2,7 +2,6 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
-import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:geolocator/geolocator.dart';
 import '../notification/notification_page.dart';
 import '../../providers/notification_provider.dart';
@@ -32,13 +31,10 @@ class _AddDataPageState extends State<AddDataPage> {
   final _noteController = TextEditingController();
   File? _fotoPohon;
 
-  // Notifikasi
-  final FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin = FlutterLocalNotificationsPlugin();
-
   int? _selectedTujuan;
   int? _selectedPrioritas;
   String? _selectedNamaPohon;
-  bool _isLoading = false; // Loading state variable
+  bool _isLoading = false;
 
   final Map<int, String> _tujuanOptions = {
     1: 'Tebang Pangkas',
@@ -51,12 +47,14 @@ class _AddDataPageState extends State<AddDataPage> {
     3: 'Tinggi',
   };
 
-  InputDecoration _buildInputDecoration(String label, String hint, {Icon? suffixIcon}) {
+  InputDecoration _buildInputDecoration(String label, String hint,
+      {Icon? suffixIcon}) {
     return InputDecoration(
       filled: true,
       fillColor: const Color(0xFFD3E0EA),
       labelText: label,
-      labelStyle: const TextStyle(color: Colors.black54, fontWeight: FontWeight.w400),
+      labelStyle:
+          const TextStyle(color: Colors.black54, fontWeight: FontWeight.w400),
       hintText: hint,
       hintStyle: const TextStyle(color: Colors.black54),
       suffixIcon: suffixIcon,
@@ -75,31 +73,6 @@ class _AddDataPageState extends State<AddDataPage> {
       contentPadding: const EdgeInsets.symmetric(vertical: 18, horizontal: 16),
       floatingLabelBehavior: FloatingLabelBehavior.never,
     );
-  }
-
-  @override
-  void initState() {
-    super.initState();
-    _initNotification();
-  }
-
-  Future<void> _initNotification() async {
-    const AndroidInitializationSettings initializationSettingsAndroid = AndroidInitializationSettings('@mipmap/ic_launcher');
-    const InitializationSettings initializationSettings = InitializationSettings(android: initializationSettingsAndroid);
-    await flutterLocalNotificationsPlugin.initialize(initializationSettings);
-  }
-
-  Future<void> _showNotification(String title, String body) async {
-    const AndroidNotificationDetails androidPlatformChannelSpecifics = AndroidNotificationDetails(
-      'pohon_channel',
-      'Pohon Notification',
-      channelDescription: 'Notifikasi penambahan pohon',
-      importance: Importance.max,
-      priority: Priority.high,
-      ticker: 'ticker',
-    );
-    const NotificationDetails platformChannelSpecifics = NotificationDetails(android: androidPlatformChannelSpecifics);
-    await flutterLocalNotificationsPlugin.show(0, title, body, platformChannelSpecifics);
   }
 
   Future<bool> _requestLocationPermission() async {
@@ -121,12 +94,15 @@ class _AddDataPageState extends State<AddDataPage> {
       bool hasPermission = await _requestLocationPermission();
       if (!hasPermission) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Izin lokasi ditolak. Tidak dapat mengambil lokasi saat ini.')),
+          const SnackBar(
+              content:
+                  Text('Izin lokasi ditolak. Tidak dapat mengambil lokasi saat ini.')),
         );
         return null;
       }
 
-      Position position = await Geolocator.getCurrentPosition(desiredAccuracy: LocationAccuracy.high);
+      Position position =
+          await Geolocator.getCurrentPosition(desiredAccuracy: LocationAccuracy.high);
       return "${position.latitude},${position.longitude}";
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -160,11 +136,18 @@ class _AddDataPageState extends State<AddDataPage> {
         backgroundColor: const Color(0xFF2E5D6F),
         elevation: 0,
         centerTitle: true,
-        leading: IconButton(icon: const Icon(Icons.arrow_back, color: Colors.white), onPressed: () => Navigator.of(context).pop()),
-        title: const Text("Tambah Data Pohon", style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white, fontSize: 20)),
+        leading: IconButton(
+            icon: const Icon(Icons.arrow_back, color: Colors.white),
+            onPressed: () => Navigator.of(context).pop()),
+        title: const Text("Tambah Data Pohon",
+            style: TextStyle(
+                fontWeight: FontWeight.bold, color: Colors.white, fontSize: 20)),
       ),
       body: Container(
-        decoration: const BoxDecoration(color: Colors.white, borderRadius: BorderRadius.only(topLeft: Radius.circular(32), topRight: Radius.circular(32))),
+        decoration: const BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.only(
+                topLeft: Radius.circular(32), topRight: Radius.circular(32))),
         child: Form(
           key: _formKey,
           child: ListView(
@@ -206,8 +189,10 @@ class _AddDataPageState extends State<AddDataPage> {
                 controller: _zonaProteksiController,
                 style: const TextStyle(color: Colors.black),
                 keyboardType: TextInputType.text,
-                decoration: _buildInputDecoration('Zona Proteksi', 'Masukkan Zona Proteksi'),
-                validator: (value) => value!.isEmpty ? 'Zona Proteksi wajib diisi' : null,
+                decoration:
+                    _buildInputDecoration('Zona Proteksi', 'Masukkan Zona Proteksi'),
+                validator: (value) =>
+                    value!.isEmpty ? 'Zona Proteksi wajib diisi' : null,
               ),
               const SizedBox(height: 20),
               TextFormField(
@@ -238,7 +223,8 @@ class _AddDataPageState extends State<AddDataPage> {
                 controller: _dateController,
                 style: const TextStyle(color: Colors.black),
                 keyboardType: TextInputType.datetime,
-                decoration: _buildInputDecoration('Tanggal Penjadwalan', 'Pilih tanggal', suffixIcon: const Icon(Icons.calendar_today, color: Colors.black)),
+                decoration: _buildInputDecoration('Tanggal Penjadwalan', 'Pilih tanggal',
+                    suffixIcon: const Icon(Icons.calendar_today, color: Colors.black)),
                 readOnly: true,
                 validator: (value) => value!.isEmpty ? 'Tanggal wajib diisi' : null,
                 onTap: () async {
@@ -256,7 +242,8 @@ class _AddDataPageState extends State<AddDataPage> {
                             onSurface: Colors.black87,
                           ),
                           textButtonTheme: TextButtonThemeData(
-                            style: TextButton.styleFrom(foregroundColor: Color(0xFF125E72)),
+                            style: TextButton.styleFrom(
+                                foregroundColor: Color(0xFF125E72)),
                           ),
                         ),
                         child: child!,
@@ -264,7 +251,8 @@ class _AddDataPageState extends State<AddDataPage> {
                     },
                   );
                   if (pickedDate != null) {
-                    _dateController.text = "${pickedDate.day.toString().padLeft(2, '0')}-${pickedDate.month.toString().padLeft(2, '0')}-${pickedDate.year}";
+                    _dateController.text =
+                        "${pickedDate.day.toString().padLeft(2, '0')}-${pickedDate.month.toString().padLeft(2, '0')}-${pickedDate.year}";
                   }
                 },
               ),
@@ -290,7 +278,8 @@ class _AddDataPageState extends State<AddDataPage> {
                     context: context,
                     builder: (context) {
                       return Dialog(
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+                        shape:
+                            RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
                         child: Padding(
                           padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 16),
                           child: Column(
@@ -307,7 +296,8 @@ class _AddDataPageState extends State<AddDataPage> {
                                 onTap: () async {
                                   Navigator.pop(context);
                                   final picker = ImagePicker();
-                                  final picked = await picker.pickImage(source: ImageSource.camera);
+                                  final picked =
+                                      await picker.pickImage(source: ImageSource.camera);
                                   if (picked != null) {
                                     setState(() {
                                       _fotoPohon = File(picked.path);
@@ -318,11 +308,13 @@ class _AddDataPageState extends State<AddDataPage> {
                               const SizedBox(height: 8),
                               ListTile(
                                 leading: const Icon(Icons.photo_library, size: 32),
-                                title: const Text('Pilih dari Galeri', style: TextStyle(fontSize: 18)),
+                                title:
+                                    const Text('Pilih dari Galeri', style: TextStyle(fontSize: 18)),
                                 onTap: () async {
                                   Navigator.pop(context);
                                   final picker = ImagePicker();
-                                  final picked = await picker.pickImage(source: ImageSource.gallery);
+                                  final picked =
+                                      await picker.pickImage(source: ImageSource.gallery);
                                   if (picked != null) {
                                     setState(() {
                                       _fotoPohon = File(picked.path);
@@ -347,7 +339,8 @@ class _AddDataPageState extends State<AddDataPage> {
                   ),
                   child: Row(
                     children: [
-                      Icon(_fotoPohon == null ? Icons.camera_alt : Icons.check_circle, size: 28, color: Colors.black54),
+                      Icon(_fotoPohon == null ? Icons.camera_alt : Icons.check_circle,
+                          size: 28, color: Colors.black54),
                       const SizedBox(width: 12),
                       Expanded(
                         child: Text(
@@ -365,7 +358,8 @@ class _AddDataPageState extends State<AddDataPage> {
                 controller: _coordinatesController,
                 style: const TextStyle(color: Colors.black),
                 keyboardType: TextInputType.text,
-                decoration: _buildInputDecoration('Koordinat', 'Pilih koordinat', suffixIcon: const Icon(Icons.location_on, color: Colors.black)),
+                decoration: _buildInputDecoration('Koordinat', 'Pilih koordinat',
+                    suffixIcon: const Icon(Icons.location_on, color: Colors.black)),
                 readOnly: true,
                 validator: (value) => value!.isEmpty ? 'Koordinat wajib diisi' : null,
                 onTap: () async {
@@ -373,7 +367,8 @@ class _AddDataPageState extends State<AddDataPage> {
                     context: context,
                     builder: (context) {
                       return Dialog(
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+                        shape:
+                            RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
                         child: Padding(
                           padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 16),
                           child: Column(
@@ -386,10 +381,13 @@ class _AddDataPageState extends State<AddDataPage> {
                               const SizedBox(height: 24),
                               ListTile(
                                 leading: const Icon(Icons.map, size: 32),
-                                title: const Text('Pilih dari Peta', style: TextStyle(fontSize: 18)),
+                                title:
+                                    const Text('Pilih dari Peta', style: TextStyle(fontSize: 18)),
                                 onTap: () async {
                                   Navigator.pop(context);
-                                  final String? selectedCoord = await Navigator.push(context, MaterialPageRoute(builder: (_) => PickLocationPage()));
+                                  final String? selectedCoord = await Navigator.push(
+                                      context,
+                                      MaterialPageRoute(builder: (_) => PickLocationPage()));
                                   if (selectedCoord != null) {
                                     setState(() {
                                       _coordinatesController.text = selectedCoord;
@@ -400,7 +398,8 @@ class _AddDataPageState extends State<AddDataPage> {
                               const SizedBox(height: 8),
                               ListTile(
                                 leading: const Icon(Icons.my_location, size: 32),
-                                title: const Text('Gunakan Lokasi Saat Ini', style: TextStyle(fontSize: 18)),
+                                title: const Text('Gunakan Lokasi Saat Ini',
+                                    style: TextStyle(fontSize: 18)),
                                 onTap: () async {
                                   Navigator.pop(context);
                                   final String? currentCoord = await _getCurrentLocation();
@@ -422,7 +421,8 @@ class _AddDataPageState extends State<AddDataPage> {
               const SizedBox(height: 20),
               DropdownButtonFormField<int>(
                 value: _selectedTujuan,
-                decoration: _buildInputDecoration('Tujuan Penjadwalan', 'Pilih tujuan penjadwalan'),
+                decoration:
+                    _buildInputDecoration('Tujuan Penjadwalan', 'Pilih tujuan penjadwalan'),
                 items: _tujuanOptions.entries.map((entry) {
                   return DropdownMenuItem<int>(
                     value: entry.key,
@@ -473,12 +473,14 @@ class _AddDataPageState extends State<AddDataPage> {
                           backgroundColor: Colors.white,
                           foregroundColor: const Color(0xFF2E5D6F),
                           side: const BorderSide(color: Color(0xFF2E5D6F), width: 2),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(25)),
+                          shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(25)),
                         ),
                         onPressed: () {
                           Navigator.of(context).pop();
                         },
-                        child: const Text('Batal', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 16)),
+                        child: const Text('Batal',
+                            style: TextStyle(fontWeight: FontWeight.w600, fontSize: 16)),
                       ),
                     ),
                   ),
@@ -490,14 +492,15 @@ class _AddDataPageState extends State<AddDataPage> {
                         style: ElevatedButton.styleFrom(
                           backgroundColor: const Color(0xFF2E5D6F),
                           foregroundColor: Colors.white,
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(25)),
+                          shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(25)),
                         ),
                         onPressed: _isLoading
-                            ? null // Disable button when loading
+                            ? null
                             : () async {
                                 if (_formKey.currentState!.validate()) {
                                   setState(() {
-                                    _isLoading = true; // Start loading
+                                    _isLoading = true;
                                   });
                                   List<String> dateParts = _dateController.text.split('-');
                                   if (dateParts.length == 3) {
@@ -515,7 +518,8 @@ class _AddDataPageState extends State<AddDataPage> {
                                         parentId: int.tryParse(_up3Controller.text) ?? 0,
                                         unitId: int.tryParse(_ulpController.text) ?? 0,
                                         asetJtmId: int.tryParse(_kmsAsetController.text) ?? 0,
-                                        scheduleDate: DateTime(int.parse(dateParts[2]), int.parse(dateParts[1]), int.parse(dateParts[0])),
+                                        scheduleDate: DateTime(int.parse(dateParts[2]),
+                                            int.parse(dateParts[1]), int.parse(dateParts[0])),
                                         prioritas: _selectedPrioritas ?? 1,
                                         namaPohon: _selectedNamaPohon ?? '',
                                         fotoPohon: '',
@@ -529,22 +533,28 @@ class _AddDataPageState extends State<AddDataPage> {
                                         notificationDate: DateTime.now(),
                                       );
 
-                                      await Provider.of<DataPohonProvider>(context, listen: false).addPohon(pohon, _fotoPohon);
-                                      final notifMsg = '${_selectedNamaPohon ?? ''} dengan ID ${_idController.text} baru ditambahkan dengan perkiraan tanggal penebangan ${_dateController.text}.';
-                                      await Provider.of<NotificationProvider>(context, listen: false).addNotification(
+                                      await Provider.of<DataPohonProvider>(context,
+                                              listen: false)
+                                          .addPohon(pohon, _fotoPohon);
+                                      final notifMsg =
+                                          '${_selectedNamaPohon ?? ''} dengan ID ${_idController.text} baru ditambahkan dengan perkiraan tanggal penebangan ${_dateController.text}.';
+                                      await Provider.of<NotificationProvider>(context,
+                                              listen: false)
+                                          .addNotification(
                                         AppNotification(
                                           title: 'Pohon Baru Ditambahkan',
                                           message: notifMsg,
                                           date: DateTime.now(),
                                         ),
                                       );
-                                      await _showNotification('Pohon Baru Ditambahkan', notifMsg);
                                       if (!mounted) return;
                                       await showDialog(
                                         context: context,
                                         builder: (ctx) => AlertDialog(
-                                          title: const Text('Sukses!', style: TextStyle(color: Colors.green)),
-                                          content: const Text('Data pohon berhasil disimpan.'),
+                                          title: const Text('Sukses!',
+                                              style: TextStyle(color: Colors.green)),
+                                          content:
+                                              const Text('Data pohon berhasil disimpan.'),
                                           actions: [
                                             TextButton(
                                               onPressed: () => Navigator.of(ctx).pop(),
@@ -558,8 +568,10 @@ class _AddDataPageState extends State<AddDataPage> {
                                       await showDialog(
                                         context: context,
                                         builder: (ctx) => AlertDialog(
-                                          title: const Text('Gagal!', style: TextStyle(color: Colors.red)),
-                                          content: Text('Terjadi kesalahan saat menyimpan data:\n${e.toString()}'),
+                                          title: const Text('Gagal!',
+                                              style: TextStyle(color: Colors.red)),
+                                          content: Text(
+                                              'Terjadi kesalahan saat menyimpan data:\n${e.toString()}'),
                                           actions: [
                                             TextButton(
                                               onPressed: () => Navigator.of(ctx).pop(),
@@ -571,18 +583,18 @@ class _AddDataPageState extends State<AddDataPage> {
                                     } finally {
                                       if (mounted) {
                                         setState(() {
-                                          _isLoading = false; // Stop loading
+                                          _isLoading = false;
                                         });
                                       }
                                     }
                                   } else {
                                     setState(() {
-                                      _isLoading = false; // Stop loading if date format is invalid
+                                      _isLoading = false;
                                     });
                                   }
                                 } else {
                                   setState(() {
-                                    _isLoading = false; // Stop loading if validation fails
+                                    _isLoading = false;
                                   });
                                 }
                               },
@@ -595,7 +607,9 @@ class _AddDataPageState extends State<AddDataPage> {
                                   valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
                                 ),
                               )
-                            : const Text('Simpan', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 16)),
+                            : const Text('Simpan',
+                                style:
+                                    TextStyle(fontWeight: FontWeight.w600, fontSize: 16)),
                       ),
                     ),
                   ),

@@ -2,6 +2,7 @@
 import 'package:flutter/material.dart';
 import '../../constants/colors.dart';
 import '../../navigation_menu.dart';
+import '../login/login.dart';
 import 'onboarding1.dart';
 import 'onboarding2.dart';
 import 'onboarding3.dart';
@@ -93,7 +94,7 @@ class _OnboardingPageState extends State<OnboardingPage> {
       );
     } else {
       Navigator.of(context).pushReplacement(
-        MaterialPageRoute(builder: (context) => const NavigationMenu()),
+        MaterialPageRoute(builder: (context) => const LoginPage()),
       );
     }
   }

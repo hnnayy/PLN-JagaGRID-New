@@ -1,12 +1,12 @@
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-// import 'package:flutter_dotenv/flutter_dotenv.dart'; // Opsional, aktifkan kalau sudah pakai .env
-import 'package:firebase_app_check/firebase_app_check.dart'; // Aktifkan lagi kalau mau App Check
+import 'package:firebase_app_check/firebase_app_check.dart';
 
 import 'firebase_options.dart';
+import 'package:overlay_support/overlay_support.dart';
 import 'providers/data_pohon_provider.dart';
-import 'providers/eksekusi_provider.dart'; // jangan lupa provider tambahan
+import 'providers/eksekusi_provider.dart';
 import 'providers/notification_provider.dart';
 import 'page/splash_screen.dart';
 import 'page/peta_pohon/map_page.dart';
@@ -16,14 +16,10 @@ void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
   try {
-    // Optional: load .env
-    // await dotenv.load(fileName: ".env");
-
     await Firebase.initializeApp(
       options: DefaultFirebaseOptions.currentPlatform,
     );
 
-    // AppCheck → bisa di-comment kalau lagi debugging
     await FirebaseAppCheck.instance.activate(
       androidProvider: AndroidProvider.debug, // ganti playIntegrity di production
     );
@@ -33,7 +29,7 @@ void main() async {
     print('❌ Error initializing Firebase/AppCheck: $e');
   }
 
-  runApp(const MyApp());
+  runApp(const OverlaySupport(child: MyApp()));
 }
 
 class MyApp extends StatelessWidget {
@@ -43,9 +39,9 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MultiProvider(
       providers: [
-  ChangeNotifierProvider(create: (_) => DataPohonProvider()),
-  ChangeNotifierProvider(create: (_) => EksekusiProvider()), // provider tambahan
-  ChangeNotifierProvider(create: (_) => NotificationProvider()),
+        ChangeNotifierProvider(create: (_) => DataPohonProvider()),
+        ChangeNotifierProvider(create: (_) => EksekusiProvider()),
+        ChangeNotifierProvider(create: (_) => NotificationProvider()),
       ],
       child: MaterialApp(
         debugShowCheckedModeBanner: false,

@@ -4,6 +4,7 @@ import 'layoutsetting.dart';
 import 'assets_jtm/assets_jtm.dart'; // ✅ Import halaman Assets JTM menu utama
 import 'package:flutter_application_2/page/settings/profile/profile_page.dart';
 import 'package:flutter_application_2/page/settings/profile/user_list_page.dart';
+import '../../page/login/login.dart';
 
 /// -------------------------
 /// Settings Item Content
@@ -72,10 +73,10 @@ class SettingsContent {
             TextButton(
               onPressed: () {
                 Navigator.of(context).pop();
-                // TODO: Implementasi logout
-                // Contoh:
-                // FirebaseAuth.instance.signOut();
-                // Navigator.pushReplacementNamed(context, '/login');
+                Navigator.of(context).pushAndRemoveUntil(
+                  MaterialPageRoute(builder: (_) => const LoginPage()),
+                  (route) => false,
+                );
               },
               child: const Text('Logout'),
             ),
