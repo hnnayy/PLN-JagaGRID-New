@@ -7,6 +7,7 @@ import 'package:firebase_app_check/firebase_app_check.dart'; // Aktifkan lagi ka
 import 'firebase_options.dart';
 import 'providers/data_pohon_provider.dart';
 import 'providers/eksekusi_provider.dart'; // jangan lupa provider tambahan
+import 'providers/notification_provider.dart';
 import 'page/splash_screen.dart';
 import 'page/peta_pohon/map_page.dart';
 import 'page/peta_pohon/add_data_page.dart';
@@ -42,8 +43,9 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MultiProvider(
       providers: [
-        ChangeNotifierProvider(create: (_) => DataPohonProvider()),
-        ChangeNotifierProvider(create: (_) => EksekusiProvider()), // provider tambahan
+  ChangeNotifierProvider(create: (_) => DataPohonProvider()),
+  ChangeNotifierProvider(create: (_) => EksekusiProvider()), // provider tambahan
+  ChangeNotifierProvider(create: (_) => NotificationProvider()),
       ],
       child: MaterialApp(
         debugShowCheckedModeBanner: false,

@@ -2,6 +2,10 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
+import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import 'package:geolocator/geolocator.dart';
+import '../notification/notification_page.dart';
+import '../../providers/notification_provider.dart';
 import '../../providers/data_pohon_provider.dart';
 import '../../models/data_pohon.dart';
 import 'pick_location_page.dart';
@@ -24,14 +28,17 @@ class _AddDataPageState extends State<AddDataPage> {
   final _kmsAsetController = TextEditingController();
   final _vendorController = TextEditingController();
   final _dateController = TextEditingController();
-  final _initialHeightController = TextEditingController(); // Tambahan untuk tinggi awal
   final _coordinatesController = TextEditingController();
   final _noteController = TextEditingController();
   File? _fotoPohon;
 
+  // Notifikasi
+  final FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin = FlutterLocalNotificationsPlugin();
+
   int? _selectedTujuan;
   int? _selectedPrioritas;
-  String? _selectedNamaPohon; // Diganti dari _treeNameController
+  String? _selectedNamaPohon;
+  bool _isLoading = false; // Loading state variable
 
   final Map<int, String> _tujuanOptions = {
     1: 'Tebang Pangkas',
@@ -71,6 +78,65 @@ class _AddDataPageState extends State<AddDataPage> {
   }
 
   @override
+  void initState() {
+    super.initState();
+    _initNotification();
+  }
+
+  Future<void> _initNotification() async {
+    const AndroidInitializationSettings initializationSettingsAndroid = AndroidInitializationSettings('@mipmap/ic_launcher');
+    const InitializationSettings initializationSettings = InitializationSettings(android: initializationSettingsAndroid);
+    await flutterLocalNotificationsPlugin.initialize(initializationSettings);
+  }
+
+  Future<void> _showNotification(String title, String body) async {
+    const AndroidNotificationDetails androidPlatformChannelSpecifics = AndroidNotificationDetails(
+      'pohon_channel',
+      'Pohon Notification',
+      channelDescription: 'Notifikasi penambahan pohon',
+      importance: Importance.max,
+      priority: Priority.high,
+      ticker: 'ticker',
+    );
+    const NotificationDetails platformChannelSpecifics = NotificationDetails(android: androidPlatformChannelSpecifics);
+    await flutterLocalNotificationsPlugin.show(0, title, body, platformChannelSpecifics);
+  }
+
+  Future<bool> _requestLocationPermission() async {
+    LocationPermission permission = await Geolocator.checkPermission();
+    if (permission == LocationPermission.denied) {
+      permission = await Geolocator.requestPermission();
+      if (permission == LocationPermission.denied) {
+        return false;
+      }
+    }
+    if (permission == LocationPermission.deniedForever) {
+      return false;
+    }
+    return true;
+  }
+
+  Future<String?> _getCurrentLocation() async {
+    try {
+      bool hasPermission = await _requestLocationPermission();
+      if (!hasPermission) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Izin lokasi ditolak. Tidak dapat mengambil lokasi saat ini.')),
+        );
+        return null;
+      }
+
+      Position position = await Geolocator.getCurrentPosition(desiredAccuracy: LocationAccuracy.high);
+      return "${position.latitude},${position.longitude}";
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Gagal mengambil lokasi: $e')),
+      );
+      return null;
+    }
+  }
+
+  @override
   void dispose() {
     _idController.dispose();
     _up3Controller.dispose();
@@ -81,7 +147,6 @@ class _AddDataPageState extends State<AddDataPage> {
     _kmsAsetController.dispose();
     _vendorController.dispose();
     _dateController.dispose();
-    _initialHeightController.dispose();
     _coordinatesController.dispose();
     _noteController.dispose();
     super.dispose();
@@ -90,17 +155,20 @@ class _AddDataPageState extends State<AddDataPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: const Color(0xFF2E5D6F),
       appBar: AppBar(
-        title: const Text('Tambah Data Pohon', style: TextStyle(color: Color(0xFFEFE62E), fontFamily: 'Poppins', fontWeight: FontWeight.bold)),
-        leading: IconButton(icon: const Icon(Icons.arrow_back, color: Color(0xFFEFE62E)), onPressed: () => Navigator.pop(context)),
-        backgroundColor: const Color(0xFF125E72),
+        backgroundColor: const Color(0xFF2E5D6F),
+        elevation: 0,
+        centerTitle: true,
+        leading: IconButton(icon: const Icon(Icons.arrow_back, color: Colors.white), onPressed: () => Navigator.of(context).pop()),
+        title: const Text("Tambah Data Pohon", style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white, fontSize: 20)),
       ),
       body: Container(
-        color: const Color(0xFF125E72),
-        padding: const EdgeInsets.all(16.0),
+        decoration: const BoxDecoration(color: Colors.white, borderRadius: BorderRadius.only(topLeft: Radius.circular(32), topRight: Radius.circular(32))),
         child: Form(
           key: _formKey,
           child: ListView(
+            padding: const EdgeInsets.all(24),
             children: [
               TextFormField(
                 controller: _idController,
@@ -109,7 +177,7 @@ class _AddDataPageState extends State<AddDataPage> {
                 decoration: _buildInputDecoration('Id Pohon', 'Masukkan ID pohon'),
                 validator: (value) => value!.isEmpty ? 'ID wajib diisi' : null,
               ),
-              const SizedBox(height: 10),
+              const SizedBox(height: 20),
               TextFormField(
                 controller: _up3Controller,
                 style: const TextStyle(color: Colors.black),
@@ -117,7 +185,7 @@ class _AddDataPageState extends State<AddDataPage> {
                 decoration: _buildInputDecoration('UP3', 'Masukkan UP3'),
                 validator: (value) => value!.isEmpty ? 'UP3 wajib diisi' : null,
               ),
-              const SizedBox(height: 10),
+              const SizedBox(height: 20),
               TextFormField(
                 controller: _ulpController,
                 style: const TextStyle(color: Colors.black),
@@ -125,7 +193,7 @@ class _AddDataPageState extends State<AddDataPage> {
                 decoration: _buildInputDecoration('ULP', 'Masukkan ULP'),
                 validator: (value) => value!.isEmpty ? 'ULP wajib diisi' : null,
               ),
-              const SizedBox(height: 10),
+              const SizedBox(height: 20),
               TextFormField(
                 controller: _penyulangController,
                 style: const TextStyle(color: Colors.black),
@@ -133,7 +201,7 @@ class _AddDataPageState extends State<AddDataPage> {
                 decoration: _buildInputDecoration('Penyulang', 'Masukkan Penyulang'),
                 validator: (value) => value!.isEmpty ? 'Penyulang wajib diisi' : null,
               ),
-              const SizedBox(height: 10),
+              const SizedBox(height: 20),
               TextFormField(
                 controller: _zonaProteksiController,
                 style: const TextStyle(color: Colors.black),
@@ -141,7 +209,7 @@ class _AddDataPageState extends State<AddDataPage> {
                 decoration: _buildInputDecoration('Zona Proteksi', 'Masukkan Zona Proteksi'),
                 validator: (value) => value!.isEmpty ? 'Zona Proteksi wajib diisi' : null,
               ),
-              const SizedBox(height: 10),
+              const SizedBox(height: 20),
               TextFormField(
                 controller: _sectionController,
                 style: const TextStyle(color: Colors.black),
@@ -149,7 +217,7 @@ class _AddDataPageState extends State<AddDataPage> {
                 decoration: _buildInputDecoration('Section', 'Masukkan section'),
                 validator: (value) => value!.isEmpty ? 'Section wajib diisi' : null,
               ),
-              const SizedBox(height: 10),
+              const SizedBox(height: 20),
               TextFormField(
                 controller: _kmsAsetController,
                 style: const TextStyle(color: Colors.black),
@@ -157,7 +225,7 @@ class _AddDataPageState extends State<AddDataPage> {
                 decoration: _buildInputDecoration('Kms Aset', 'Masukkan Kms Aset'),
                 validator: (value) => value!.isEmpty ? 'Kms Aset wajib diisi' : null,
               ),
-              const SizedBox(height: 10),
+              const SizedBox(height: 20),
               TextFormField(
                 controller: _vendorController,
                 style: const TextStyle(color: Colors.black),
@@ -165,7 +233,7 @@ class _AddDataPageState extends State<AddDataPage> {
                 decoration: _buildInputDecoration('Vendor VB', 'Masukkan vendor'),
                 validator: (value) => value!.isEmpty ? 'Vendor wajib diisi' : null,
               ),
-              const SizedBox(height: 10),
+              const SizedBox(height: 20),
               TextFormField(
                 controller: _dateController,
                 style: const TextStyle(color: Colors.black),
@@ -200,7 +268,7 @@ class _AddDataPageState extends State<AddDataPage> {
                   }
                 },
               ),
-              const SizedBox(height: 10),
+              const SizedBox(height: 20),
               DropdownButtonFormField<String>(
                 value: _selectedNamaPohon,
                 decoration: _buildInputDecoration('Nama Pohon', 'Pilih nama pohon'),
@@ -215,24 +283,59 @@ class _AddDataPageState extends State<AddDataPage> {
                 },
                 validator: (value) => value == null ? 'Nama pohon wajib diisi' : null,
               ),
-              const SizedBox(height: 10),
-              TextFormField(
-                controller: _initialHeightController,
-                style: const TextStyle(color: Colors.black),
-                keyboardType: TextInputType.number,
-                decoration: _buildInputDecoration('Tinggi Awal (meter)', 'Masukkan tinggi awal'),
-                validator: (value) => value!.isEmpty ? 'Tinggi wajib diisi' : null,
-              ),
-              const SizedBox(height: 10),
+              const SizedBox(height: 20),
               GestureDetector(
                 onTap: () async {
-                  final picker = ImagePicker();
-                  final picked = await picker.pickImage(source: ImageSource.camera);
-                  if (picked != null) {
-                    setState(() {
-                      _fotoPohon = File(picked.path);
-                    });
-                  }
+                  await showDialog(
+                    context: context,
+                    builder: (context) {
+                      return Dialog(
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 16),
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              const Text(
+                                'Pilih Sumber Foto',
+                                style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+                              ),
+                              const SizedBox(height: 24),
+                              ListTile(
+                                leading: const Icon(Icons.camera_alt, size: 32),
+                                title: const Text('Ambil Foto', style: TextStyle(fontSize: 18)),
+                                onTap: () async {
+                                  Navigator.pop(context);
+                                  final picker = ImagePicker();
+                                  final picked = await picker.pickImage(source: ImageSource.camera);
+                                  if (picked != null) {
+                                    setState(() {
+                                      _fotoPohon = File(picked.path);
+                                    });
+                                  }
+                                },
+                              ),
+                              const SizedBox(height: 8),
+                              ListTile(
+                                leading: const Icon(Icons.photo_library, size: 32),
+                                title: const Text('Pilih dari Galeri', style: TextStyle(fontSize: 18)),
+                                onTap: () async {
+                                  Navigator.pop(context);
+                                  final picker = ImagePicker();
+                                  final picked = await picker.pickImage(source: ImageSource.gallery);
+                                  if (picked != null) {
+                                    setState(() {
+                                      _fotoPohon = File(picked.path);
+                                    });
+                                  }
+                                },
+                              ),
+                            ],
+                          ),
+                        ),
+                      );
+                    },
+                  );
                 },
                 child: Container(
                   margin: const EdgeInsets.symmetric(vertical: 8),
@@ -244,17 +347,20 @@ class _AddDataPageState extends State<AddDataPage> {
                   ),
                   child: Row(
                     children: [
-                      const Icon(Icons.camera_alt, size: 32, color: Colors.black54),
+                      Icon(_fotoPohon == null ? Icons.camera_alt : Icons.check_circle, size: 28, color: Colors.black54),
                       const SizedBox(width: 12),
-                      Text(
-                        _fotoPohon == null ? 'Foto Pohon' : 'Foto Dipilih',
-                        style: const TextStyle(fontSize: 16, color: Colors.black),
+                      Expanded(
+                        child: Text(
+                          _fotoPohon == null ? 'Pilih Foto Pohon' : 'Foto Dipilih',
+                          style: const TextStyle(fontSize: 16, color: Colors.black),
+                          textAlign: TextAlign.left,
+                        ),
                       ),
                     ],
                   ),
                 ),
               ),
-              const SizedBox(height: 10),
+              const SizedBox(height: 20),
               TextFormField(
                 controller: _coordinatesController,
                 style: const TextStyle(color: Colors.black),
@@ -263,13 +369,57 @@ class _AddDataPageState extends State<AddDataPage> {
                 readOnly: true,
                 validator: (value) => value!.isEmpty ? 'Koordinat wajib diisi' : null,
                 onTap: () async {
-                  final String? selectedCoord = await Navigator.push(context, MaterialPageRoute(builder: (_) => PickLocationPage()));
-                  if (selectedCoord != null) {
-                    _coordinatesController.text = selectedCoord;
-                  }
+                  await showDialog(
+                    context: context,
+                    builder: (context) {
+                      return Dialog(
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 16),
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              const Text(
+                                'Pilih Sumber Koordinat',
+                                style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+                              ),
+                              const SizedBox(height: 24),
+                              ListTile(
+                                leading: const Icon(Icons.map, size: 32),
+                                title: const Text('Pilih dari Peta', style: TextStyle(fontSize: 18)),
+                                onTap: () async {
+                                  Navigator.pop(context);
+                                  final String? selectedCoord = await Navigator.push(context, MaterialPageRoute(builder: (_) => PickLocationPage()));
+                                  if (selectedCoord != null) {
+                                    setState(() {
+                                      _coordinatesController.text = selectedCoord;
+                                    });
+                                  }
+                                },
+                              ),
+                              const SizedBox(height: 8),
+                              ListTile(
+                                leading: const Icon(Icons.my_location, size: 32),
+                                title: const Text('Gunakan Lokasi Saat Ini', style: TextStyle(fontSize: 18)),
+                                onTap: () async {
+                                  Navigator.pop(context);
+                                  final String? currentCoord = await _getCurrentLocation();
+                                  if (currentCoord != null) {
+                                    setState(() {
+                                      _coordinatesController.text = currentCoord;
+                                    });
+                                  }
+                                },
+                              ),
+                            ],
+                          ),
+                        ),
+                      );
+                    },
+                  );
                 },
               ),
-              const SizedBox(height: 10),
+              const SizedBox(height: 20),
               DropdownButtonFormField<int>(
                 value: _selectedTujuan,
                 decoration: _buildInputDecoration('Tujuan Penjadwalan', 'Pilih tujuan penjadwalan'),
@@ -286,7 +436,7 @@ class _AddDataPageState extends State<AddDataPage> {
                 },
                 validator: (value) => value == null ? 'Tujuan wajib diisi' : null,
               ),
-              const SizedBox(height: 10),
+              const SizedBox(height: 20),
               DropdownButtonFormField<int>(
                 value: _selectedPrioritas,
                 decoration: _buildInputDecoration('Prioritas', 'Pilih prioritas'),
@@ -303,7 +453,7 @@ class _AddDataPageState extends State<AddDataPage> {
                 },
                 validator: (value) => value == null ? 'Prioritas wajib diisi' : null,
               ),
-              const SizedBox(height: 10),
+              const SizedBox(height: 20),
               TextFormField(
                 controller: _noteController,
                 minLines: 2,
@@ -312,84 +462,144 @@ class _AddDataPageState extends State<AddDataPage> {
                 keyboardType: TextInputType.multiline,
                 decoration: _buildInputDecoration('Catatan', 'Masukkan catatan'),
               ),
-              const SizedBox(height: 24),
-              SizedBox(
-                width: double.infinity,
-                height: 48,
-                child: ElevatedButton(
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFFEFE62E),
-                    foregroundColor: Colors.black,
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+              const SizedBox(height: 32),
+              Row(
+                children: [
+                  Expanded(
+                    child: SizedBox(
+                      height: 50,
+                      child: OutlinedButton(
+                        style: OutlinedButton.styleFrom(
+                          backgroundColor: Colors.white,
+                          foregroundColor: const Color(0xFF2E5D6F),
+                          side: const BorderSide(color: Color(0xFF2E5D6F), width: 2),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(25)),
+                        ),
+                        onPressed: () {
+                          Navigator.of(context).pop();
+                        },
+                        child: const Text('Batal', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 16)),
+                      ),
+                    ),
                   ),
-                  onPressed: () async {
-                    if (_formKey.currentState!.validate()) {
-                      List<String> dateParts = _dateController.text.split('-');
-                      if (dateParts.length == 3) {
-                        try {
-                          final pohon = DataPohon(
-                            id: '',
-                            idPohon: _idController.text,
-                            up3: _up3Controller.text,
-                            ulp: _ulpController.text,
-                            penyulang: _penyulangController.text,
-                            zonaProteksi: _zonaProteksiController.text,
-                            section: _sectionController.text,
-                            kmsAset: _kmsAsetController.text,
-                            vendor: _vendorController.text,
-                            parentId: int.tryParse(_up3Controller.text) ?? 0,
-                            unitId: int.tryParse(_ulpController.text) ?? 0,
-                            asetJtmId: int.tryParse(_kmsAsetController.text) ?? 0,
-                            scheduleDate: DateTime(int.parse(dateParts[2]), int.parse(dateParts[1]), int.parse(dateParts[0])),
-                            prioritas: _selectedPrioritas ?? 1,
-                            namaPohon: _selectedNamaPohon ?? '',
-                            fotoPohon: '',
-                            koordinat: _coordinatesController.text,
-                            tujuanPenjadwalan: _selectedTujuan ?? 1,
-                            catatan: _noteController.text,
-                            createdBy: 1,
-                            createdDate: DateTime.now(),
-                            growthRate: DataPohon.growthRates[_selectedNamaPohon!]!,
-                            initialHeight: double.parse(_initialHeightController.text),
-                            notificationDate: DateTime.now(), // Akan dihitung di service
-                          );
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: SizedBox(
+                      height: 50,
+                      child: ElevatedButton(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFF2E5D6F),
+                          foregroundColor: Colors.white,
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(25)),
+                        ),
+                        onPressed: _isLoading
+                            ? null // Disable button when loading
+                            : () async {
+                                if (_formKey.currentState!.validate()) {
+                                  setState(() {
+                                    _isLoading = true; // Start loading
+                                  });
+                                  List<String> dateParts = _dateController.text.split('-');
+                                  if (dateParts.length == 3) {
+                                    try {
+                                      final pohon = DataPohon(
+                                        id: '',
+                                        idPohon: _idController.text,
+                                        up3: _up3Controller.text,
+                                        ulp: _ulpController.text,
+                                        penyulang: _penyulangController.text,
+                                        zonaProteksi: _zonaProteksiController.text,
+                                        section: _sectionController.text,
+                                        kmsAset: _kmsAsetController.text,
+                                        vendor: _vendorController.text,
+                                        parentId: int.tryParse(_up3Controller.text) ?? 0,
+                                        unitId: int.tryParse(_ulpController.text) ?? 0,
+                                        asetJtmId: int.tryParse(_kmsAsetController.text) ?? 0,
+                                        scheduleDate: DateTime(int.parse(dateParts[2]), int.parse(dateParts[1]), int.parse(dateParts[0])),
+                                        prioritas: _selectedPrioritas ?? 1,
+                                        namaPohon: _selectedNamaPohon ?? '',
+                                        fotoPohon: '',
+                                        koordinat: _coordinatesController.text,
+                                        tujuanPenjadwalan: _selectedTujuan ?? 1,
+                                        catatan: _noteController.text,
+                                        createdBy: 1,
+                                        createdDate: DateTime.now(),
+                                        growthRate: DataPohon.growthRates[_selectedNamaPohon!]!,
+                                        initialHeight: 0,
+                                        notificationDate: DateTime.now(),
+                                      );
 
-                          await Provider.of<DataPohonProvider>(context, listen: false).addPohon(pohon, _fotoPohon);
-                          if (!mounted) return;
-                          await showDialog(
-                            context: context,
-                            builder: (ctx) => AlertDialog(
-                              title: const Text('Sukses!', style: TextStyle(color: Colors.green)),
-                              content: const Text('Data pohon berhasil disimpan.'),
-                              actions: [
-                                TextButton(
-                                  onPressed: () => Navigator.of(ctx).pop(),
-                                  child: const Text('OK'),
+                                      await Provider.of<DataPohonProvider>(context, listen: false).addPohon(pohon, _fotoPohon);
+                                      final notifMsg = '${_selectedNamaPohon ?? ''} dengan ID ${_idController.text} baru ditambahkan dengan perkiraan tanggal penebangan ${_dateController.text}.';
+                                      await Provider.of<NotificationProvider>(context, listen: false).addNotification(
+                                        AppNotification(
+                                          title: 'Pohon Baru Ditambahkan',
+                                          message: notifMsg,
+                                          date: DateTime.now(),
+                                        ),
+                                      );
+                                      await _showNotification('Pohon Baru Ditambahkan', notifMsg);
+                                      if (!mounted) return;
+                                      await showDialog(
+                                        context: context,
+                                        builder: (ctx) => AlertDialog(
+                                          title: const Text('Sukses!', style: TextStyle(color: Colors.green)),
+                                          content: const Text('Data pohon berhasil disimpan.'),
+                                          actions: [
+                                            TextButton(
+                                              onPressed: () => Navigator.of(ctx).pop(),
+                                              child: const Text('OK'),
+                                            ),
+                                          ],
+                                        ),
+                                      );
+                                      Navigator.pop(context);
+                                    } catch (e) {
+                                      await showDialog(
+                                        context: context,
+                                        builder: (ctx) => AlertDialog(
+                                          title: const Text('Gagal!', style: TextStyle(color: Colors.red)),
+                                          content: Text('Terjadi kesalahan saat menyimpan data:\n${e.toString()}'),
+                                          actions: [
+                                            TextButton(
+                                              onPressed: () => Navigator.of(ctx).pop(),
+                                              child: const Text('OK'),
+                                            ),
+                                          ],
+                                        ),
+                                      );
+                                    } finally {
+                                      if (mounted) {
+                                        setState(() {
+                                          _isLoading = false; // Stop loading
+                                        });
+                                      }
+                                    }
+                                  } else {
+                                    setState(() {
+                                      _isLoading = false; // Stop loading if date format is invalid
+                                    });
+                                  }
+                                } else {
+                                  setState(() {
+                                    _isLoading = false; // Stop loading if validation fails
+                                  });
+                                }
+                              },
+                        child: _isLoading
+                            ? const SizedBox(
+                                height: 20,
+                                width: 20,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
                                 ),
-                              ],
-                            ),
-                          );
-                          Navigator.pop(context);
-                        } catch (e) {
-                          await showDialog(
-                            context: context,
-                            builder: (ctx) => AlertDialog(
-                              title: const Text('Gagal!', style: TextStyle(color: Colors.red)),
-                              content: Text('Terjadi kesalahan saat menyimpan data:\n${e.toString()}'),
-                              actions: [
-                                TextButton(
-                                  onPressed: () => Navigator.of(ctx).pop(),
-                                  child: const Text('OK'),
-                                ),
-                              ],
-                            ),
-                          );
-                        }
-                      }
-                    }
-                  },
-                  child: const Text('Simpan', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-                ),
+                              )
+                            : const Text('Simpan', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 16)),
+                      ),
+                    ),
+                  ),
+                ],
               ),
             ],
           ),

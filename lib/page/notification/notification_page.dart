@@ -1,10 +1,13 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import '../../providers/notification_provider.dart';
 
 class NotificationPage extends StatelessWidget {
   const NotificationPage({super.key});
 
   @override
   Widget build(BuildContext context) {
+    final notifications = Provider.of<NotificationProvider>(context).notifications;
     return Scaffold(
       backgroundColor: const Color(0xFF2E5D6F),
       appBar: AppBar(
@@ -29,25 +32,16 @@ class NotificationPage extends StatelessWidget {
             topRight: Radius.circular(32),
           ),
         ),
-        child: ListView(
-          padding: const EdgeInsets.fromLTRB(20, 24, 20, 16),
-          children: [
-            _buildSectionTitle("Hari ini"),
-            const SizedBox(height: 8),
-            _buildNotificationItem(),
-            _buildNotificationItem(),
-            const SizedBox(height: 24),
-            _buildSectionTitle("Kemarin"),
-            const SizedBox(height: 8),
-            _buildNotificationItem(),
-            _buildNotificationItem(),
-            const SizedBox(height: 24),
-            _buildSectionTitle("Minggu ini"),
-            const SizedBox(height: 8),
-            _buildNotificationItem(),
-            _buildNotificationItem(),
-          ],
-        ),
+        child: notifications.isEmpty
+            ? const Center(child: Text('Belum ada notifikasi'))
+            : ListView.builder(
+                padding: const EdgeInsets.fromLTRB(20, 24, 20, 16),
+                itemCount: notifications.length,
+                itemBuilder: (context, i) {
+                  final notif = notifications[i];
+                  return _buildNotificationItem(notif);
+                },
+              ),
       ),
     );
   }
@@ -63,7 +57,7 @@ class NotificationPage extends StatelessWidget {
     );
   }
 
-  Widget _buildNotificationItem() {
+  Widget _buildNotificationItem(AppNotification notif) {
     return Container(
       margin: const EdgeInsets.symmetric(vertical: 8),
       padding: const EdgeInsets.all(16),
@@ -102,19 +96,18 @@ class NotificationPage extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text(
-                  "Penebangan Pohon Diperlukan Segera!",
-                  style: TextStyle(
+                Text(
+                  notif.title,
+                  style: const TextStyle(
                     fontWeight: FontWeight.bold,
                     fontSize: 14,
                     color: Colors.black,
                   ),
                 ),
                 const SizedBox(height: 6),
-                const Text(
-                  "Pohon ID #258756801 harus ditebang dalam 7 hari. "
-                  "Segera tindak lanjuti. Lihat detail pohon.",
-                  style: TextStyle(
+                Text(
+                  notif.message,
+                  style: const TextStyle(
                     fontSize: 12,
                     color: Colors.black54,
                     height: 1.4,
@@ -124,8 +117,8 @@ class NotificationPage extends StatelessWidget {
                 Align(
                   alignment: Alignment.bottomRight,
                   child: Text(
-                    "17:00 - April 24",
-                    style: TextStyle(
+                    _formatDate(notif.date),
+                    style: const TextStyle(
                       fontSize: 11,
                       color: Colors.blue,
                       fontWeight: FontWeight.w500,
@@ -138,5 +131,13 @@ class NotificationPage extends StatelessWidget {
         ],
       ),
     );
+  }
+
+  String _formatDate(DateTime date) {
+    // Format: HH:mm - dd MMM yyyy
+    final months = [
+      '', 'Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'
+    ];
+    return '${date.hour.toString().padLeft(2, '0')}:${date.minute.toString().padLeft(2, '0')} - ${date.day} ${months[date.month]} ${date.year}';
   }
 }
