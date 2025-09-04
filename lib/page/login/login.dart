@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../../navigation_menu.dart';
 
 class LoginPage extends StatefulWidget {
@@ -166,6 +167,12 @@ class _LoginPageState extends State<LoginPage> {
 
       if (query.docs.isNotEmpty) {
         // Login success, navigate to home (NavigationMenu)
+  // Simpan session ke SharedPreferences
+  final userData = query.docs.first.data();
+  final prefs = await SharedPreferences.getInstance();
+  await prefs.setString('session_username', userData['username'] ?? '');
+  await prefs.setString('session_name', userData['name'] ?? '');
+  await prefs.setString('session_unit', userData['unit'] ?? '');
         if (mounted) {
           Navigator.pushReplacement(
             context,

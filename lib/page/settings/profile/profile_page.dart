@@ -1,4 +1,9 @@
+
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+
+String? _userDocId;
 
 class ProfilePage extends StatefulWidget {
   const ProfilePage({Key? key}) : super(key: key);
@@ -9,18 +14,42 @@ class ProfilePage extends StatefulWidget {
 
 class _ProfilePageState extends State<ProfilePage> {
   final _formKey = GlobalKey<FormState>();
-  final _fullNameController = TextEditingController(text: 'John Smith');
-  final _usernameController = TextEditingController(text: 'John Walkim');
-  final _emailController = TextEditingController(text: 'example@example.com');
+  final _fullNameController = TextEditingController();
+  final _usernameController = TextEditingController();
+  final _unitController = TextEditingController();
 
   // Header nama di tengah
-  String _headerName = 'John Smith';
+  String _headerName = '';
+  @override
+  void initState() {
+    super.initState();
+    _loadSession();
+  }
+
+  Future<void> _loadSession() async {
+    final prefs = await SharedPreferences.getInstance();
+    final name = prefs.getString('session_name') ?? '';
+    final username = prefs.getString('session_username') ?? '';
+    final unit = prefs.getString('session_unit') ?? '';
+    final docId = prefs.getString('session_docId');
+    setState(() {
+      _fullNameController.text = name;
+      _usernameController.text = username;
+      _unitController.text = unit;
+      _headerName = name;
+      _userDocId = docId;
+    });
+    _fullNameController.addListener(_autoSaveProfile);
+    _usernameController.addListener(_autoSaveProfile);
+  }
 
   @override
   void dispose() {
-    _fullNameController.dispose();
-    _usernameController.dispose();
-    _emailController.dispose();
+  _fullNameController.removeListener(_autoSaveProfile);
+  _usernameController.removeListener(_autoSaveProfile);
+  _fullNameController.dispose();
+  _usernameController.dispose();
+  _unitController.dispose();
     super.dispose();
   }
 
@@ -136,9 +165,9 @@ class _ProfilePageState extends State<ProfilePage> {
                           ),
                           const SizedBox(height: 20),
                           _buildEditableField(
-                            label: 'Email',
-                            controller: _emailController,
-                            keyboardType: TextInputType.emailAddress,
+                            label: 'Unit',
+                            controller: _unitController,
+                            readOnly: true,
                           ),
                           const SizedBox(height: 32),
 
@@ -219,9 +248,32 @@ class _ProfilePageState extends State<ProfilePage> {
         ),
       );
 
-      print('Full Name: ${_fullNameController.text}');
-      print('Username: ${_usernameController.text}');
-      print('Email: ${_emailController.text}');
+  print('Full Name: ${_fullNameController.text}');
+  print('Username: ${_usernameController.text}');
+  print('Unit: ${_unitController.text}');
+    }
+  }
+
+  void _autoSaveProfile() async {
+    if (_userDocId == null) return;
+    final name = _fullNameController.text.trim();
+    final username = _usernameController.text.trim();
+    final unit = _unitController.text.trim();
+    // Update Firestore users collection
+    await Future.delayed(const Duration(milliseconds: 500)); // debounce
+    await _updateUserFirestore(_userDocId!, name, username, unit);
+  }
+
+  Future<void> _updateUserFirestore(String docId, String name, String username, String unit) async {
+    try {
+      // Pastikan sama persis dengan add user page
+      await FirebaseFirestore.instance.collection("users").doc(docId).update({
+        "name": name,
+        "username": username.startsWith("@") ? username : "@$username",
+        "unit": unit,
+      });
+    } catch (e) {
+      debugPrint('Failed to auto-save profile: $e');
     }
   }
 
@@ -229,6 +281,7 @@ class _ProfilePageState extends State<ProfilePage> {
     required String label,
     required TextEditingController controller,
     TextInputType keyboardType = TextInputType.text,
+    bool readOnly = false,
   }) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -245,6 +298,7 @@ class _ProfilePageState extends State<ProfilePage> {
         TextFormField(
           controller: controller,
           keyboardType: keyboardType,
+          readOnly: readOnly,
           decoration: InputDecoration(
             filled: true,
             fillColor: const Color(0xFFF8F9FA),
@@ -293,11 +347,6 @@ class _ProfilePageState extends State<ProfilePage> {
           validator: (value) {
             if (value == null || value.isEmpty) {
               return 'Please enter $label';
-            }
-            if (label == 'Email') {
-              if (!RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(value)) {
-                return 'Please enter a valid email address';
-              }
             }
             if (label == 'Username') {
               if (value.length < 3) {

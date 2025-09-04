@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
 import 'package:geolocator/geolocator.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../notification/notification_page.dart';
 import '../../providers/notification_provider.dart';
 import '../../providers/data_pohon_provider.dart';
@@ -19,8 +20,23 @@ class AddDataPage extends StatefulWidget {
 class _AddDataPageState extends State<AddDataPage> {
   final _formKey = GlobalKey<FormState>();
   final _idController = TextEditingController();
-  final _up3Controller = TextEditingController();
+  final _up3Controller = TextEditingController(text: 'PAREPARE');
   final _ulpController = TextEditingController();
+  @override
+  void initState() {
+    super.initState();
+    _loadSessionUnit();
+  }
+
+  Future<void> _loadSessionUnit() async {
+    // Import shared_preferences if not already
+    // import 'package:shared_preferences/shared_preferences.dart';
+    final prefs = await SharedPreferences.getInstance();
+    final unit = prefs.getString('session_unit') ?? '';
+    setState(() {
+      _ulpController.text = unit;
+    });
+  }
   final _penyulangController = TextEditingController();
   final _zonaProteksiController = TextEditingController();
   final _sectionController = TextEditingController();
@@ -165,7 +181,8 @@ class _AddDataPageState extends State<AddDataPage> {
                 controller: _up3Controller,
                 style: const TextStyle(color: Colors.black),
                 keyboardType: TextInputType.text,
-                decoration: _buildInputDecoration('UP3', 'Masukkan UP3'),
+                decoration: _buildInputDecoration('UP3', 'UP3'),
+                readOnly: true,
                 validator: (value) => value!.isEmpty ? 'UP3 wajib diisi' : null,
               ),
               const SizedBox(height: 20),
@@ -173,7 +190,8 @@ class _AddDataPageState extends State<AddDataPage> {
                 controller: _ulpController,
                 style: const TextStyle(color: Colors.black),
                 keyboardType: TextInputType.text,
-                decoration: _buildInputDecoration('ULP', 'Masukkan ULP'),
+                decoration: _buildInputDecoration('ULP', 'ULP'),
+                readOnly: true,
                 validator: (value) => value!.isEmpty ? 'ULP wajib diisi' : null,
               ),
               const SizedBox(height: 20),
