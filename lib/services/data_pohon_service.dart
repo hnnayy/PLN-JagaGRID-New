@@ -106,4 +106,14 @@ class DataPohonService {
           }).toList(),
         );
   }
+
+  Future<void> deleteDataPohon(String idPohon) async {
+    try {
+      await _db.collection('data_pohon').doc(idPohon).delete().timeout(const Duration(seconds: 30));
+      print('Data pohon dengan ID: $idPohon berhasil dihapus');
+    } catch (e) {
+      print('Error menghapus data pohon: $e');
+      rethrow;
+    }
+  }
 }

@@ -24,6 +24,13 @@ dependencies:
   dropdown_search: ^6.0.1
   flutter_local_notifications: ^19.4.1
   geolocator: ^14.0.2
+  path_provider: ^2.1.5
+  permission_handler: ^11.3.1
+  open_file: ^3.5.9
+  share_plus: ^10.0.2
+  googleapis: ^11.0.0
+  googleapis_auth: ^1.4.1
+  excel: ^2.0.0-null-safety-3
 
   overlay_support: ^2.1.0
 
@@ -101,3 +108,5 @@ flutter:
         - asset: assets/fonts/Poppins-ThinItalic.ttf
           weight: 100
           style: italic
+
+          
