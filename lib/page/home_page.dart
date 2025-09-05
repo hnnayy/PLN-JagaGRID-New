@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../constants/colors.dart';
 import 'package:provider/provider.dart';
 import '../providers/data_pohon_provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class HomePage extends StatelessWidget {
   const HomePage({Key? key}) : super(key: key);
@@ -14,286 +15,146 @@ class HomePage extends StatelessWidget {
     return Scaffold(
       backgroundColor: AppColors.putihKebiruan,
       body: SafeArea(
-        child: SingleChildScrollView(
-          child: Consumer<DataPohonProvider>(
-            builder: (context, provider, _) {
-              final pohonList = provider.pohonList;
-              final totalPohon = pohonList.length;
-              final prioritasTinggi = pohonList.where((p) => p.prioritas == 3).length;
-              final prioritasSedang = pohonList.where((p) => p.prioritas == 2).length;
-              final prioritasRendah = pohonList.where((p) => p.prioritas == 1).length;
-              final tebangHabis = pohonList.where((p) => p.tujuanPenjadwalan == 2).length;
-              final tebangPangkas = pohonList.where((p) => p.tujuanPenjadwalan == 1).length;
-              // Chart dummy: Menunggu = total - (tebangHabis + tebangPangkas)
-              final menunggu = totalPohon - (tebangHabis + tebangPangkas);
-              // Persentase
-              String percent(int value) => totalPohon == 0 ? '0%' : '${((value / totalPohon) * 100).toStringAsFixed(1)}%';
+        child: Consumer<DataPohonProvider>(
+          builder: (context, provider, _) {
+            String greeting() {
+              final hour = DateTime.now().hour;
+              if (hour >= 4 && hour < 11) return "Selamat Pagi";
+              if (hour >= 11 && hour < 15) return "Selamat Siang";
+              if (hour >= 15 && hour < 18) return "Selamat Sore";
+              return "Selamat Malam";
+            }
+            final pohonList = provider.pohonList;
+            final totalPohon = pohonList.length;
+            final prioritasTinggi = pohonList.where((p) => p.prioritas == 3).length;
+            final prioritasSedang = pohonList.where((p) => p.prioritas == 2).length;
+            final prioritasRendah = pohonList.where((p) => p.prioritas == 1).length;
+            final tebangHabis = pohonList.where((p) => p.tujuanPenjadwalan == 2).length;
+            final tebangPangkas = pohonList.where((p) => p.tujuanPenjadwalan == 1).length;
 
-              return Column(
-                children: [
-                  SizedBox(height: screenHeight * 0.03),
-                  // ...existing header code...
-                  Container(
-                    padding: EdgeInsets.symmetric(
-                      horizontal: screenWidth * 0.05,
-                      vertical: screenHeight * 0.02,
+            // Ambil nama dari session SharedPreferences dengan FutureBuilder
+
+            return Column(
+              children: [
+                // HEADER
+                Container(
+                  width: double.infinity,
+                  padding: EdgeInsets.symmetric(vertical: screenHeight * 0.04, horizontal: screenWidth * 0.06),
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: [AppColors.tealGelap, AppColors.cyan],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
                     ),
-                    margin: EdgeInsets.symmetric(horizontal: screenWidth * 0.05),
-                    decoration: BoxDecoration(
-                      color: AppColors.white,
-                      borderRadius: BorderRadius.circular(12),
-                      boxShadow: [
-                        BoxShadow(
-                          color: AppColors.black.withOpacity(0.1),
-                          blurRadius: 8,
-                          offset: const Offset(0, 3),
-                        ),
-                      ],
-                    ),
-                    child: Row(
-                      children: [
-                        Container(
-                          width: screenWidth * 0.18,
-                          height: screenWidth * 0.18,
-                          decoration: BoxDecoration(
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          child: Image.asset(
-                            'assets/logo/logo.png',
-                            fit: BoxFit.contain,
-                          ),
-                        ),
-                        SizedBox(width: screenWidth * 0.04),
-                        Column(
+                    borderRadius: BorderRadius.vertical(bottom: Radius.circular(32)),
+                  ),
+                  child: Row(
+                    children: [
+                      CircleAvatar(
+                        radius: screenWidth * 0.09,
+                        backgroundColor: AppColors.white,
+                        child: Image.asset('assets/logo/logo.png', fit: BoxFit.contain, width: screenWidth * 0.13),
+                      ),
+                      SizedBox(width: screenWidth * 0.04),
+                      Expanded(
+                        child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text(
-                              'PLN JagaGRID',
-                              style: TextStyle(
-                                fontSize: screenWidth * 0.04,
-                                fontWeight: FontWeight.bold,
-                                color: AppColors.yellow,
-                                fontFamily: 'Poppins',
-                              ),
+                            Text('PLN JagaGRID', style: TextStyle(fontSize: screenWidth * 0.065, fontWeight: FontWeight.bold, color: AppColors.yellow, fontFamily: 'Poppins')),
+                            SizedBox(height: 6),
+                            FutureBuilder<SharedPreferences>(
+                              future: SharedPreferences.getInstance(),
+                              builder: (context, snapshot) {
+                                final userName = snapshot.data?.getString('session_name') ?? '';
+                                return Text(
+                                  'Hi, $userName',
+                                  style: TextStyle(
+                                    fontSize: screenWidth * 0.055,
+                                    fontWeight: FontWeight.w700,
+                                    color: AppColors.white,
+                                    fontFamily: 'Poppins',
+                                  ),
+                                );
+                              },
                             ),
-                            SizedBox(height: 2),
-                            Text(
-                              'Hi, Welcome Back',
-                              style: TextStyle(
-                                fontSize: screenWidth * 0.04,
-                                fontWeight: FontWeight.w600,
-                                color: AppColors.black,
-                                fontFamily: 'Poppins',
-                              ),
-                            ),
-                            Text(
-                              'Good Morning',
-                              style: TextStyle(
-                                fontSize: screenWidth * 0.03,
-                                color: AppColors.grey,
-                                fontFamily: 'Poppins',
-                              ),
-                            ),
+                            Text(greeting(), style: TextStyle(fontSize: screenWidth * 0.045, color: AppColors.white.withOpacity(0.9), fontFamily: 'Poppins', fontWeight: FontWeight.w600)),
                           ],
                         ),
-                      ],
-                    ),
+                      ),
+                    ],
                   ),
-                  SizedBox(height: screenHeight * 0.03),
-                  // Statistik
-                  Container(
-                    padding: EdgeInsets.symmetric(
-                      horizontal: screenWidth * 0.05,
-                      vertical: screenHeight * 0.02,
-                    ),
-                    margin: EdgeInsets.symmetric(horizontal: screenWidth * 0.05),
-                    decoration: BoxDecoration(
-                      color: AppColors.white,
-                      borderRadius: BorderRadius.circular(12),
-                      boxShadow: [
-                        BoxShadow(
-                          color: AppColors.black.withOpacity(0.1),
-                          blurRadius: 8,
-                          offset: const Offset(0, 3),
-                        ),
-                      ],
-                    ),
-                    child: Row(
-                      children: [
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                'Total Pohon',
-                                style: TextStyle(
-                                  fontSize: screenWidth * 0.03,
-                                  color: AppColors.grey,
-                                  fontFamily: 'Poppins',
-                                ),
-                              ),
-                              Text(
-                                '$totalPohon',
-                                style: TextStyle(
-                                  fontSize: screenWidth * 0.07,
-                                  fontWeight: FontWeight.bold,
-                                  color: AppColors.tealGelap,
-                                  fontFamily: 'Poppins',
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                        Container(
-                          width: 1,
-                          height: screenHeight * 0.06,
-                          color: AppColors.grey.withOpacity(0.4),
-                        ),
-                        SizedBox(width: screenWidth * 0.04),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                'Total Prioritas',
-                                style: TextStyle(
-                                  fontSize: screenWidth * 0.03,
-                                  color: AppColors.grey,
-                                  fontFamily: 'Poppins',
-                                ),
-                              ),
-                              Text(
-                                '${prioritasTinggi + prioritasSedang + prioritasRendah}',
-                                style: TextStyle(
-                                  fontSize: screenWidth * 0.07,
-                                  fontWeight: FontWeight.bold,
-                                  color: AppColors.tealGelap,
-                                  fontFamily: 'Poppins',
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
+                ),
+                SizedBox(height: screenHeight * 0.02),
+                // STATISTIK CARD
+                Container(
+                  padding: EdgeInsets.symmetric(horizontal: screenWidth * 0.07, vertical: screenHeight * 0.018),
+                  margin: EdgeInsets.symmetric(horizontal: screenWidth * 0.07),
+                  decoration: BoxDecoration(
+                    color: AppColors.white,
+                    borderRadius: BorderRadius.circular(18),
+                    boxShadow: [BoxShadow(color: AppColors.black.withOpacity(0.08), blurRadius: 10, offset: Offset(0, 4))],
                   ),
-                  SizedBox(height: screenHeight * 0.02),
-                  // Chart + Cards
-                  Container(
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                    children: [
+                      _statInfoTile('Total Pohon', totalPohon, AppColors.tealGelap, Icons.eco_outlined, screenWidth),
+                      Container(width: 1, height: screenHeight * 0.06, color: AppColors.grey.withOpacity(0.2)),
+                      _statInfoTile('Prioritas', prioritasTinggi + prioritasSedang + prioritasRendah, AppColors.yellow, Icons.star, screenWidth),
+                    ],
+                  ),
+                ),
+                SizedBox(height: screenHeight * 0.02),
+                // GRID STATISTIK
+                Expanded(
+                  child: Container(
                     width: double.infinity,
+                    // background dihilangkan, hanya borderRadius agar grid tetap rapi
                     decoration: BoxDecoration(
-                      color: AppColors.cyan,
-                      borderRadius: const BorderRadius.vertical(top: Radius.circular(50)),
+                      borderRadius: const BorderRadius.vertical(top: Radius.circular(40)),
                     ),
                     child: Padding(
                       padding: EdgeInsets.only(
-                        top: screenHeight * 0.03,
-                        left: screenWidth * 0.03,
-                        right: screenWidth * 0.03,
-                        bottom: screenHeight * 0.15,
+                        top: screenHeight * 0.02,
+                        left: screenWidth * 0.04,
+                        right: screenWidth * 0.04,
+                        bottom: screenHeight * 0.04,
                       ),
-                      child: Column(
-                        children: [
-                          // Chart
-                          Container(
-                            margin: EdgeInsets.symmetric(horizontal: screenWidth * 0.03),
-                            padding: EdgeInsets.all(screenWidth * 0.03),
-                            decoration: BoxDecoration(
-                              color: AppColors.white,
-                              borderRadius: BorderRadius.circular(24),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: AppColors.black.withOpacity(0.1),
-                                  blurRadius: 6,
-                                  offset: const Offset(0, 2),
-                                ),
-                              ],
-                            ),
-                            child: Row(
-                              children: [
-                                SizedBox(
-                                  width: screenWidth * 0.15,
-                                  height: screenWidth * 0.15,
-                                  child: CustomPaint(
-                                    painter: DonutChartPainter(
-                                      total: totalPohon,
-                                      menunggu: menunggu,
-                                      tebangPangkas: tebangPangkas,
-                                      tebangHabis: tebangHabis,
-                                    ),
-                                  ),
-                                ),
-                                SizedBox(width: screenWidth * 0.04),
-                                Expanded(
-                                  child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                    children: [
-                                      Row(
-                                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                        children: [
-                                          _buildLegendItem('Total Pohon', percent(totalPohon), AppColors.green, screenWidth),
-                                          _buildLegendItem('Ditebang', percent(tebangHabis), AppColors.pink, screenWidth),
-                                        ],
-                                      ),
-                                      SizedBox(height: screenHeight * 0.01),
-                                      Row(
-                                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                        children: [
-                                          _buildLegendItem('Menunggu', percent(menunggu), AppColors.orange, screenWidth),
-                                          _buildLegendItem('Tebang Pangkas', percent(tebangPangkas), AppColors.blue, screenWidth),
-                                        ],
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                          SizedBox(height: screenHeight * 0.03),
-                          // Grid Statistik
-                          _buildStatsGridAktual(
-                            screenWidth,
-                            screenHeight,
-                            totalPohon,
-                            prioritasTinggi,
-                            prioritasSedang,
-                            prioritasRendah,
-                            tebangHabis,
-                            tebangPangkas,
-                          ),
-                        ],
+                      child: _buildStatsGridAktual(
+                        screenWidth,
+                        screenHeight,
+                        totalPohon,
+                        prioritasTinggi,
+                        prioritasSedang,
+                        prioritasRendah,
+                        tebangHabis,
+                        tebangPangkas,
                       ),
                     ),
                   ),
-                ],
-              );
-            },
-          ),
+                ),
+              ],
+            );
+          },
         ),
       ),
     );
   }
 
-  Widget _buildLegendItem(String label, String percentage, Color color, double screenWidth) {
+  // _buildLegendItem dihapus
+  Widget _statInfoTile(String label, int value, Color color, IconData icon, double screenWidth) {
     return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(width: 10, height: 10, decoration: BoxDecoration(color: color, shape: BoxShape.circle)),
-            const SizedBox(width: 6),
-            Text(label, style: TextStyle(fontSize: screenWidth * 0.03, color: AppColors.grey, fontFamily: 'Poppins')),
-          ],
-        ),
-        SizedBox(height: 2),
-        Padding(
-          padding: const EdgeInsets.only(left: 16),
-          child: Text(
-            percentage,
-            style: TextStyle(fontSize: screenWidth * 0.04, fontWeight: FontWeight.bold, color: AppColors.black),
+        Container(
+          padding: EdgeInsets.all(screenWidth * 0.018),
+          decoration: BoxDecoration(
+            color: color.withOpacity(0.12),
+            borderRadius: BorderRadius.circular(10),
           ),
+          child: Icon(icon, color: color, size: screenWidth * 0.06),
         ),
+        SizedBox(height: 6),
+        Text('$value', style: TextStyle(fontSize: screenWidth * 0.05, fontWeight: FontWeight.bold, color: color)),
+        Text(label, style: TextStyle(fontSize: screenWidth * 0.03, color: AppColors.grey, fontFamily: 'Poppins')),
       ],
     );
   }
@@ -308,118 +169,191 @@ class HomePage extends StatelessWidget {
     int tebangHabis,
     int tebangPangkas,
   ) {
-    return Column(
-      children: [
-        Row(
-          children: [
-            Expanded(child: _buildStatCard('$totalPohon', 'Total Pohon', Icons.eco_outlined, screenWidth)),
-            SizedBox(width: screenWidth * 0.02),
-            Expanded(child: _buildStatCard('$prioritasTinggi', 'Prioritas Tinggi', Icons.warning_amber_outlined, screenWidth)),
-          ],
-        ),
-        SizedBox(height: screenHeight * 0.02),
-        Row(
-          children: [
-            Expanded(child: _buildStatCard('$tebangHabis', 'Tebang Habis', Icons.delete_forever_outlined, screenWidth)),
-            SizedBox(width: screenWidth * 0.02),
-            Expanded(child: _buildStatCard('$prioritasSedang', 'Prioritas Sedang', Icons.error_outline, screenWidth)),
-          ],
-        ),
-        SizedBox(height: screenHeight * 0.02),
-        Row(
-          children: [
-            Expanded(child: _buildStatCard('$tebangPangkas', 'Tebang Pangkas', Icons.content_cut_outlined, screenWidth)),
-            SizedBox(width: screenWidth * 0.02),
-            Expanded(child: _buildStatCard('$prioritasRendah', 'Prioritas Rendah', Icons.low_priority_outlined, screenWidth)),
-          ],
-        ),
-      ],
+    // Styling baru: grid 2 kolom, card gradient, icon besar, animasi angka, efek tap
+    final stats = [
+      {
+        'label': 'Total Pohon',
+        'value': totalPohon,
+        'icon': Icons.eco_outlined,
+        'color1': Color(0xFF2193b0), // biru gradasi
+        'color2': Color(0xFF6dd5ed),
+      },
+      {
+        'label': 'Prioritas Tinggi',
+        'value': prioritasTinggi,
+        'icon': Icons.warning_amber_outlined,
+        'color1': Color(0xFF2193b0),
+        'color2': Color(0xFF6dd5ed),
+      },
+      {
+        'label': 'Tebang Habis',
+        'value': tebangHabis,
+        'icon': Icons.delete_forever_outlined,
+        'color1': Color(0xFF2193b0),
+        'color2': Color(0xFF6dd5ed),
+      },
+      {
+        'label': 'Prioritas Sedang',
+        'value': prioritasSedang,
+        'icon': Icons.error_outline,
+        'color1': Color(0xFF2193b0),
+        'color2': Color(0xFF6dd5ed),
+      },
+      {
+        'label': 'Tebang Pangkas',
+        'value': tebangPangkas,
+        'icon': Icons.content_cut_outlined,
+        'color1': Color(0xFF2193b0),
+        'color2': Color(0xFF6dd5ed),
+      },
+      {
+        'label': 'Prioritas Rendah',
+        'value': prioritasRendah,
+        'icon': Icons.low_priority_outlined,
+        'color1': Color(0xFF2193b0),
+        'color2': Color(0xFF6dd5ed),
+      },
+    ];
+
+    return GridView.builder(
+      shrinkWrap: true,
+      physics: NeverScrollableScrollPhysics(),
+      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: 2,
+        crossAxisSpacing: screenWidth * 0.02,
+        mainAxisSpacing: screenHeight * 0.012,
+        childAspectRatio: 1.45, // lebih ramping agar tidak terpotong
+      ),
+      itemCount: stats.length,
+      itemBuilder: (context, i) {
+        final stat = stats[i];
+        return _AnimatedStatCard(
+          label: stat['label'] as String,
+          value: stat['value'] as int,
+          icon: stat['icon'] as IconData,
+          color1: stat['color1'] as Color,
+          color2: stat['color2'] as Color,
+          screenWidth: screenWidth,
+        );
+      },
     );
   }
 
-  Widget _buildStatCard(String value, String label, IconData icon, double screenWidth) {
-    return Container(
-      padding: EdgeInsets.all(screenWidth * 0.03),
-      decoration: BoxDecoration(
-        color: AppColors.tealGelap,
-        borderRadius: BorderRadius.circular(18),
-        boxShadow: [
-          BoxShadow(color: AppColors.black.withOpacity(0.1), blurRadius: 5, offset: const Offset(0, 2)),
-        ],
-      ),
-      child: Row(
-        children: [
-          Container(
-            width: screenWidth * 0.1,
-            height: screenWidth * 0.1,
-            decoration: BoxDecoration(color: AppColors.white, borderRadius: BorderRadius.circular(12)),
-            child: Icon(icon, color: AppColors.tealGelap, size: screenWidth * 0.05),
-          ),
-          SizedBox(width: screenWidth * 0.02),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Text(
-                  value,
-                  style: TextStyle(color: AppColors.yellow, fontSize: screenWidth * 0.04, fontWeight: FontWeight.bold),
-                ),
-                Text(label, style: TextStyle(color: AppColors.white.withOpacity(0.7), fontSize: screenWidth * 0.025)),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
+  // Card statistik baru dengan animasi dan gradient
 }
 
-class DonutChartPainter extends CustomPainter {
-  final int total;
-  final int menunggu;
-  final int tebangPangkas;
-  final int tebangHabis;
-
-  DonutChartPainter({
-    required this.total,
-    required this.menunggu,
-    required this.tebangPangkas,
-    required this.tebangHabis,
+class _AnimatedStatCard extends StatefulWidget {
+  final String label;
+  final int value;
+  final IconData icon;
+  final Color color1;
+  final Color color2;
+  final double screenWidth;
+  const _AnimatedStatCard({
+    required this.label,
+    required this.value,
+    required this.icon,
+    required this.color1,
+    required this.color2,
+    required this.screenWidth,
   });
 
   @override
-  void paint(Canvas canvas, Size size) {
-    final Paint paint = Paint()..style = PaintingStyle.stroke..strokeWidth = 12;
-    final double centerX = size.width / 2;
-    final double centerY = size.height / 2;
-    final double radius = (size.width / 2) - 6;
-    paint.color = AppColors.grey.withOpacity(0.2);
-    canvas.drawCircle(Offset(centerX, centerY), radius, paint);
-    double startAngle = -90 * (3.14159 / 180);
-    double sweepTotal = total > 0 ? 2 * 3.14159 : 0;
-    double sweepMenunggu = total > 0 ? (menunggu / total) * sweepTotal : 0;
-    double sweepTebangPangkas = total > 0 ? (tebangPangkas / total) * sweepTotal : 0;
-    double sweepTebangHabis = total > 0 ? (tebangHabis / total) * sweepTotal : 0;
-    double sweepSisa = sweepTotal - (sweepMenunggu + sweepTebangPangkas + sweepTebangHabis);
+  State<_AnimatedStatCard> createState() => _AnimatedStatCardState();
+}
 
-    // Menunggu (orange)
-    paint.color = AppColors.orange;
-    canvas.drawArc(Rect.fromCircle(center: Offset(centerX, centerY), radius: radius), startAngle, sweepMenunggu, false, paint);
-    startAngle += sweepMenunggu;
-    // Tebang Pangkas (blue)
-    paint.color = AppColors.blue;
-    canvas.drawArc(Rect.fromCircle(center: Offset(centerX, centerY), radius: radius), startAngle, sweepTebangPangkas, false, paint);
-    startAngle += sweepTebangPangkas;
-    // Tebang Habis (pink)
-    paint.color = AppColors.pink;
-    canvas.drawArc(Rect.fromCircle(center: Offset(centerX, centerY), radius: radius), startAngle, sweepTebangHabis, false, paint);
-    startAngle += sweepTebangHabis;
-    // Sisa (green)
-    paint.color = AppColors.green;
-    canvas.drawArc(Rect.fromCircle(center: Offset(centerX, centerY), radius: radius), startAngle, sweepSisa, false, paint);
+class _AnimatedStatCardState extends State<_AnimatedStatCard> with SingleTickerProviderStateMixin {
+  late AnimationController _controller;
+  late Animation<int> _animation;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(vsync: this, duration: Duration(milliseconds: 900));
+    _animation = IntTween(begin: 0, end: widget.value).animate(CurvedAnimation(parent: _controller, curve: Curves.easeOut));
+    _controller.forward();
   }
 
   @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => true;
+  void didUpdateWidget(covariant _AnimatedStatCard oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.value != widget.value) {
+      _animation = IntTween(begin: 0, end: widget.value).animate(CurvedAnimation(parent: _controller, curve: Curves.easeOut));
+      _controller.forward(from: 0);
+    }
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: () {},
+      child: Container(
+        margin: EdgeInsets.symmetric(vertical: 1),
+        padding: EdgeInsets.symmetric(
+          horizontal: widget.screenWidth * 0.015,
+          vertical: widget.screenWidth * 0.015,
+        ),
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            colors: [widget.color1.withOpacity(0.85), widget.color2.withOpacity(0.7)],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
+          borderRadius: BorderRadius.circular(14),
+          boxShadow: [BoxShadow(color: widget.color2.withOpacity(0.10), blurRadius: 5, offset: Offset(0, 1))],
+        ),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Flexible(
+              child: Container(
+                padding: EdgeInsets.all(widget.screenWidth * 0.012),
+                decoration: BoxDecoration(
+                  color: Colors.white.withOpacity(0.18),
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(widget.icon, color: Colors.white, size: widget.screenWidth * 0.055),
+              ),
+            ),
+            SizedBox(height: 6),
+            AnimatedBuilder(
+              animation: _animation,
+              builder: (context, child) => Text(
+                '${_animation.value}',
+                style: TextStyle(
+                  color: Colors.black,
+                  fontSize: widget.screenWidth * 0.065,
+                  fontWeight: FontWeight.bold,
+                  letterSpacing: 1.0,
+                ),
+              ),
+            ),
+            SizedBox(height: 2),
+            Flexible(
+              child: Text(
+                widget.label,
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  color: Colors.black,
+                  fontSize: widget.screenWidth * 0.035,
+                  fontWeight: FontWeight.w600,
+                ),
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
 }
+
+// DonutChartPainter dihapus
