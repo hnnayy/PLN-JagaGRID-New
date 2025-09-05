@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import 'package:firebase_app_check/firebase_app_check.dart';
 
 import 'firebase_options.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:overlay_support/overlay_support.dart';
 import 'providers/data_pohon_provider.dart';
 import 'providers/eksekusi_provider.dart';
@@ -14,6 +15,12 @@ import 'page/peta_pohon/add_data_page.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  try {
+    await dotenv.load(fileName: ".env");
+  } catch (e) {
+    print("ENV file not found: $e");
+  }
 
   try {
     await Firebase.initializeApp(

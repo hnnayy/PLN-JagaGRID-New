@@ -11,6 +11,7 @@
 .svn/
 .swiftpm/
 .env
+lib/config/secret_config.dart
 migrate_working_dir/
 
 # IntelliJ related

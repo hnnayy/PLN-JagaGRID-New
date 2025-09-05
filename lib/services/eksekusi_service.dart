@@ -2,14 +2,15 @@ import 'dart:convert';
 import 'dart:io';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:http/http.dart' as http;
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 import '../models/eksekusi.dart';
 
 class EksekusiService {
   final FirebaseFirestore _db = FirebaseFirestore.instance;
 
   static const String _imageKitUploadUrl = 'https://upload.imagekit.io/api/v1/files/upload';
-  static const String _privateKey = 'private_RsgXuz88cqDhNzGadpKJUbvU/qg='; // GANTI DENGAN NILAI ASLI!
-  static const String _imageKitId = 'jdshnz8lhf'; // GANTI DENGAN NILAI ASLI!
+  final String _privateKey = dotenv.env['IMAGEKIT_PRIVATE_KEY'] ?? '';
+  // final String _imageKitId = dotenv.env['IMAGEKIT_ID'] ?? '';
 
   Future<void> addEksekusi(Eksekusi eksekusi, File? image) async {
     try {

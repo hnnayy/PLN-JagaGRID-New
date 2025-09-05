@@ -18,14 +18,16 @@ class AppNotification {
 class NotificationProvider with ChangeNotifier {
   // Ganti dengan token bot dan chat id kamu
   final String _telegramBotToken = '8460425371:AAEhROYuwoKTst2LUUVDkv1zRQTSubHMN2Q';
-  final String _telegramChatId = '1245445196';
+  final List<String> _telegramChatIds = ['1245445196', '1188821735'];
 
   Future<void> sendTelegramMessage(String message) async {
-    final url = 'https://api.telegram.org/bot$_telegramBotToken/sendMessage?chat_id=$_telegramChatId&text=${Uri.encodeComponent(message)}';
-    try {
-      await http.get(Uri.parse(url));
-    } catch (e) {
-      debugPrint('Gagal kirim Telegram: $e');
+    for (String chatId in _telegramChatIds) {
+      final url = 'https://api.telegram.org/bot$_telegramBotToken/sendMessage?chat_id=$chatId&text=${Uri.encodeComponent(message)}';
+      try {
+        await http.get(Uri.parse(url));
+      } catch (e) {
+        debugPrint('Gagal kirim Telegram: $e');
+      }
     }
   }
   final List<AppNotification> _notifications = [];
