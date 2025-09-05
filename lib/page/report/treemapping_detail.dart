@@ -139,7 +139,7 @@ class _TreeMappingDetailPageState extends State<TreeMappingDetailPage> {
                                   ),
                                   DropdownMenuItem(
                                     value: MapType.hybrid,
-                                    child: Text('Hybrid', style: TextStyle(color: Colors.black)), // Fixed typo
+                                    child: Text('Hybrid', style: TextStyle(color: Colors.black)),
                                   ),
                                 ],
                                 onChanged: (type) {
@@ -266,7 +266,11 @@ class _TreeMappingDetailPageState extends State<TreeMappingDetailPage> {
                                             child: Container(
                                               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
                                               decoration: BoxDecoration(
-                                                color: const Color(0xFFFFD700), // Yellow color from the image
+                                                color: widget.pohon!.prioritas == 1
+                                                    ? Colors.green // Rendah
+                                                    : widget.pohon!.prioritas == 2
+                                                        ? const Color(0xFFFFD700) // Sedang (kuning)
+                                                        : Colors.red, // Tinggi
                                                 borderRadius: BorderRadius.circular(8),
                                               ),
                                               child: Text(

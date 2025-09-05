@@ -151,7 +151,11 @@ class _EksekusiPageState extends State<EksekusiPage> {
                               vertical: screenHeight * 0.005,
                             ),
                             decoration: BoxDecoration(
-                              color: AppColors.yellow,
+                              color: widget.pohon.prioritas == 1
+                                  ? Colors.green // Rendah
+                                  : widget.pohon.prioritas == 2
+                                      ? const Color(0xFFFFD700) // Sedang (kuning)
+                                      : Colors.red, // Tinggi
                               borderRadius: BorderRadius.circular(10),
                             ),
                             child: Text(
