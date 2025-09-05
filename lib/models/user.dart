@@ -5,6 +5,8 @@ class UserModel {
   final String unit;
   final String added;
   final String password;
+  final String telegramUsername;
+  final String telegramChatId;
 
   UserModel({
     this.id,
@@ -13,16 +15,20 @@ class UserModel {
     required this.unit,
     required this.added,
     required this.password,
+    required this.telegramUsername,
+    required this.telegramChatId,
   });
 
   /// Buat copy data dengan nilai baru
   UserModel copyWith({
-    String? id,
-    String? name,
-    String? username,
-    String? unit,
-    String? added,
-    String? password,
+  String? id,
+  String? name,
+  String? username,
+  String? unit,
+  String? added,
+  String? password,
+  String? telegramUsername,
+  String? telegramChatId,
   }) {
     return UserModel(
       id: id ?? this.id,
@@ -31,6 +37,8 @@ class UserModel {
       unit: unit ?? this.unit,
       added: added ?? this.added,
       password: password ?? this.password,
+      telegramUsername: telegramUsername ?? this.telegramUsername,
+      telegramChatId: telegramChatId ?? this.telegramChatId,
     );
   }
 
@@ -43,6 +51,8 @@ class UserModel {
       unit: map['unit'] ?? '',
       added: map['added'] ?? '',
       password: map['password'] ?? '',
+      telegramUsername: map['telegramUsername'] ?? '',
+      telegramChatId: map['telegramChatId'] ?? '',
     );
   }
 
@@ -54,6 +64,8 @@ class UserModel {
       'unit': unit,
       'added': added,
       'password': password,
+      'telegramUsername': telegramUsername,
+      'telegramChatId': telegramChatId,
     };
   }
 
@@ -66,6 +78,8 @@ class UserModel {
       unit: json['unit'],
       added: json['added'],
       password: json['password'],
+      telegramUsername: json['telegramUsername'] ?? '',
+      telegramChatId: json['telegramChatId'] ?? '',
     );
   }
 
@@ -78,6 +92,8 @@ class UserModel {
       'unit': unit,
       'added': added,
       'password': password,
+      'telegramUsername': telegramUsername,
+      'telegramChatId': telegramChatId,
     };
   }
 }

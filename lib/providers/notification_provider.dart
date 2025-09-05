@@ -16,11 +16,23 @@ class AppNotification {
 }
 
 class NotificationProvider with ChangeNotifier {
-  // Ganti dengan token bot dan chat id kamu
+  // Ganti dengan token bot kamu
   final String _telegramBotToken = '8460425371:AAEhROYuwoKTst2LUUVDkv1zRQTSubHMN2Q';
-  final List<String> _telegramChatIds = ['1245445196', '1188821735'];
+  List<String> _telegramChatIds = [];
+  /// Ambil chat ID Telegram dari database users
+  Future<void> fetchTelegramChatIds() async {
+    final snapshot = await FirebaseFirestore.instance.collection('users').get();
+    _telegramChatIds = snapshot.docs
+        .map((doc) => doc.data()['telegramChatId']?.toString() ?? '')
+        .where((id) => id.isNotEmpty)
+        .toList();
+  }
 
   Future<void> sendTelegramMessage(String message) async {
+    // Pastikan chat ID sudah diambil dari database
+    if (_telegramChatIds.isEmpty) {
+      await fetchTelegramChatIds();
+    }
     for (String chatId in _telegramChatIds) {
       final url = 'https://api.telegram.org/bot$_telegramBotToken/sendMessage?chat_id=$chatId&text=${Uri.encodeComponent(message)}';
       try {

@@ -8,7 +8,173 @@ import '../notification/notification_page.dart';
 import '../../providers/notification_provider.dart';
 import '../../providers/data_pohon_provider.dart';
 import '../../models/data_pohon.dart';
+import '../../models/asset_model.dart';
+import '../../services/asset_service.dart';
 import 'pick_location_page.dart';
+
+// CustomDropdown Widget
+class CustomDropdown extends StatefulWidget {
+  final String? value;
+  final List<String> items;
+  final String labelText;
+  final Function(String?) onChanged;
+
+  const CustomDropdown({
+    super.key,
+    required this.value,
+    required this.items,
+    required this.labelText,
+    required this.onChanged,
+  });
+
+  @override
+  State<CustomDropdown> createState() => _CustomDropdownState();
+}
+
+class _CustomDropdownState extends State<CustomDropdown> with SingleTickerProviderStateMixin {
+  bool isExpanded = false;
+  late AnimationController _controller;
+  OverlayEntry? _overlayEntry;
+  final LayerLink _layerLink = LayerLink();
+  final GlobalKey _dropdownKey = GlobalKey();
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(duration: const Duration(milliseconds: 200), vsync: this);
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    _overlayEntry?.remove();
+    super.dispose();
+  }
+
+  void _toggleDropdown() => isExpanded ? _closeDropdown() : _openDropdown();
+
+  void _openDropdown() {
+    setState(() => isExpanded = true);
+    _controller.forward();
+
+    final renderBox = _dropdownKey.currentContext!.findRenderObject() as RenderBox;
+    _overlayEntry = OverlayEntry(
+      builder: (context) => Positioned(
+        width: renderBox.size.width,
+        child: CompositedTransformFollower(
+          link: _layerLink,
+          showWhenUnlinked: false,
+          offset: Offset(0, renderBox.size.height + 4),
+          child: Material(
+            elevation: 4,
+            borderRadius: BorderRadius.circular(8),
+            child: AnimatedBuilder(
+              animation: _controller,
+              builder: (context, child) => Transform.scale(
+                scaleY: _controller.value,
+                alignment: Alignment.topCenter,
+                child: Container(
+                  constraints: const BoxConstraints(maxHeight: 200),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: Colors.grey.shade300),
+                  ),
+                  child: ListView.builder(
+                    shrinkWrap: true,
+                    padding: EdgeInsets.zero,
+                    itemCount: widget.items.length,
+                    itemBuilder: (context, index) => InkWell(
+                      onTap: () {
+                        widget.onChanged(widget.items[index]);
+                        _closeDropdown();
+                      },
+                      child: Container(
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: widget.value == widget.items[index] ? const Color(0xFFF0F9FF) : null,
+                        ),
+                        child: Text(
+                          widget.items[index],
+                          style: TextStyle(
+                            fontSize: 16,
+                            color: widget.value == widget.items[index]
+                                ? const Color(0xFF2E5D6F)
+                                : Colors.black87,
+                            fontWeight: widget.value == widget.items[index]
+                                ? FontWeight.w500
+                                : FontWeight.normal,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+    Overlay.of(context).insert(_overlayEntry!);
+  }
+
+  void _closeDropdown() {
+    setState(() => isExpanded = false);
+    _controller.reverse().then((_) => _overlayEntry?.remove());
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          widget.labelText,
+          style: TextStyle(
+            fontSize: 12,
+            color: Colors.grey.shade600,
+            fontWeight: FontWeight.w500,
+          ),
+        ),
+        const SizedBox(height: 8),
+        CompositedTransformTarget(
+          link: _layerLink,
+          child: GestureDetector(
+            key: _dropdownKey,
+            onTap: _toggleDropdown,
+            child: Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: const Color(0xFFF0F9FF),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      widget.value ?? 'Pilih ${widget.labelText.toLowerCase()}',
+                      style: TextStyle(
+                        fontSize: 16,
+                        color: widget.value != null ? Colors.black87 : Colors.grey.shade500,
+                      ),
+                    ),
+                  ),
+                  AnimatedRotation(
+                    turns: isExpanded ? 0.5 : 0,
+                    duration: const Duration(milliseconds: 200),
+                    child: Icon(Icons.keyboard_arrow_down, color: Colors.grey.shade600),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
 
 class AddDataPage extends StatefulWidget {
   const AddDataPage({Key? key}) : super(key: key);
@@ -22,21 +188,6 @@ class _AddDataPageState extends State<AddDataPage> {
   final _idController = TextEditingController();
   final _up3Controller = TextEditingController(text: 'PAREPARE');
   final _ulpController = TextEditingController();
-  @override
-  void initState() {
-    super.initState();
-    _loadSessionUnit();
-  }
-
-  Future<void> _loadSessionUnit() async {
-    // Import shared_preferences if not already
-    // import 'package:shared_preferences/shared_preferences.dart';
-    final prefs = await SharedPreferences.getInstance();
-    final unit = prefs.getString('session_unit') ?? '';
-    setState(() {
-      _ulpController.text = unit;
-    });
-  }
   final _penyulangController = TextEditingController();
   final _zonaProteksiController = TextEditingController();
   final _sectionController = TextEditingController();
@@ -50,6 +201,11 @@ class _AddDataPageState extends State<AddDataPage> {
   int? _selectedTujuan;
   int? _selectedPrioritas;
   String? _selectedNamaPohon;
+  String? _selectedPenyulang;
+  String? _selectedZonaProteksi;
+  String? _selectedSection;
+  String? _selectedVendor;
+
   bool _isLoading = false;
 
   final Map<int, String> _tujuanOptions = {
@@ -63,31 +219,77 @@ class _AddDataPageState extends State<AddDataPage> {
     3: 'Tinggi',
   };
 
-  InputDecoration _buildInputDecoration(String label, String hint,
-      {Icon? suffixIcon}) {
-    return InputDecoration(
-      filled: true,
-      fillColor: const Color(0xFFD3E0EA),
-      labelText: label,
-      labelStyle:
-          const TextStyle(color: Colors.black54, fontWeight: FontWeight.w400),
-      hintText: hint,
-      hintStyle: const TextStyle(color: Colors.black54),
-      suffixIcon: suffixIcon,
-      border: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(20),
-        borderSide: const BorderSide(color: Colors.black54),
-      ),
-      enabledBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(20),
-        borderSide: const BorderSide(color: Colors.black54),
-      ),
-      focusedBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(20),
-        borderSide: const BorderSide(color: Colors.black54, width: 2.0),
-      ),
-      contentPadding: const EdgeInsets.symmetric(vertical: 18, horizontal: 16),
-      floatingLabelBehavior: FloatingLabelBehavior.never,
+  List<String> _penyulangOptions = [];
+  List<String> _zonaProteksiOptions = [];
+  List<String> _sectionOptions = [];
+  List<String> _vendorOptions = [];
+  bool _dropdownDataLoaded = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _generateRandomIdPohon();
+    _loadSessionUnit();
+    _loadDropdownData();
+  }
+
+  Future<void> _loadDropdownData() async {
+    final assetService = AssetService();
+    final assets = await assetService.getAssets().first;
+    setState(() {
+      _penyulangOptions = assets.map((asset) => asset.penyulang).toSet().toList();
+      _zonaProteksiOptions = assets.map((asset) => asset.zonaProteksi).toSet().toList();
+      _sectionOptions = assets.map((asset) => asset.section).toSet().toList();
+      _vendorOptions = assets.map((asset) => asset.vendorVb).toSet().toList();
+      _dropdownDataLoaded = true;
+    });
+  }
+
+  void _generateRandomIdPohon() {
+    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+    String randomId = List.generate(
+        8, (index) => chars[(DateTime.now().microsecondsSinceEpoch + index * 997) % chars.length]).join();
+    randomId = randomId + DateTime.now().millisecondsSinceEpoch.toString().substring(7);
+    randomId = randomId.substring(0, 8);
+    _idController.text = randomId;
+  }
+
+  Future<void> _loadSessionUnit() async {
+    final prefs = await SharedPreferences.getInstance();
+    final unit = prefs.getString('session_unit') ?? '';
+    setState(() {
+      _ulpController.text = unit;
+    });
+  }
+
+  Widget _buildField(String label, TextEditingController controller,
+      {bool readOnly = false, Icon? suffixIcon, void Function()? onTap, String? Function(String?)? validator}) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          style: TextStyle(fontSize: 12, color: Colors.grey.shade600, fontWeight: FontWeight.w500),
+        ),
+        const SizedBox(height: 8),
+        TextFormField(
+          controller: controller,
+          readOnly: readOnly,
+          onTap: onTap,
+          style: const TextStyle(color: Colors.black),
+          decoration: InputDecoration(
+            filled: true,
+            fillColor: const Color(0xFFF0F9FF),
+            border: const OutlineInputBorder(
+              borderSide: BorderSide.none,
+              borderRadius: BorderRadius.all(Radius.circular(8)),
+            ),
+            contentPadding: const EdgeInsets.all(16),
+            suffixIcon: suffixIcon,
+          ),
+          validator: validator,
+        ),
+      ],
     );
   }
 
@@ -111,14 +313,12 @@ class _AddDataPageState extends State<AddDataPage> {
       if (!hasPermission) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-              content:
-                  Text('Izin lokasi ditolak. Tidak dapat mengambil lokasi saat ini.')),
+              content: Text('Izin lokasi ditolak. Tidak dapat mengambil lokasi saat ini.')),
         );
         return null;
       }
 
-      Position position =
-          await Geolocator.getCurrentPosition(desiredAccuracy: LocationAccuracy.high);
+      Position position = await Geolocator.getCurrentPosition(desiredAccuracy: LocationAccuracy.high);
       return "${position.latitude},${position.longitude}";
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -146,104 +346,122 @@ class _AddDataPageState extends State<AddDataPage> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
+  return Scaffold(
       backgroundColor: const Color(0xFF2E5D6F),
       appBar: AppBar(
         backgroundColor: const Color(0xFF2E5D6F),
         elevation: 0,
         centerTitle: true,
         leading: IconButton(
-            icon: const Icon(Icons.arrow_back, color: Colors.white),
-            onPressed: () => Navigator.of(context).pop()),
-        title: const Text("Tambah Data Pohon",
-            style: TextStyle(
-                fontWeight: FontWeight.bold, color: Colors.white, fontSize: 20)),
+          icon: const Icon(Icons.arrow_back, color: Colors.white),
+          onPressed: () => Navigator.of(context).pop(),
+        ),
+        title: const Text(
+          "Tambah Data Pohon",
+          style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white, fontSize: 20),
+        ),
       ),
       body: Container(
         decoration: const BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.only(
-                topLeft: Radius.circular(32), topRight: Radius.circular(32))),
+          color: Colors.white,
+          borderRadius: BorderRadius.only(
+            topLeft: Radius.circular(32),
+            topRight: Radius.circular(32),
+          ),
+        ),
         child: Form(
           key: _formKey,
           child: ListView(
             padding: const EdgeInsets.all(24),
             children: [
-              TextFormField(
-                controller: _idController,
-                style: const TextStyle(color: Colors.black),
-                keyboardType: TextInputType.text,
-                decoration: _buildInputDecoration('Id Pohon', 'Masukkan ID pohon'),
+              _buildField(
+                'Id Pohon',
+                _idController,
+                readOnly: true,
                 validator: (value) => value!.isEmpty ? 'ID wajib diisi' : null,
               ),
               const SizedBox(height: 20),
-              TextFormField(
-                controller: _up3Controller,
-                style: const TextStyle(color: Colors.black),
-                keyboardType: TextInputType.text,
-                decoration: _buildInputDecoration('UP3', 'UP3'),
+              _buildField(
+                'UP3',
+                _up3Controller,
                 readOnly: true,
                 validator: (value) => value!.isEmpty ? 'UP3 wajib diisi' : null,
               ),
               const SizedBox(height: 20),
-              TextFormField(
-                controller: _ulpController,
-                style: const TextStyle(color: Colors.black),
-                keyboardType: TextInputType.text,
-                decoration: _buildInputDecoration('ULP', 'ULP'),
+              _buildField(
+                'ULP',
+                _ulpController,
                 readOnly: true,
                 validator: (value) => value!.isEmpty ? 'ULP wajib diisi' : null,
               ),
               const SizedBox(height: 20),
-              TextFormField(
-                controller: _penyulangController,
-                style: const TextStyle(color: Colors.black),
-                keyboardType: TextInputType.text,
-                decoration: _buildInputDecoration('Penyulang', 'Masukkan Penyulang'),
-                validator: (value) => value!.isEmpty ? 'Penyulang wajib diisi' : null,
-              ),
+              !_dropdownDataLoaded
+                  ? const Center(child: CircularProgressIndicator())
+                  : CustomDropdown(
+                      value: _selectedPenyulang,
+                      items: _penyulangOptions,
+                      labelText: 'Penyulang',
+                      onChanged: (value) {
+                        setState(() {
+                          _selectedPenyulang = value;
+                          _penyulangController.text = value ?? '';
+                        });
+                      },
+                    ),
               const SizedBox(height: 20),
-              TextFormField(
-                controller: _zonaProteksiController,
-                style: const TextStyle(color: Colors.black),
-                keyboardType: TextInputType.text,
-                decoration:
-                    _buildInputDecoration('Zona Proteksi', 'Masukkan Zona Proteksi'),
-                validator: (value) =>
-                    value!.isEmpty ? 'Zona Proteksi wajib diisi' : null,
-              ),
+              !_dropdownDataLoaded
+                  ? const Center(child: CircularProgressIndicator())
+                  : CustomDropdown(
+                      value: _selectedZonaProteksi,
+                      items: _zonaProteksiOptions,
+                      labelText: 'Zona Proteksi',
+                      onChanged: (value) {
+                        setState(() {
+                          _selectedZonaProteksi = value;
+                          _zonaProteksiController.text = value ?? '';
+                        });
+                      },
+                    ),
               const SizedBox(height: 20),
-              TextFormField(
-                controller: _sectionController,
-                style: const TextStyle(color: Colors.black),
-                keyboardType: TextInputType.text,
-                decoration: _buildInputDecoration('Section', 'Masukkan section'),
-                validator: (value) => value!.isEmpty ? 'Section wajib diisi' : null,
-              ),
+              !_dropdownDataLoaded
+                  ? const Center(child: CircularProgressIndicator())
+                  : CustomDropdown(
+                      value: _selectedSection,
+                      items: _sectionOptions,
+                      labelText: 'Section',
+                      onChanged: (value) {
+                        setState(() {
+                          _selectedSection = value;
+                          _sectionController.text = value ?? '';
+                        });
+                      },
+                    ),
               const SizedBox(height: 20),
-              TextFormField(
-                controller: _kmsAsetController,
-                style: const TextStyle(color: Colors.black),
-                keyboardType: TextInputType.text,
-                decoration: _buildInputDecoration('Kms Aset', 'Masukkan Kms Aset'),
+              _buildField(
+                'Kms Aset',
+                _kmsAsetController,
                 validator: (value) => value!.isEmpty ? 'Kms Aset wajib diisi' : null,
               ),
               const SizedBox(height: 20),
-              TextFormField(
-                controller: _vendorController,
-                style: const TextStyle(color: Colors.black),
-                keyboardType: TextInputType.text,
-                decoration: _buildInputDecoration('Vendor VB', 'Masukkan vendor'),
-                validator: (value) => value!.isEmpty ? 'Vendor wajib diisi' : null,
-              ),
+              !_dropdownDataLoaded
+                  ? const Center(child: CircularProgressIndicator())
+                  : CustomDropdown(
+                      value: _selectedVendor,
+                      items: _vendorOptions,
+                      labelText: 'Vendor VB',
+                      onChanged: (value) {
+                        setState(() {
+                          _selectedVendor = value;
+                          _vendorController.text = value ?? '';
+                        });
+                      },
+                    ),
               const SizedBox(height: 20),
-              TextFormField(
-                controller: _dateController,
-                style: const TextStyle(color: Colors.black),
-                keyboardType: TextInputType.datetime,
-                decoration: _buildInputDecoration('Tanggal Penjadwalan', 'Pilih tanggal',
-                    suffixIcon: const Icon(Icons.calendar_today, color: Colors.black)),
+              _buildField(
+                'Tanggal Penjadwalan',
+                _dateController,
                 readOnly: true,
+                suffixIcon: const Icon(Icons.calendar_today, color: Colors.grey),
                 validator: (value) => value!.isEmpty ? 'Tanggal wajib diisi' : null,
                 onTap: () async {
                   DateTime? pickedDate = await showDatePicker(
@@ -255,13 +473,12 @@ class _AddDataPageState extends State<AddDataPage> {
                       return Theme(
                         data: Theme.of(context).copyWith(
                           colorScheme: const ColorScheme.light(
-                            primary: Color(0xFF125E72),
+                            primary: Color(0xFF2E5D6F),
                             onPrimary: Colors.white,
                             onSurface: Colors.black87,
                           ),
                           textButtonTheme: TextButtonThemeData(
-                            style: TextButton.styleFrom(
-                                foregroundColor: Color(0xFF125E72)),
+                            style: TextButton.styleFrom(foregroundColor: Color(0xFF2E5D6F)),
                           ),
                         ),
                         child: child!,
@@ -275,19 +492,15 @@ class _AddDataPageState extends State<AddDataPage> {
                 },
               ),
               const SizedBox(height: 20),
-              DropdownButtonFormField<String>(
+              CustomDropdown(
                 value: _selectedNamaPohon,
-                decoration: _buildInputDecoration('Nama Pohon', 'Pilih nama pohon'),
-                items: DataPohon.growthRates.keys.map((String species) {
-                  return DropdownMenuItem<String>(
-                    value: species,
-                    child: Text(species, style: const TextStyle(color: Colors.black)),
-                  );
-                }).toList(),
-                onChanged: (String? newValue) {
-                  setState(() => _selectedNamaPohon = newValue);
+                items: DataPohon.growthRates.keys.toList(),
+                labelText: 'Nama Pohon',
+                onChanged: (value) {
+                  setState(() {
+                    _selectedNamaPohon = value;
+                  });
                 },
-                validator: (value) => value == null ? 'Nama pohon wajib diisi' : null,
               ),
               const SizedBox(height: 20),
               GestureDetector(
@@ -296,8 +509,7 @@ class _AddDataPageState extends State<AddDataPage> {
                     context: context,
                     builder: (context) {
                       return Dialog(
-                        shape:
-                            RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
                         child: Padding(
                           padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 16),
                           child: Column(
@@ -314,8 +526,7 @@ class _AddDataPageState extends State<AddDataPage> {
                                 onTap: () async {
                                   Navigator.pop(context);
                                   final picker = ImagePicker();
-                                  final picked =
-                                      await picker.pickImage(source: ImageSource.camera);
+                                  final picked = await picker.pickImage(source: ImageSource.camera);
                                   if (picked != null) {
                                     setState(() {
                                       _fotoPohon = File(picked.path);
@@ -326,13 +537,11 @@ class _AddDataPageState extends State<AddDataPage> {
                               const SizedBox(height: 8),
                               ListTile(
                                 leading: const Icon(Icons.photo_library, size: 32),
-                                title:
-                                    const Text('Pilih dari Galeri', style: TextStyle(fontSize: 18)),
+                                title: const Text('Pilih dari Galeri', style: TextStyle(fontSize: 18)),
                                 onTap: () async {
                                   Navigator.pop(context);
                                   final picker = ImagePicker();
-                                  final picked =
-                                      await picker.pickImage(source: ImageSource.gallery);
+                                  final picked = await picker.pickImage(source: ImageSource.gallery);
                                   if (picked != null) {
                                     setState(() {
                                       _fotoPohon = File(picked.path);
@@ -351,20 +560,22 @@ class _AddDataPageState extends State<AddDataPage> {
                   margin: const EdgeInsets.symmetric(vertical: 8),
                   padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(
-                    color: const Color(0xFFD3E0EA),
-                    borderRadius: BorderRadius.circular(10),
-                    border: Border.all(color: Colors.grey),
+                    color: const Color(0xFFF0F9FF),
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: Colors.grey.shade300),
                   ),
                   child: Row(
                     children: [
-                      Icon(_fotoPohon == null ? Icons.camera_alt : Icons.check_circle,
-                          size: 28, color: Colors.black54),
+                      Icon(
+                        _fotoPohon == null ? Icons.camera_alt : Icons.check_circle,
+                        size: 28,
+                        color: Colors.grey.shade600,
+                      ),
                       const SizedBox(width: 12),
                       Expanded(
                         child: Text(
                           _fotoPohon == null ? 'Pilih Foto Pohon' : 'Foto Dipilih',
-                          style: const TextStyle(fontSize: 16, color: Colors.black),
-                          textAlign: TextAlign.left,
+                          style: TextStyle(fontSize: 16, color: Colors.black87),
                         ),
                       ),
                     ],
@@ -372,21 +583,18 @@ class _AddDataPageState extends State<AddDataPage> {
                 ),
               ),
               const SizedBox(height: 20),
-              TextFormField(
-                controller: _coordinatesController,
-                style: const TextStyle(color: Colors.black),
-                keyboardType: TextInputType.text,
-                decoration: _buildInputDecoration('Koordinat', 'Pilih koordinat',
-                    suffixIcon: const Icon(Icons.location_on, color: Colors.black)),
+              _buildField(
+                'Koordinat',
+                _coordinatesController,
                 readOnly: true,
+                suffixIcon: const Icon(Icons.location_on, color: Colors.grey),
                 validator: (value) => value!.isEmpty ? 'Koordinat wajib diisi' : null,
                 onTap: () async {
                   await showDialog(
                     context: context,
                     builder: (context) {
                       return Dialog(
-                        shape:
-                            RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
                         child: Padding(
                           padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 16),
                           child: Column(
@@ -399,13 +607,13 @@ class _AddDataPageState extends State<AddDataPage> {
                               const SizedBox(height: 24),
                               ListTile(
                                 leading: const Icon(Icons.map, size: 32),
-                                title:
-                                    const Text('Pilih dari Peta', style: TextStyle(fontSize: 18)),
+                                title: const Text('Pilih dari Peta', style: TextStyle(fontSize: 18)),
                                 onTap: () async {
                                   Navigator.pop(context);
                                   final String? selectedCoord = await Navigator.push(
-                                      context,
-                                      MaterialPageRoute(builder: (_) => PickLocationPage()));
+                                    context,
+                                    MaterialPageRoute(builder: (_) => PickLocationPage()),
+                                  );
                                   if (selectedCoord != null) {
                                     setState(() {
                                       _coordinatesController.text = selectedCoord;
@@ -437,48 +645,36 @@ class _AddDataPageState extends State<AddDataPage> {
                 },
               ),
               const SizedBox(height: 20),
-              DropdownButtonFormField<int>(
-                value: _selectedTujuan,
-                decoration:
-                    _buildInputDecoration('Tujuan Penjadwalan', 'Pilih tujuan penjadwalan'),
-                items: _tujuanOptions.entries.map((entry) {
-                  return DropdownMenuItem<int>(
-                    value: entry.key,
-                    child: Text(entry.value, style: const TextStyle(color: Colors.black)),
-                  );
-                }).toList(),
+              CustomDropdown(
+                value: _selectedTujuan != null ? _tujuanOptions[_selectedTujuan] : null,
+                items: _tujuanOptions.values.toList(),
+                labelText: 'Tujuan Penjadwalan',
                 onChanged: (value) {
                   setState(() {
-                    _selectedTujuan = value;
+                    _selectedTujuan = _tujuanOptions.entries
+                        .firstWhere((entry) => entry.value == value, orElse: () => MapEntry(1, ''))
+                        .key;
                   });
                 },
-                validator: (value) => value == null ? 'Tujuan wajib diisi' : null,
               ),
               const SizedBox(height: 20),
-              DropdownButtonFormField<int>(
-                value: _selectedPrioritas,
-                decoration: _buildInputDecoration('Prioritas', 'Pilih prioritas'),
-                items: _prioritasOptions.entries.map((entry) {
-                  return DropdownMenuItem<int>(
-                    value: entry.key,
-                    child: Text(entry.value, style: const TextStyle(color: Colors.black)),
-                  );
-                }).toList(),
+              CustomDropdown(
+                value: _selectedPrioritas != null ? _prioritasOptions[_selectedPrioritas] : null,
+                items: _prioritasOptions.values.toList(),
+                labelText: 'Prioritas',
                 onChanged: (value) {
                   setState(() {
-                    _selectedPrioritas = value;
+                    _selectedPrioritas = _prioritasOptions.entries
+                        .firstWhere((entry) => entry.value == value, orElse: () => MapEntry(1, ''))
+                        .key;
                   });
                 },
-                validator: (value) => value == null ? 'Prioritas wajib diisi' : null,
               ),
               const SizedBox(height: 20),
-              TextFormField(
-                controller: _noteController,
-                minLines: 2,
-                maxLines: 4,
-                style: const TextStyle(color: Colors.black, fontSize: 16),
-                keyboardType: TextInputType.multiline,
-                decoration: _buildInputDecoration('Catatan', 'Masukkan catatan'),
+              _buildField(
+                'Catatan',
+                _noteController,
+                validator: (value) => null, // Optional field
               ),
               const SizedBox(height: 32),
               Row(
@@ -491,14 +687,15 @@ class _AddDataPageState extends State<AddDataPage> {
                           backgroundColor: Colors.white,
                           foregroundColor: const Color(0xFF2E5D6F),
                           side: const BorderSide(color: Color(0xFF2E5D6F), width: 2),
-                          shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(25)),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(25)),
                         ),
                         onPressed: () {
                           Navigator.of(context).pop();
                         },
-                        child: const Text('Batal',
-                            style: TextStyle(fontWeight: FontWeight.w600, fontSize: 16)),
+                        child: const Text(
+                          'Batal',
+                          style: TextStyle(fontWeight: FontWeight.w600, fontSize: 16),
+                        ),
                       ),
                     ),
                   ),
@@ -510,13 +707,19 @@ class _AddDataPageState extends State<AddDataPage> {
                         style: ElevatedButton.styleFrom(
                           backgroundColor: const Color(0xFF2E5D6F),
                           foregroundColor: Colors.white,
-                          shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(25)),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(25)),
                         ),
                         onPressed: _isLoading
                             ? null
                             : () async {
-                                if (_formKey.currentState!.validate()) {
+                                if (_formKey.currentState!.validate() &&
+                                    _selectedPenyulang != null &&
+                                    _selectedZonaProteksi != null &&
+                                    _selectedSection != null &&
+                                    _selectedVendor != null &&
+                                    _selectedNamaPohon != null &&
+                                    _selectedTujuan != null &&
+                                    _selectedPrioritas != null) {
                                   setState(() {
                                     _isLoading = true;
                                   });
@@ -536,8 +739,11 @@ class _AddDataPageState extends State<AddDataPage> {
                                         parentId: int.tryParse(_up3Controller.text) ?? 0,
                                         unitId: int.tryParse(_ulpController.text) ?? 0,
                                         asetJtmId: int.tryParse(_kmsAsetController.text) ?? 0,
-                                        scheduleDate: DateTime(int.parse(dateParts[2]),
-                                            int.parse(dateParts[1]), int.parse(dateParts[0])),
+                                        scheduleDate: DateTime(
+                                          int.parse(dateParts[2]),
+                                          int.parse(dateParts[1]),
+                                          int.parse(dateParts[0]),
+                                        ),
                                         prioritas: _selectedPrioritas ?? 1,
                                         namaPohon: _selectedNamaPohon ?? '',
                                         fotoPohon: '',
@@ -546,18 +752,16 @@ class _AddDataPageState extends State<AddDataPage> {
                                         catatan: _noteController.text,
                                         createdBy: 1,
                                         createdDate: DateTime.now(),
-                                        growthRate: DataPohon.growthRates[_selectedNamaPohon!]!,
+                                        growthRate: DataPohon.growthRates[_selectedNamaPohon!] ?? 0,
                                         initialHeight: 0,
                                         notificationDate: DateTime.now(),
                                       );
 
-                                      await Provider.of<DataPohonProvider>(context,
-                                              listen: false)
+                                      await Provider.of<DataPohonProvider>(context, listen: false)
                                           .addPohon(pohon, _fotoPohon);
                                       final notifMsg =
                                           '${_selectedNamaPohon ?? ''} dengan ID ${_idController.text} baru ditambahkan dengan perkiraan tanggal penebangan ${_dateController.text}.';
-                                      await Provider.of<NotificationProvider>(context,
-                                              listen: false)
+                                      await Provider.of<NotificationProvider>(context, listen: false)
                                           .addNotification(
                                         AppNotification(
                                           title: 'Pohon Baru Ditambahkan',
@@ -568,34 +772,143 @@ class _AddDataPageState extends State<AddDataPage> {
                                       if (!mounted) return;
                                       await showDialog(
                                         context: context,
-                                        builder: (ctx) => AlertDialog(
-                                          title: const Text('Sukses!',
-                                              style: TextStyle(color: Colors.green)),
-                                          content:
-                                              const Text('Data pohon berhasil disimpan.'),
-                                          actions: [
-                                            TextButton(
-                                              onPressed: () => Navigator.of(ctx).pop(),
-                                              child: const Text('OK'),
+                                        builder: (ctx) => Dialog(
+                                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                                          child: Container(
+                                            padding: const EdgeInsets.all(28),
+                                            decoration: BoxDecoration(
+                                              borderRadius: BorderRadius.circular(20),
+                                              color: Colors.white,
                                             ),
-                                          ],
+                                            child: Column(
+                                              mainAxisSize: MainAxisSize.min,
+                                              children: [
+                                                Container(
+                                                  width: 85,
+                                                  height: 85,
+                                                  decoration: BoxDecoration(
+                                                    color: const Color(0xFF2E5D6F),
+                                                    shape: BoxShape.circle,
+                                                  ),
+                                                  child: const Icon(
+                                                    Icons.check_circle_rounded,
+                                                    size: 55,
+                                                    color: Colors.white,
+                                                  ),
+                                                ),
+                                                const SizedBox(height: 24),
+                                                const Text(
+                                                  "Berhasil!",
+                                                  style: TextStyle(
+                                                    fontSize: 26,
+                                                    fontWeight: FontWeight.bold,
+                                                    color: Color(0xFF2E5D6F),
+                                                  ),
+                                                ),
+                                                const SizedBox(height: 10),
+                                                Text(
+                                                  "Data pohon berhasil ditambahkan ke sistem",
+                                                  style: TextStyle(
+                                                    fontSize: 15,
+                                                    color: Colors.grey.shade600,
+                                                  ),
+                                                  textAlign: TextAlign.center,
+                                                ),
+                                                const SizedBox(height: 24),
+                                                ElevatedButton(
+                                                  style: ElevatedButton.styleFrom(
+                                                    backgroundColor: const Color(0xFF2E5D6F),
+                                                    foregroundColor: Colors.white,
+                                                    shape: RoundedRectangleBorder(
+                                                      borderRadius: BorderRadius.circular(12),
+                                                    ),
+                                                    padding: const EdgeInsets.symmetric(vertical: 14),
+                                                  ),
+                                                  onPressed: () {
+                                                    Navigator.of(ctx).pop();
+                                                    Navigator.pop(context);
+                                                  },
+                                                  child: const Text(
+                                                    "OK",
+                                                    style: TextStyle(
+                                                      fontWeight: FontWeight.w600,
+                                                      fontSize: 15,
+                                                    ),
+                                                  ),
+                                                ),
+                                              ],
+                                            ),
+                                          ),
                                         ),
                                       );
-                                      Navigator.pop(context);
                                     } catch (e) {
+                                      if (!mounted) return;
                                       await showDialog(
                                         context: context,
-                                        builder: (ctx) => AlertDialog(
-                                          title: const Text('Gagal!',
-                                              style: TextStyle(color: Colors.red)),
-                                          content: Text(
-                                              'Terjadi kesalahan saat menyimpan data:\n${e.toString()}'),
-                                          actions: [
-                                            TextButton(
-                                              onPressed: () => Navigator.of(ctx).pop(),
-                                              child: const Text('OK'),
+                                        builder: (ctx) => Dialog(
+                                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                                          child: Container(
+                                            padding: const EdgeInsets.all(28),
+                                            decoration: BoxDecoration(
+                                              borderRadius: BorderRadius.circular(20),
+                                              color: Colors.white,
                                             ),
-                                          ],
+                                            child: Column(
+                                              mainAxisSize: MainAxisSize.min,
+                                              children: [
+                                                Container(
+                                                  width: 85,
+                                                  height: 85,
+                                                  decoration: BoxDecoration(
+                                                    color: Colors.red,
+                                                    shape: BoxShape.circle,
+                                                  ),
+                                                  child: const Icon(
+                                                    Icons.error_outline_rounded,
+                                                    size: 55,
+                                                    color: Colors.white,
+                                                  ),
+                                                ),
+                                                const SizedBox(height: 24),
+                                                const Text(
+                                                  "Gagal!",
+                                                  style: TextStyle(
+                                                    fontSize: 26,
+                                                    fontWeight: FontWeight.bold,
+                                                    color: Color(0xFF2E5D6F),
+                                                  ),
+                                                ),
+                                                const SizedBox(height: 10),
+                                                Text(
+                                                  "Terjadi kesalahan saat menyimpan data:\n${e.toString()}",
+                                                  style: TextStyle(
+                                                    fontSize: 15,
+                                                    color: Colors.grey.shade600,
+                                                  ),
+                                                  textAlign: TextAlign.center,
+                                                ),
+                                                const SizedBox(height: 24),
+                                                ElevatedButton(
+                                                  style: ElevatedButton.styleFrom(
+                                                    backgroundColor: const Color(0xFF2E5D6F),
+                                                    foregroundColor: Colors.white,
+                                                    shape: RoundedRectangleBorder(
+                                                      borderRadius: BorderRadius.circular(12),
+                                                    ),
+                                                    padding: const EdgeInsets.symmetric(vertical: 14),
+                                                  ),
+                                                  onPressed: () => Navigator.of(ctx).pop(),
+                                                  child: const Text(
+                                                    "OK",
+                                                    style: TextStyle(
+                                                      fontWeight: FontWeight.w600,
+                                                      fontSize: 15,
+                                                    ),
+                                                  ),
+                                                ),
+                                              ],
+                                            ),
+                                          ),
                                         ),
                                       );
                                     } finally {
@@ -609,11 +922,23 @@ class _AddDataPageState extends State<AddDataPage> {
                                     setState(() {
                                       _isLoading = false;
                                     });
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      const SnackBar(
+                                        content: Text('Format tanggal tidak valid'),
+                                        backgroundColor: Colors.red,
+                                      ),
+                                    );
                                   }
                                 } else {
                                   setState(() {
                                     _isLoading = false;
                                   });
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(
+                                      content: Text('Harap lengkapi semua field wajib'),
+                                      backgroundColor: Colors.red,
+                                    ),
+                                  );
                                 }
                               },
                         child: _isLoading
@@ -625,9 +950,10 @@ class _AddDataPageState extends State<AddDataPage> {
                                   valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
                                 ),
                               )
-                            : const Text('Simpan',
-                                style:
-                                    TextStyle(fontWeight: FontWeight.w600, fontSize: 16)),
+                            : const Text(
+                                'Simpan',
+                                style: TextStyle(fontWeight: FontWeight.w600, fontSize: 16),
+                              ),
                       ),
                     ),
                   ),

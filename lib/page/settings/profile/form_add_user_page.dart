@@ -139,6 +139,8 @@ class _FormAddUserPageState extends State<FormAddUserPage> {
   final units = ["ULP MATTIROTASI", "ULP BARRU", "ULP RAPPANG", "ULP PANGSID", "ULP TANRUTEDONG", "ULP SOPPENG", "ULP PAJALESANG", "ULP MAKASSAR", "ULP BONE"];
   final fullNameController = TextEditingController();
   final usernameController = TextEditingController();
+  final telegramUsernameController = TextEditingController();
+  final telegramChatIdController = TextEditingController();
   final passwordController = TextEditingController();
   bool _isPasswordVisible = false, _isLoading = false;
 
@@ -164,6 +166,8 @@ class _FormAddUserPageState extends State<FormAddUserPage> {
           "unit": selectedUnit!,
           "added": getCurrentDate(),
           "password": passwordController.text.trim(),
+          "telegramUsername": telegramUsernameController.text.trim(),
+          "telegramChatId": telegramChatIdController.text.trim(),
         };
 
         final docRef = await FirebaseFirestore.instance.collection("users").add(newUser);
@@ -213,6 +217,8 @@ class _FormAddUserPageState extends State<FormAddUserPage> {
                     ("Username", newUser["username"] ?? ""),
                     ("Unit", newUser["unit"] ?? ""),
                     ("Ditambahkan", newUser["added"] ?? ""),
+                    ("Username Telegram", newUser["telegramUsername"] ?? ""),
+                    ("Chat ID Telegram", newUser["telegramChatId"] ?? ""),
                   ].map((detail) => Padding(
                     padding: const EdgeInsets.symmetric(vertical: 6),
                     child: Row(
@@ -265,6 +271,8 @@ class _FormAddUserPageState extends State<FormAddUserPage> {
       selectedUnit = null;
       fullNameController.clear();
       usernameController.clear();
+      telegramUsernameController.clear();
+      telegramChatIdController.clear();
       passwordController.clear();
     });
   }
@@ -315,6 +323,10 @@ class _FormAddUserPageState extends State<FormAddUserPage> {
               const SizedBox(height: 20),
               _buildField("Username", usernameController, validator: (value) => value?.isEmpty ?? true ? "Username tidak boleh kosong" : null),
               const SizedBox(height: 20),
+              _buildField("Username Telegram", telegramUsernameController, validator: (value) => value?.isEmpty ?? true ? "Username Telegram tidak boleh kosong" : null),
+              const SizedBox(height: 20),
+              _buildField("Chat ID Telegram", telegramChatIdController, validator: (value) => value?.isEmpty ?? true ? "Chat ID Telegram tidak boleh kosong" : null),
+              const SizedBox(height: 20),
               _buildField(
                 "Password", 
                 passwordController,
@@ -341,9 +353,11 @@ class _FormAddUserPageState extends State<FormAddUserPage> {
 
   @override
   void dispose() {
-    fullNameController.dispose();
-    usernameController.dispose();
-    passwordController.dispose();
-    super.dispose();
+  fullNameController.dispose();
+  usernameController.dispose();
+  telegramUsernameController.dispose();
+  telegramChatIdController.dispose();
+  passwordController.dispose();
+  super.dispose();
   }
 }
