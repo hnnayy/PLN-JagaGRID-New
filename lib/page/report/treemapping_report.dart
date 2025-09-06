@@ -12,6 +12,9 @@ import '../../services/data_pohon_service.dart';
 
 class TreeMappingReportPage extends StatelessWidget {
   final DataPohonService _dataPohonService = DataPohonService();
+  final String? filterType;
+
+  TreeMappingReportPage({this.filterType});
 
   // Fungsi untuk menampilkan dialog konfirmasi hapus
   Future<bool?> _showDeleteConfirmationDialog(BuildContext context, String idPohon) async {
@@ -58,6 +61,41 @@ class TreeMappingReportPage extends StatelessWidget {
       default:
         return 'Tidak Diketahui';
     }
+  }
+
+  // Fungsi untuk filter dan sort list berdasarkan filterType
+  List<DataPohon> _filterAndSortList(List<DataPohon> pohonList) {
+    List<DataPohon> filteredList = pohonList;
+
+    if (filterType == 'high_priority') {
+      filteredList = filteredList.where((p) => p.prioritas == 3).toList();
+    } else if (filterType == 'medium_priority') {
+      filteredList = filteredList.where((p) => p.prioritas == 2).toList();
+    } else if (filterType == 'low_priority') {
+      filteredList = filteredList.where((p) => p.prioritas == 1).toList();
+    } else if (filterType == 'tebang_habis') {
+      filteredList = filteredList.where((p) => p.tujuanPenjadwalan == 2).toList();
+    } else if (filterType == 'tebang_pangkas') {
+      filteredList = filteredList.where((p) => p.tujuanPenjadwalan == 1).toList();
+    } else if (filterType == 'total_pohon' || filterType == 'prioritas') {
+      // Untuk total atau prioritas, tampilkan semua
+    }
+
+    // Selalu sort by prioritas descending (tinggi dulu)
+    filteredList.sort((a, b) => b.prioritas.compareTo(a.prioritas));
+
+    return filteredList;
+  }
+
+  // Fungsi untuk mendapatkan title berdasarkan filterType
+  String _getTitle() {
+    if (filterType == 'high_priority') return 'Laporan Prioritas Tinggi';
+    if (filterType == 'medium_priority') return 'Laporan Prioritas Sedang';
+    if (filterType == 'low_priority') return 'Laporan Prioritas Rendah';
+    if (filterType == 'tebang_habis') return 'Laporan Tebang Habis';
+    if (filterType == 'tebang_pangkas') return 'Laporan Tebang Pangkas';
+    if (filterType == 'prioritas') return 'Laporan Semua Prioritas';
+    return 'Laporan Peta Pohon';
   }
 
   // Fungsi untuk membuat dan menyimpan file Excel
@@ -140,7 +178,7 @@ class TreeMappingReportPage extends StatelessWidget {
       appBar: AppBar(
         backgroundColor: AppColors.tealGelap,
         title: Text(
-          'Laporan Peta Pohon',
+          _getTitle(),
           style: TextStyle(
             color: AppColors.yellow,
             fontSize: 20,
@@ -153,8 +191,9 @@ class TreeMappingReportPage extends StatelessWidget {
             tooltip: 'Ekspor ke Excel',
             onPressed: () async {
               final pohonList = await _dataPohonService.getAllDataPohon().first;
-              if (pohonList.isNotEmpty) {
-                await _exportToExcel(context, pohonList);
+              final filteredList = _filterAndSortList(pohonList);
+              if (filteredList.isNotEmpty) {
+                await _exportToExcel(context, filteredList);
               }
             },
           ),
@@ -173,7 +212,10 @@ class TreeMappingReportPage extends StatelessWidget {
             return const Center(child: Text('Tidak ada data pohon tersedia'));
           }
 
-          final pohonList = snapshot.data!;
+          final pohonList = _filterAndSortList(snapshot.data!);
+          if (pohonList.isEmpty) {
+            return const Center(child: Text('Tidak ada data yang sesuai filter'));
+          }
           return ListView.builder(
             itemCount: pohonList.length,
             itemBuilder: (context, index) {

@@ -3,6 +3,7 @@ import '../constants/colors.dart';
 import 'package:provider/provider.dart';
 import '../providers/data_pohon_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'report/treemapping_report.dart'; // Import halaman report
 
 class HomePage extends StatelessWidget {
   const HomePage({Key? key}) : super(key: key);
@@ -86,21 +87,32 @@ class HomePage extends StatelessWidget {
                 ),
                 SizedBox(height: screenHeight * 0.02),
                 // STATISTIK CARD
-                Container(
-                  padding: EdgeInsets.symmetric(horizontal: screenWidth * 0.07, vertical: screenHeight * 0.018),
-                  margin: EdgeInsets.symmetric(horizontal: screenWidth * 0.07),
-                  decoration: BoxDecoration(
-                    color: AppColors.white,
-                    borderRadius: BorderRadius.circular(18),
-                    boxShadow: [BoxShadow(color: AppColors.black.withOpacity(0.08), blurRadius: 10, offset: Offset(0, 4))],
-                  ),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                    children: [
-                      _statInfoTile('Total Pohon', totalPohon, AppColors.tealGelap, Icons.eco_outlined, screenWidth),
-                      Container(width: 1, height: screenHeight * 0.06, color: AppColors.grey.withOpacity(0.2)),
-                      _statInfoTile('Prioritas', prioritasTinggi + prioritasSedang + prioritasRendah, AppColors.yellow, Icons.star, screenWidth),
-                    ],
+                GestureDetector(
+                  onTap: () {
+                    // Klik total pohon atau prioritas, navigasi ke report dengan filter sesuai
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => TreeMappingReportPage(filterType: 'total_pohon'),
+                      ),
+                    );
+                  },
+                  child: Container(
+                    padding: EdgeInsets.symmetric(horizontal: screenWidth * 0.07, vertical: screenHeight * 0.018),
+                    margin: EdgeInsets.symmetric(horizontal: screenWidth * 0.07),
+                    decoration: BoxDecoration(
+                      color: AppColors.white,
+                      borderRadius: BorderRadius.circular(18),
+                      boxShadow: [BoxShadow(color: AppColors.black.withOpacity(0.08), blurRadius: 10, offset: Offset(0, 4))],
+                    ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                      children: [
+                        _statInfoTile('Total Pohon', totalPohon, AppColors.tealGelap, Icons.eco_outlined, screenWidth),
+                        Container(width: 1, height: screenHeight * 0.06, color: AppColors.grey.withOpacity(0.2)),
+                        _statInfoTile('Prioritas', prioritasTinggi + prioritasSedang + prioritasRendah, AppColors.yellow, Icons.star, screenWidth),
+                      ],
+                    ),
                   ),
                 ),
                 SizedBox(height: screenHeight * 0.02),
@@ -120,6 +132,7 @@ class HomePage extends StatelessWidget {
                         bottom: screenHeight * 0.04,
                       ),
                       child: _buildStatsGridAktual(
+                        context,
                         screenWidth,
                         screenHeight,
                         totalPohon,
@@ -160,6 +173,7 @@ class HomePage extends StatelessWidget {
   }
 
   Widget _buildStatsGridAktual(
+    BuildContext context,
     double screenWidth,
     double screenHeight,
     int totalPohon,
@@ -177,6 +191,7 @@ class HomePage extends StatelessWidget {
         'icon': Icons.eco_outlined,
         'color1': Color(0xFF2193b0), // biru gradasi
         'color2': Color(0xFF6dd5ed),
+        'filter': 'total_pohon',
       },
       {
         'label': 'Prioritas Tinggi',
@@ -184,6 +199,7 @@ class HomePage extends StatelessWidget {
         'icon': Icons.warning_amber_outlined,
         'color1': Color(0xFF2193b0),
         'color2': Color(0xFF6dd5ed),
+        'filter': 'high_priority',
       },
       {
         'label': 'Tebang Habis',
@@ -191,6 +207,7 @@ class HomePage extends StatelessWidget {
         'icon': Icons.delete_forever_outlined,
         'color1': Color(0xFF2193b0),
         'color2': Color(0xFF6dd5ed),
+        'filter': 'tebang_habis',
       },
       {
         'label': 'Prioritas Sedang',
@@ -198,6 +215,7 @@ class HomePage extends StatelessWidget {
         'icon': Icons.error_outline,
         'color1': Color(0xFF2193b0),
         'color2': Color(0xFF6dd5ed),
+        'filter': 'medium_priority',
       },
       {
         'label': 'Tebang Pangkas',
@@ -205,6 +223,7 @@ class HomePage extends StatelessWidget {
         'icon': Icons.content_cut_outlined,
         'color1': Color(0xFF2193b0),
         'color2': Color(0xFF6dd5ed),
+        'filter': 'tebang_pangkas',
       },
       {
         'label': 'Prioritas Rendah',
@@ -212,6 +231,7 @@ class HomePage extends StatelessWidget {
         'icon': Icons.low_priority_outlined,
         'color1': Color(0xFF2193b0),
         'color2': Color(0xFF6dd5ed),
+        'filter': 'low_priority',
       },
     ];
 
@@ -234,6 +254,15 @@ class HomePage extends StatelessWidget {
           color1: stat['color1'] as Color,
           color2: stat['color2'] as Color,
           screenWidth: screenWidth,
+          filterType: stat['filter'] as String,
+          onTap: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => TreeMappingReportPage(filterType: stat['filter'] as String),
+              ),
+            );
+          },
         );
       },
     );
@@ -249,6 +278,8 @@ class _AnimatedStatCard extends StatefulWidget {
   final Color color1;
   final Color color2;
   final double screenWidth;
+  final String filterType;
+  final VoidCallback onTap;
   const _AnimatedStatCard({
     required this.label,
     required this.value,
@@ -256,6 +287,8 @@ class _AnimatedStatCard extends StatefulWidget {
     required this.color1,
     required this.color2,
     required this.screenWidth,
+    required this.filterType,
+    required this.onTap,
   });
 
   @override
@@ -292,7 +325,7 @@ class _AnimatedStatCardState extends State<_AnimatedStatCard> with SingleTickerP
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
-      onTap: () {},
+      onTap: widget.onTap,
       child: Container(
         margin: EdgeInsets.symmetric(vertical: 1),
         padding: EdgeInsets.symmetric(
@@ -355,5 +388,3 @@ class _AnimatedStatCardState extends State<_AnimatedStatCard> with SingleTickerP
     );
   }
 }
-
-// DonutChartPainter dihapus
