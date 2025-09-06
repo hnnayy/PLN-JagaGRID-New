@@ -152,7 +152,9 @@ class _FormAddUserPageState extends State<FormAddUserPage> {
 
   Future<void> _saveUser() async {
     if (selectedUnit == null) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Pilih unit kerja terlebih dahulu"), backgroundColor: Colors.red));
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Pilih unit kerja terlebih dahulu"), backgroundColor: Colors.red)
+      );
       return;
     }
     
@@ -160,14 +162,20 @@ class _FormAddUserPageState extends State<FormAddUserPage> {
       setState(() => _isLoading = true);
 
       try {
+        // PERBAIKAN: Gunakan nama field yang konsisten
         final newUser = {
           "name": fullNameController.text.trim(),
-          "username": usernameController.text.trim().startsWith('@') ? usernameController.text.trim() : '@${usernameController.text.trim()}',
+          "username": usernameController.text.trim().startsWith('@') 
+            ? usernameController.text.trim() 
+            : '@${usernameController.text.trim()}',
           "unit": selectedUnit!,
-          "added": getCurrentDate(),
           "password": passwordController.text.trim(),
-          "telegramUsername": telegramUsernameController.text.trim(),
-          "telegramChatId": telegramChatIdController.text.trim(),
+          "added": getCurrentDate(),
+          // FIELD TELEGRAM DENGAN NAMA YANG BENAR
+          "username_telegram": telegramUsernameController.text.trim(),
+          "chat_id_telegram": telegramChatIdController.text.trim(),
+          // FIELD STATUS: 1 = aktif, 0 = terhapus
+          "status": 1,
         };
 
         final docRef = await FirebaseFirestore.instance.collection("users").add(newUser);
@@ -179,7 +187,9 @@ class _FormAddUserPageState extends State<FormAddUserPage> {
         }
       } catch (e) {
         setState(() => _isLoading = false);
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Gagal menyimpan user: $e"), backgroundColor: Colors.red));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text("Gagal menyimpan user: $e"), backgroundColor: Colors.red)
+        );
       }
     }
   }
@@ -199,13 +209,17 @@ class _FormAddUserPageState extends State<FormAddUserPage> {
               Container(
                 width: 85, 
                 height: 85,
-                decoration: BoxDecoration(color: const Color(0xFF2E5D6F), shape: BoxShape.circle),
+                decoration: const BoxDecoration(color: Color(0xFF2E5D6F), shape: BoxShape.circle),
                 child: const Icon(Icons.check_circle_rounded, size: 55, color: Colors.white),
               ),
               const SizedBox(height: 24),
               const Text("Berhasil!", style: TextStyle(fontSize: 26, fontWeight: FontWeight.bold, color: Color(0xFF2E5D6F))),
               const SizedBox(height: 10),
-              Text("User ${newUser["name"]} berhasil ditambahkan ke sistem", style: TextStyle(fontSize: 15, color: Colors.grey.shade600), textAlign: TextAlign.center),
+              Text(
+                "User ${newUser["name"]} berhasil ditambahkan ke sistem", 
+                style: TextStyle(fontSize: 15, color: Colors.grey.shade600), 
+                textAlign: TextAlign.center
+              ),
               const SizedBox(height: 24),
               Container(
                 width: double.infinity,
@@ -217,14 +231,26 @@ class _FormAddUserPageState extends State<FormAddUserPage> {
                     ("Username", newUser["username"] ?? ""),
                     ("Unit", newUser["unit"] ?? ""),
                     ("Ditambahkan", newUser["added"] ?? ""),
-                    ("Username Telegram", newUser["telegramUsername"] ?? ""),
-                    ("Chat ID Telegram", newUser["telegramChatId"] ?? ""),
+                    // PERBAIKAN: Tampilkan dengan field name yang benar
+                    ("Username Telegram", newUser["username_telegram"] ?? ""),
+                    ("Chat ID Telegram", newUser["chat_id_telegram"] ?? ""),
                   ].map((detail) => Padding(
                     padding: const EdgeInsets.symmetric(vertical: 6),
                     child: Row(
                       children: [
-                        SizedBox(width: 90, child: Text("${detail.$1}:", style: TextStyle(color: Colors.grey.shade700, fontWeight: FontWeight.w600, fontSize: 14))),
-                        Expanded(child: Text(detail.$2, style: const TextStyle(color: Color(0xFF2E5D6F), fontSize: 14, fontWeight: FontWeight.w500))),
+                        SizedBox(
+                          width: 90, 
+                          child: Text(
+                            "${detail.$1}:", 
+                            style: TextStyle(color: Colors.grey.shade700, fontWeight: FontWeight.w600, fontSize: 14)
+                          )
+                        ),
+                        Expanded(
+                          child: Text(
+                            detail.$2, 
+                            style: const TextStyle(color: Color(0xFF2E5D6F), fontSize: 14, fontWeight: FontWeight.w500)
+                          )
+                        ),
                       ],
                     ),
                   )).toList(),
@@ -235,19 +261,31 @@ class _FormAddUserPageState extends State<FormAddUserPage> {
                 children: [
                   Expanded(
                     child: OutlinedButton.icon(
-                      style: OutlinedButton.styleFrom(side: BorderSide(color: Colors.grey.shade400, width: 1.5), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)), padding: const EdgeInsets.symmetric(vertical: 14)),
+                      style: OutlinedButton.styleFrom(
+                        side: BorderSide(color: Colors.grey.shade400, width: 1.5), 
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)), 
+                        padding: const EdgeInsets.symmetric(vertical: 14)
+                      ),
                       onPressed: () {
                         Navigator.of(context).pop();
                         _resetForm();
                       },
                       icon: Icon(Icons.person_add_rounded, color: Colors.grey.shade700, size: 20),
-                      label: Text("Tambah Lagi", style: TextStyle(color: Colors.grey.shade700, fontWeight: FontWeight.w600, fontSize: 15)),
+                      label: Text(
+                        "Tambah Lagi", 
+                        style: TextStyle(color: Colors.grey.shade700, fontWeight: FontWeight.w600, fontSize: 15)
+                      ),
                     ),
                   ),
                   const SizedBox(width: 12),
                   Expanded(
                     child: ElevatedButton.icon(
-                      style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF2E5D6F), foregroundColor: Colors.white, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)), padding: const EdgeInsets.symmetric(vertical: 14)),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFF2E5D6F), 
+                        foregroundColor: Colors.white, 
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)), 
+                        padding: const EdgeInsets.symmetric(vertical: 14)
+                      ),
                       onPressed: () {
                         Navigator.of(context).pop();
                         Navigator.pop(context, newUser);
@@ -277,7 +315,11 @@ class _FormAddUserPageState extends State<FormAddUserPage> {
     });
   }
 
-  Widget _buildField(String label, TextEditingController controller, {bool obscureText = false, Widget? suffixIcon, String? Function(String?)? validator}) {
+  Widget _buildField(String label, TextEditingController controller, {
+    bool obscureText = false, 
+    Widget? suffixIcon, 
+    String? Function(String?)? validator
+  }) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -289,7 +331,10 @@ class _FormAddUserPageState extends State<FormAddUserPage> {
           decoration: InputDecoration(
             filled: true,
             fillColor: const Color(0xFFF0F9FF),
-            border: const OutlineInputBorder(borderSide: BorderSide.none, borderRadius: BorderRadius.all(Radius.circular(8))),
+            border: const OutlineInputBorder(
+              borderSide: BorderSide.none, 
+              borderRadius: BorderRadius.all(Radius.circular(8))
+            ),
             contentPadding: const EdgeInsets.all(16),
             suffixIcon: suffixIcon,
           ),
@@ -307,31 +352,67 @@ class _FormAddUserPageState extends State<FormAddUserPage> {
         backgroundColor: const Color(0xFF2E5D6F),
         elevation: 0,
         centerTitle: true,
-        leading: IconButton(icon: const Icon(Icons.arrow_back, color: Colors.white), onPressed: () => Navigator.of(context).pop()),
-        title: const Text("Tambah User Baru", style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white, fontSize: 20)),
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back, color: Colors.white), 
+          onPressed: () => Navigator.of(context).pop()
+        ),
+        title: const Text(
+          "Tambah User Baru", 
+          style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white, fontSize: 20)
+        ),
       ),
       body: Container(
-        decoration: const BoxDecoration(color: Colors.white, borderRadius: BorderRadius.only(topLeft: Radius.circular(32), topRight: Radius.circular(32))),
+        decoration: const BoxDecoration(
+          color: Colors.white, 
+          borderRadius: BorderRadius.only(topLeft: Radius.circular(32), topRight: Radius.circular(32))
+        ),
         child: Form(
           key: _formKey,
           child: ListView(
             padding: const EdgeInsets.all(24),
             children: [
-              CustomDropdown(value: selectedUnit, items: units, labelText: "Pilih Unit Kerja", onChanged: (value) => setState(() => selectedUnit = value)),
+              CustomDropdown(
+                value: selectedUnit, 
+                items: units, 
+                labelText: "Pilih Unit Kerja", 
+                onChanged: (value) => setState(() => selectedUnit = value)
+              ),
               const SizedBox(height: 20),
-              _buildField("Nama Lengkap", fullNameController, validator: (value) => value?.isEmpty ?? true ? "Nama tidak boleh kosong" : null),
+              _buildField(
+                "Nama Lengkap", 
+                fullNameController, 
+                validator: (value) => value?.isEmpty ?? true ? "Nama tidak boleh kosong" : null
+              ),
               const SizedBox(height: 20),
-              _buildField("Username", usernameController, validator: (value) => value?.isEmpty ?? true ? "Username tidak boleh kosong" : null),
+              _buildField(
+                "Username", 
+                usernameController, 
+                validator: (value) => value?.isEmpty ?? true ? "Username tidak boleh kosong" : null
+              ),
               const SizedBox(height: 20),
-              _buildField("Username Telegram", telegramUsernameController, validator: (value) => value?.isEmpty ?? true ? "Username Telegram tidak boleh kosong" : null),
+              _buildField(
+                "Username Telegram", 
+                telegramUsernameController, 
+                validator: (value) => value?.isEmpty ?? true ? "Username Telegram tidak boleh kosong" : null
+              ),
               const SizedBox(height: 20),
-              _buildField("Chat ID Telegram", telegramChatIdController, validator: (value) => value?.isEmpty ?? true ? "Chat ID Telegram tidak boleh kosong" : null),
+              _buildField(
+                "Chat ID Telegram", 
+                telegramChatIdController, 
+                validator: (value) => value?.isEmpty ?? true ? "Chat ID Telegram tidak boleh kosong" : null
+              ),
               const SizedBox(height: 20),
               _buildField(
                 "Password", 
                 passwordController,
                 obscureText: !_isPasswordVisible,
-                suffixIcon: IconButton(icon: Icon(_isPasswordVisible ? Icons.visibility : Icons.visibility_off, color: Colors.grey), onPressed: () => setState(() => _isPasswordVisible = !_isPasswordVisible)),
+                suffixIcon: IconButton(
+                  icon: Icon(
+                    _isPasswordVisible ? Icons.visibility : Icons.visibility_off, 
+                    color: Colors.grey
+                  ), 
+                  onPressed: () => setState(() => _isPasswordVisible = !_isPasswordVisible)
+                ),
                 validator: (value) => (value?.length ?? 0) < 6 ? "Password minimal 6 karakter" : null,
               ),
               const SizedBox(height: 32),
@@ -339,9 +420,15 @@ class _FormAddUserPageState extends State<FormAddUserPage> {
                 width: double.infinity,
                 height: 50,
                 child: ElevatedButton(
-                  style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF2E5D6F), foregroundColor: Colors.white, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(25))),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF2E5D6F), 
+                    foregroundColor: Colors.white, 
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(25))
+                  ),
                   onPressed: _isLoading ? null : _saveUser,
-                  child: _isLoading ? const CircularProgressIndicator(color: Colors.white) : const Text("Simpan User"),
+                  child: _isLoading 
+                    ? const CircularProgressIndicator(color: Colors.white) 
+                    : const Text("Simpan User"),
                 ),
               ),
             ],
@@ -353,11 +440,11 @@ class _FormAddUserPageState extends State<FormAddUserPage> {
 
   @override
   void dispose() {
-  fullNameController.dispose();
-  usernameController.dispose();
-  telegramUsernameController.dispose();
-  telegramChatIdController.dispose();
-  passwordController.dispose();
-  super.dispose();
+    fullNameController.dispose();
+    usernameController.dispose();
+    telegramUsernameController.dispose();
+    telegramChatIdController.dispose();
+    passwordController.dispose();
+    super.dispose();
   }
 }

@@ -142,9 +142,10 @@ class EditUserPage extends StatefulWidget {
 
 class _EditUserPageState extends State<EditUserPage> {
   final _formKey = GlobalKey<FormState>();
-  late TextEditingController fullNameController, usernameController, addedDateController;
+  late TextEditingController fullNameController, usernameController, addedDateController, usernameTelegramController, chatIdTelegramController, passwordController;
   String? selectedUnit;
   bool _isLoading = false;
+  bool _obscurePassword = true;
 
   final units = ["ULP MATTIROTASI", "ULP BARRU", "ULP RAPPANG", "ULP PANGSID", "ULP TANRUTEDONG", "ULP SOPPENG", "ULP PAJALESANG", "ULP MAKASSAR", "ULP BONE"];
 
@@ -153,6 +154,9 @@ class _EditUserPageState extends State<EditUserPage> {
     super.initState();
     fullNameController = TextEditingController(text: widget.user["name"]);
     usernameController = TextEditingController(text: widget.user["username"]);
+    usernameTelegramController = TextEditingController(text: widget.user["username_telegram"]);
+    chatIdTelegramController = TextEditingController(text: widget.user["chat_id_telegram"]);
+    passwordController = TextEditingController(text: widget.user["password"]);
     selectedUnit = widget.user["unit"];
     addedDateController = TextEditingController(text: widget.user["added"] ?? "");
   }
@@ -161,6 +165,9 @@ class _EditUserPageState extends State<EditUserPage> {
   void dispose() {
     fullNameController.dispose();
     usernameController.dispose();
+    usernameTelegramController.dispose();
+    chatIdTelegramController.dispose();
+    passwordController.dispose();
     addedDateController.dispose();
     super.dispose();
   }
@@ -178,6 +185,9 @@ class _EditUserPageState extends State<EditUserPage> {
         "name": fullNameController.text.trim(),
         "username": usernameController.text.trim().startsWith('@') ? usernameController.text.trim() : '@${usernameController.text.trim()}',
         "unit": selectedUnit!,
+        "username_telegram": usernameTelegramController.text.trim(),
+        "chat_id_telegram": chatIdTelegramController.text.trim(),
+        "password": passwordController.text.trim(),
         "added": addedDateController.text,
       };
 
@@ -226,12 +236,14 @@ class _EditUserPageState extends State<EditUserPage> {
                     ("Nama", updatedUser["name"] ?? ""),
                     ("Username", updatedUser["username"] ?? ""),
                     ("Unit", updatedUser["unit"] ?? ""),
+                    ("Username Telegram", updatedUser["username_telegram"] ?? "-"),
+                    ("Chat ID Telegram", updatedUser["chat_id_telegram"] ?? "-"),
                     ("Ditambahkan", updatedUser["added"] ?? ""),
                   ].map((detail) => Padding(
                     padding: const EdgeInsets.symmetric(vertical: 6),
                     child: Row(
                       children: [
-                        SizedBox(width: 90, child: Text("${detail.$1}:", style: TextStyle(color: Colors.grey.shade700, fontWeight: FontWeight.w600, fontSize: 14))),
+                        SizedBox(width: 120, child: Text("${detail.$1}:", style: TextStyle(color: Colors.grey.shade700, fontWeight: FontWeight.w600, fontSize: 14))),
                         Expanded(child: Text(detail.$2, style: const TextStyle(color: Color(0xFF2E5D6F), fontSize: 14, fontWeight: FontWeight.w500))),
                       ],
                     ),
@@ -263,7 +275,7 @@ class _EditUserPageState extends State<EditUserPage> {
     );
   }
 
-  Widget _buildField(String label, TextEditingController controller, {bool enabled = true, String? Function(String?)? validator}) {
+  Widget _buildField(String label, TextEditingController controller, {bool enabled = true, String? Function(String?)? validator, bool obscureText = false, Widget? suffixIcon}) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -272,11 +284,13 @@ class _EditUserPageState extends State<EditUserPage> {
         TextFormField(
           controller: controller,
           enabled: enabled,
-          decoration: const InputDecoration(
+          obscureText: obscureText,
+          decoration: InputDecoration(
             filled: true,
-            fillColor: Color(0xFFF0F9FF),
-            border: OutlineInputBorder(borderSide: BorderSide.none, borderRadius: BorderRadius.all(Radius.circular(8))),
-            contentPadding: EdgeInsets.all(16),
+            fillColor: const Color(0xFFF0F9FF),
+            border: const OutlineInputBorder(borderSide: BorderSide.none, borderRadius: BorderRadius.all(Radius.circular(8))),
+            contentPadding: const EdgeInsets.all(16),
+            suffixIcon: suffixIcon,
           ),
           validator: validator,
         ),
@@ -307,6 +321,21 @@ class _EditUserPageState extends State<EditUserPage> {
               _buildField("Nama Lengkap", fullNameController, validator: (value) => value?.isEmpty ?? true ? "Nama tidak boleh kosong" : null),
               const SizedBox(height: 20),
               _buildField("Username", usernameController, validator: (value) => value?.isEmpty ?? true ? "Username tidak boleh kosong" : null),
+              const SizedBox(height: 20),
+              _buildField("Username Telegram", usernameTelegramController),
+              const SizedBox(height: 20),
+              _buildField("Chat ID Telegram", chatIdTelegramController),
+              const SizedBox(height: 20),
+              _buildField(
+                "Password", 
+                passwordController, 
+                obscureText: _obscurePassword,
+                validator: (value) => value?.isEmpty ?? true ? "Password tidak boleh kosong" : null,
+                suffixIcon: IconButton(
+                  icon: Icon(_obscurePassword ? Icons.visibility : Icons.visibility_off, color: Colors.grey.shade600),
+                  onPressed: () => setState(() => _obscurePassword = !_obscurePassword),
+                ),
+              ),
               const SizedBox(height: 20),
               _buildField("Ditambahkan", addedDateController, enabled: false),
               const SizedBox(height: 32),
