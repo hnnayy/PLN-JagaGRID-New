@@ -61,16 +61,16 @@ class RiwayatEksekusiPage extends StatelessWidget {
                 Color statusColor;
                 String aksiText;
                 switch (eksekusi.statusEksekusi) {
-                  case 2: // Pangkas
+                  case 1: // Tebang Pangkas
                     statusColor = Colors.green;
                     aksiText = 'Pemangkasan';
                     break;
-                  case 3: // Tebang
+                  case 2: // Tebang Habis
                     statusColor = Colors.red;
                     aksiText = 'Penebangan';
                     break;
                   default:
-                    statusColor = Colors.orange; // Default untuk Berjalan atau lainnya
+                    statusColor = Colors.orange; // Should not occur due to validations
                     aksiText = 'Tidak Diketahui';
                 }
 
@@ -78,7 +78,7 @@ class RiwayatEksekusiPage extends StatelessWidget {
                   margin: const EdgeInsets.symmetric(vertical: 8.0),
                   child: ExpansionTile(
                     title: Text(
-                      'Tanggal Eksekusi: ${_formatDate(eksekusi.tanggalEksekusi.toDate())}',
+                      'Tanggal Eksekusi: ${_formatDate(eksekusi.tanggalEksekusi)}',
                       style: TextStyle(
                         fontSize: screenWidth * 0.04,
                         fontWeight: FontWeight.bold,
@@ -163,7 +163,10 @@ class RiwayatEksekusiPage extends StatelessWidget {
     );
   }
 
-  String _formatDate(DateTime date) {
-    return '${date.day}/${date.month}/${date.year}';
+  String _formatDate(String tanggalEksekusi) {
+    // tanggalEksekusi is in format "DD/MM/YYYY HH:MM WITA"
+    // Extract the date part (DD/MM/YYYY) for display
+    final parts = tanggalEksekusi.split(' ');
+    return parts[0]; // Returns DD/MM/YYYY (e.g., 06/09/2025)
   }
 }
