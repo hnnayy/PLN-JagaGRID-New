@@ -27,7 +27,7 @@ class EksekusiProvider extends ChangeNotifier {
   }
 
   // Method to handle adding eksekusi via EksekusiService
-  Future<void> addEksekusi(Eksekusi eksekusi, File? image) async {
+  Future<void> addEksekusi(Eksekusi eksekusi, File image) async {
     try {
       final eksekusiService = EksekusiService();
       await eksekusiService.addEksekusi(eksekusi, image);
