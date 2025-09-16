@@ -5,56 +5,91 @@ import 'assets_jtm/assets_jtm.dart'; // ✅ Import halaman Assets JTM menu utama
 import 'package:flutter_application_2/page/settings/profile/profile_page.dart';
 import 'package:flutter_application_2/page/settings/profile/user_list_page.dart';
 import '../../page/login/login.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 /// -------------------------
 /// Settings Item Content
 /// -------------------------
 class SettingsContent {
-  static List<SettingsItem> getSettingsItems() {
-    return const [
-      SettingsItem(
-        title: 'Profile',
-        iconPath: 'assets/icons/profile.png',
-      ),
-      SettingsItem(
-        title: 'Tambah User',
-        iconPath: 'assets/icons/add.png',
-      ),
-      SettingsItem(
-        title: 'Daftar Assets JTM',
-        iconPath: 'assets/icons/powerline.png',
-      ),
-      SettingsItem(
-        title: 'Logout',
-        iconPath: 'assets/icons/logout.png',
-      ),
-    ];
+  static Future<List<SettingsItem>> getSettingsItems() async {
+    // Ambil level dari SharedPreferences
+    final prefs = await SharedPreferences.getInstance();
+    final level = prefs.getInt('session_level') ?? 2;
+    if (level == 1) {
+      // Level 1: semua item
+      return [
+        const SettingsItem(
+          title: 'Profile',
+          iconPath: 'assets/icons/profile.png',
+        ),
+        const SettingsItem(
+          title: 'Tambah User',
+          iconPath: 'assets/icons/add.png',
+        ),
+        const SettingsItem(
+          title: 'Daftar Assets JTM',
+          iconPath: 'assets/icons/powerline.png',
+        ),
+        const SettingsItem(
+          title: 'Logout',
+          iconPath: 'assets/icons/logout.png',
+        ),
+      ];
+    } else {
+      // Level 2: hanya profile dan logout
+      return [
+        const SettingsItem(
+          title: 'Profile',
+          iconPath: 'assets/icons/profile.png',
+        ),
+        const SettingsItem(
+          title: 'Logout',
+          iconPath: 'assets/icons/logout.png',
+        ),
+      ];
+    }
   }
 
-  static void handleSettingsTap(int index, BuildContext context) {
-    switch (index) {
-      case 0:
-        Navigator.push(
-          context,
-          MaterialPageRoute(builder: (_) => const ProfilePage()),
-        );
-        break;
-      case 1:
-        Navigator.push(
-          context,
-          MaterialPageRoute(builder: (_) => const UserListPage()),
-        );
-        break;
-      case 2:
-        // Navigasi ke halaman Assets JTM (menu utama)
-        Navigator.push(
-          context,
-          MaterialPageRoute(builder: (_) => const AssetsJTMPage()),
-        );
-        break;
-      case 3:
-        _showLogoutDialog(context);
-        break;
+  static Future<void> handleSettingsTap(int index, BuildContext context) async {
+    final prefs = await SharedPreferences.getInstance();
+    final level = prefs.getInt('session_level') ?? 2;
+    if (level == 1) {
+      switch (index) {
+        case 0:
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (_) => const ProfilePage()),
+          );
+          break;
+        case 1:
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (_) => const UserListPage()),
+          );
+          break;
+        case 2:
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (_) => const AssetsJTMPage()),
+          );
+          break;
+        case 3:
+          _showLogoutDialog(context);
+          break;
+      }
+    } else {
+      // Level 2: hanya profile dan logout
+      switch (index) {
+        case 0:
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (_) => const ProfilePage()),
+          );
+          break;
+        case 1:
+          _showLogoutDialog(context);
+          break;
+      }
     }
   }
 
@@ -164,10 +199,19 @@ class SettingsMainContent extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return SettingsLayout(
-      title: 'Settings',
-      settingsItems: SettingsContent.getSettingsItems(),
-      onItemTap: (index) => SettingsContent.handleSettingsTap(index, context),
+    return FutureBuilder<List<SettingsItem>>(
+      future: SettingsContent.getSettingsItems(),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Center(child: CircularProgressIndicator());
+        }
+        final items = snapshot.data ?? [];
+        return SettingsLayout(
+          title: 'Settings',
+          settingsItems: items,
+          onItemTap: (index) => SettingsContent.handleSettingsTap(index, context),
+        );
+      },
     );
   }
 }
