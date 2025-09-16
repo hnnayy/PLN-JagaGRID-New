@@ -1,4 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:intl/intl.dart';
 
 class DataPohon {
   final String id;
@@ -69,8 +70,11 @@ class DataPohon {
   });
 
   Map<String, dynamic> toMap() {
-    // Convert WITA DateTime to UTC for Firestore
-    final scheduleDateUtc = scheduleDate.subtract(const Duration(hours: 8));
+    // Format scheduleDate as a date-only string (M-d-y)
+    final dateFormatter = DateFormat('d-M-y');
+    final scheduleDateString = dateFormatter.format(scheduleDate);
+
+    // Convert WITA DateTime to UTC for Firestore for other date fields
     final notificationDateUtc = notificationDate.subtract(const Duration(hours: 8));
     final createdDateUtc = createdDate.subtract(const Duration(hours: 8));
 
@@ -87,7 +91,7 @@ class DataPohon {
       'parent_id': parentId,
       'unit_id': unitId,
       'aset_jtm_id': asetJtmId,
-      'schedule_date': Timestamp.fromDate(scheduleDateUtc),
+      'schedule_date': scheduleDateString, // Store as string in M-d-y format
       'prioritas': prioritas,
       'nama_pohon': namaPohon,
       'foto_pohon': fotoPohon,
@@ -104,22 +108,46 @@ class DataPohon {
   }
 
   factory DataPohon.fromMap(Map<String, dynamic> map) {
-    // Handle both Timestamp and String for date fields
-    DateTime parseDate(dynamic value) {
-      if (value is Timestamp) {
-        return value.toDate().add(const Duration(hours: 8)); // Convert UTC to WITA
-      } else if (value is String) {
-        try {
-          return DateTime.parse(value).add(const Duration(hours: 8)); // Parse string and convert to WITA
-        } catch (e) {
-          print('Error parsing date string: $value, error: $e');
-          return DateTime.now(); // Fallback to current time
+    // Handle schedule_date as a string in M-d-y, yyyy-MM-dd, or Timestamp
+    DateTime parseDate(dynamic value, {bool isScheduleDate = false}) {
+      if (isScheduleDate) {
+        if (value is String) {
+          try {
+            final dateFormatter = DateFormat('d-M-y');
+            // Try parsing as M-d-y first
+            try {
+              return dateFormatter.parse(value).add(const Duration(hours: 8)); // Parse to WITA
+            } catch (e) {
+              // Fallback to yyyy-MM-dd for backward compatibility
+              final fallbackFormatter = DateFormat('yyyy-MM-dd');
+              return fallbackFormatter.parse(value).add(const Duration(hours: 8)); // Parse to WITA
+            }
+          } catch (e) {
+            print('Error parsing schedule_date string: $value, error: $e');
+            return DateTime.now(); // Fallback to current date
+          }
+        }
+        // Fallback for existing Timestamp data (for backward compatibility)
+        if (value is Timestamp) {
+          final date = value.toDate();
+          return DateTime(date.year, date.month, date.day).add(const Duration(hours: 8)); // Date-only in WITA
+        }
+      } else {
+        if (value is Timestamp) {
+          return value.toDate().add(const Duration(hours: 8)); // Full datetime in WITA
+        } else if (value is String) {
+          try {
+            return DateTime.parse(value).add(const Duration(hours: 8)); // Parse string and convert to WITA
+          } catch (e) {
+            print('Error parsing date string: $value, error: $e');
+            return DateTime.now(); // Fallback to current time
+          }
         }
       }
       return DateTime.now(); // Fallback if value is null or invalid
     }
 
-    final scheduleDate = parseDate(map['schedule_date']);
+    final scheduleDate = parseDate(map['schedule_date'], isScheduleDate: true);
     final createdDate = parseDate(map['createddate']);
     final notificationDate = parseDate(map['notification_date']);
 

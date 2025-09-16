@@ -163,6 +163,108 @@ class _CustomDropdownState extends State<CustomDropdown> with SingleTickerProvid
   }
 }
 
+// Custom Success Dialog Widget
+class SuccessDialog extends StatelessWidget {
+  final String title;
+  final String message;
+  final VoidCallback? onOkPressed;
+
+  const SuccessDialog({
+    super.key,
+    required this.title,
+    required this.message,
+    this.onOkPressed,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Dialog(
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Container(
+        padding: const EdgeInsets.all(24),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(16),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            // Success Icon
+            Container(
+              width: 80,
+              height: 80,
+              decoration: const BoxDecoration(
+                color: Color(0xFF2E5D6F),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(
+                Icons.check,
+                color: Colors.white,
+                size: 40,
+              ),
+            ),
+            const SizedBox(height: 24),
+            
+            // Title
+            Text(
+              title,
+              style: const TextStyle(
+                fontSize: 24,
+                fontWeight: FontWeight.bold,
+                color: Color(0xFF2E5D6F),
+              ),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 16),
+            
+            // Message
+            Text(
+              message,
+              style: TextStyle(
+                fontSize: 16,
+                color: Colors.grey.shade600,
+              ),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 32),
+            
+            // OK Button
+            SizedBox(
+              width: 120,
+              height: 45,
+              child: ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF2E5D6F),
+                  foregroundColor: Colors.white,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  elevation: 0,
+                ),
+                onPressed: () {
+                  Navigator.of(context).pop();
+                  if (onOkPressed != null) {
+                    onOkPressed!();
+                  }
+                },
+                child: const Text(
+                  "OK",
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
 class EditAssetPage extends StatefulWidget {
   final AssetModel asset;
   
@@ -234,14 +336,68 @@ class _EditAssetPageState extends State<EditAssetPage> {
     super.dispose();
   }
 
+  void _showSuccessDialog() {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (BuildContext context) {
+        return SuccessDialog(
+          title: "Berhasil!",
+          message: "Asset berhasil diperbarui ke sistem",
+          onOkPressed: () {
+            // Navigate back to previous screen with success result
+            Navigator.pop(context, true);
+          },
+        );
+      },
+    );
+  }
+
+  void _showErrorDialog(String errorMessage) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
+          title: Row(
+            children: [
+              Icon(Icons.error_outline, color: Colors.red.shade600, size: 28),
+              const SizedBox(width: 12),
+              const Text(
+                "Error",
+                style: TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ],
+          ),
+          content: Text(
+            errorMessage,
+            style: const TextStyle(fontSize: 16),
+          ),
+          actions: [
+            TextButton(
+              style: TextButton.styleFrom(
+                foregroundColor: Colors.red.shade600,
+              ),
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text(
+                "OK",
+                style: TextStyle(fontWeight: FontWeight.w600),
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
   Future<void> _updateAsset() async {
     if (_selectedStatus == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text("Pilih status terlebih dahulu"),
-          backgroundColor: Colors.red,
-        ),
-      );
+      _showErrorDialog("Pilih status terlebih dahulu");
       return;
     }
 
@@ -271,32 +427,20 @@ class _EditAssetPageState extends State<EditAssetPage> {
       await _assetService.updateAsset(updatedAsset);
 
       if (mounted) {
-        // Show success message
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Asset berhasil diperbarui'),
-            backgroundColor: Colors.green,
-            duration: Duration(seconds: 2),
-          ),
-        );
-
-        // Go back to previous screen
-        Navigator.pop(context, true); // Pass true to indicate successful update
+        // Show success dialog instead of snackbar
+        _showSuccessDialog();
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Error: ${e.toString()}'),
-            backgroundColor: Colors.red,
-            duration: const Duration(seconds: 3),
-          ),
-        );
+        // Show error dialog instead of snackbar
+        _showErrorDialog('Gagal memperbarui asset: ${e.toString()}');
       }
     } finally {
-      setState(() {
-        _isLoading = false;
-      });
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
     }
   }
 
@@ -479,7 +623,13 @@ class _EditAssetPageState extends State<EditAssetPage> {
                   onPressed: _isLoading ? null : _updateAsset,
                   child: _isLoading
                       ? const CircularProgressIndicator(color: Colors.white)
-                      : const Text("Simpan Perubahan"),
+                      : const Text(
+                          "Simpan Perubahan",
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
                 ),
               ),
             ],

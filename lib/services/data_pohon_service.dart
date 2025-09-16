@@ -70,33 +70,10 @@ class DataPohonService {
         .snapshots()
         .map(
           (snapshot) => snapshot.docs.map((doc) {
-            final data = doc.data();
+            // Pass the entire document data to fromMap, including the document ID
             return DataPohon.fromMap({
+              ...doc.data(),
               'id': doc.id,
-              'id_pohon': data['id_pohon'] as String? ?? '',
-              'up3': data['up3'] as String? ?? '',
-              'ulp': data['ulp'] as String? ?? '',
-              'penyulang': data['penyulang'] as String? ?? '',
-              'zona_proteksi': data['zona_proteksi'] as String? ?? '',
-              'section': data['section'] as String? ?? '',
-              'kms_aset': data['kms_aset'] as String? ?? '',
-              'vendor': data['vendor'] as String? ?? '',
-              'parent_id': (data['parent_id'] as int?) ?? 0,
-              'unit_id': (data['unit_id'] as int?) ?? 0,
-              'aset_jtm_id': (data['aset_jtm_id'] as int?) ?? 0,
-              'schedule_date': data['schedule_date'], // Handled in fromMap
-              'prioritas': (data['prioritas'] as int?) ?? 1,
-              'nama_pohon': data['nama_pohon'] as String? ?? '',
-              'foto_pohon': data['foto_pohon'] as String? ?? '',
-              'koordinat': data['koordinat'] as String? ?? '',
-              'tujuan_penjadwalan': (data['tujuan_penjadwalan'] as int?) ?? 1,
-              'catatan': data['catatan'] as String? ?? '',
-              'createdby': (data['createdby'] as int?) ?? 0,
-              'createddate': data['createddate'], // Handled in fromMap
-              'growth_rate': (data['growth_rate'] as num?)?.toDouble() ?? 0.0,
-              'initial_height': (data['initial_height'] as num?)?.toDouble() ?? 0.0,
-              'notification_date': data['notification_date'], // Handled in fromMap
-              'status': (data['status'] as int?) ?? 1,
             });
           }).toList(),
         );
