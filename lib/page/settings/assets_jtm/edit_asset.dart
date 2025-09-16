@@ -163,41 +163,78 @@ class _CustomDropdownState extends State<CustomDropdown> with SingleTickerProvid
   }
 }
 
-class AddAssetsPage extends StatefulWidget {
-  const AddAssetsPage({super.key});
+class EditAssetPage extends StatefulWidget {
+  final AssetModel asset;
+  
+  const EditAssetPage({super.key, required this.asset});
 
   @override
-  State<AddAssetsPage> createState() => _AddAssetsPageState();
+  State<EditAssetPage> createState() => _EditAssetPageState();
 }
 
-class _AddAssetsPageState extends State<AddAssetsPage> {
-  final _assetService = AssetService();
+class _EditAssetPageState extends State<EditAssetPage> {
   final _formKey = GlobalKey<FormState>();
-
-  // Controller untuk form tambah asset
-  final TextEditingController _wilayahController = TextEditingController();
-  final TextEditingController _subWilayahController = TextEditingController();
-  final TextEditingController _sectionController = TextEditingController();
-  final TextEditingController _up3Controller = TextEditingController();
-  final TextEditingController _ulpController = TextEditingController();
-  final TextEditingController _penyulangController = TextEditingController();
-  final TextEditingController _zonaProteksiController = TextEditingController();
-  final TextEditingController _panjangKmsController = TextEditingController();
-  final TextEditingController _roleController = TextEditingController();
-  final TextEditingController _vendorVbController = TextEditingController();
-
+  final _assetService = AssetService();
+  
+  // Controllers for form fields
+  late TextEditingController _wilayahController;
+  late TextEditingController _subWilayahController;
+  late TextEditingController _sectionController;
+  late TextEditingController _up3Controller;
+  late TextEditingController _ulpController;
+  late TextEditingController _penyulangController;
+  late TextEditingController _zonaProteksiController;
+  late TextEditingController _panjangKmsController;
+  late TextEditingController _roleController;
+  late TextEditingController _vendorVbController;
+  
   String? _selectedStatus;
   final List<String> _statusOptions = ['Sempurna', 'Sehat', 'Sakit'];
-
+  
   bool _isLoading = false;
 
-  String getCurrentDate() {
-    final now = DateTime.now();
-    final months = ['Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'];
-    return '${now.day} ${months[now.month - 1]} ${now.year}';
+  @override
+  void initState() {
+    super.initState();
+    // Initialize controllers with current asset data
+    _wilayahController = TextEditingController(text: widget.asset.wilayah);
+    _subWilayahController = TextEditingController(text: widget.asset.subWilayah);
+    _sectionController = TextEditingController(text: widget.asset.section);
+    _up3Controller = TextEditingController(text: widget.asset.up3);
+    _ulpController = TextEditingController(text: widget.asset.ulp);
+    _penyulangController = TextEditingController(text: widget.asset.penyulang);
+    _zonaProteksiController = TextEditingController(text: widget.asset.zonaProteksi);
+    _panjangKmsController = TextEditingController(text: widget.asset.panjangKms.toString());
+    _roleController = TextEditingController(text: widget.asset.role);
+    _vendorVbController = TextEditingController(text: widget.asset.vendorVb);
+    
+    // Validasi dan set selectedStatus
+    final validStatuses = ['Sempurna', 'Sehat', 'Sakit'];
+    if (validStatuses.contains(widget.asset.status)) {
+      _selectedStatus = widget.asset.status;
+    } else {
+      _selectedStatus = null; // Set null jika status tidak valid
+      print('Warning: Invalid status "${widget.asset.status}" found, resetting to null');
+    }
   }
 
-  Future<void> _tambahAsset() async {
+  @override
+  void dispose() {
+    // Dispose all controllers
+    _wilayahController.dispose();
+    _subWilayahController.dispose();
+    _sectionController.dispose();
+    _up3Controller.dispose();
+    _ulpController.dispose();
+    _penyulangController.dispose();
+    _zonaProteksiController.dispose();
+    _panjangKmsController.dispose();
+    _roleController.dispose();
+    _vendorVbController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _updateAsset() async {
     if (_selectedStatus == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -208,17 +245,15 @@ class _AddAssetsPageState extends State<AddAssetsPage> {
       return;
     }
 
-    if (!_formKey.currentState!.validate()) {
-      return;
-    }
+    if (!_formKey.currentState!.validate()) return;
 
     setState(() {
       _isLoading = true;
     });
 
     try {
-      final newAsset = AssetModel(
-        id: '', // Firestore akan generate otomatis
+      // Create updated asset model
+      AssetModel updatedAsset = widget.asset.copyWith(
         wilayah: _wilayahController.text.trim(),
         subWilayah: _subWilayahController.text.trim(),
         section: _sectionController.text.trim(),
@@ -226,137 +261,48 @@ class _AddAssetsPageState extends State<AddAssetsPage> {
         ulp: _ulpController.text.trim(),
         penyulang: _penyulangController.text.trim(),
         zonaProteksi: _zonaProteksiController.text.trim(),
-        panjangKms: double.tryParse(_panjangKmsController.text) ?? 0,
+        panjangKms: double.tryParse(_panjangKmsController.text) ?? 0.0,
+        role: _roleController.text.trim(),
         status: _selectedStatus!,
-        role: _roleController.text.trim().isNotEmpty ? _roleController.text.trim() : "-",
-        vendorVb: _vendorVbController.text.trim().isNotEmpty ? _vendorVbController.text.trim() : "-",
-        createdAt: DateTime.now(),
+        vendorVb: _vendorVbController.text.trim(),
       );
 
-      await _assetService.addAsset(newAsset);
+      // Update asset in Firestore
+      await _assetService.updateAsset(updatedAsset);
 
       if (mounted) {
-        _showSuccessDialog(newAsset);
+        // Show success message
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Asset berhasil diperbarui'),
+            backgroundColor: Colors.green,
+            duration: Duration(seconds: 2),
+          ),
+        );
+
+        // Go back to previous screen
+        Navigator.pop(context, true); // Pass true to indicate successful update
       }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text("Error: ${e.toString()}"),
+            content: Text('Error: ${e.toString()}'),
             backgroundColor: Colors.red,
+            duration: const Duration(seconds: 3),
           ),
         );
       }
     } finally {
-      if (mounted) {
-        setState(() {
-          _isLoading = false;
-        });
-      }
+      setState(() {
+        _isLoading = false;
+      });
     }
-  }
-
-  void _showSuccessDialog(AssetModel newAsset) {
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (context) => Dialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        child: Container(
-          padding: const EdgeInsets.all(28),
-          decoration: BoxDecoration(borderRadius: BorderRadius.circular(20), color: Colors.white),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Container(
-                width: 85, 
-                height: 85,
-                decoration: const BoxDecoration(color: Color(0xFF2E5D6F), shape: BoxShape.circle),
-                child: const Icon(Icons.check_circle_rounded, size: 55, color: Colors.white),
-              ),
-              const SizedBox(height: 24),
-              const Text("Berhasil!", style: TextStyle(fontSize: 26, fontWeight: FontWeight.bold, color: Color(0xFF2E5D6F))),
-              const SizedBox(height: 10),
-              Text("Asset ${newAsset.wilayah} - ${newAsset.section} berhasil ditambahkan", style: TextStyle(fontSize: 15, color: Colors.grey.shade600), textAlign: TextAlign.center),
-              const SizedBox(height: 24),
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.all(20),
-                decoration: BoxDecoration(color: const Color(0xFFF8FAFB), borderRadius: BorderRadius.circular(15)),
-                child: Column(
-                  children: [
-                    ("Wilayah", newAsset.wilayah),
-                    ("Sub Wilayah", newAsset.subWilayah),
-                    ("Section", newAsset.section),
-                    ("Status", newAsset.status),
-                    ("Ditambahkan", getCurrentDate()),
-                  ].map((detail) => Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 6),
-                    child: Row(
-                      children: [
-                        SizedBox(width: 90, child: Text("${detail.$1}:", style: TextStyle(color: Colors.grey.shade700, fontWeight: FontWeight.w600, fontSize: 14))),
-                        Expanded(child: Text(detail.$2, style: const TextStyle(color: Color(0xFF2E5D6F), fontSize: 14, fontWeight: FontWeight.w500))),
-                      ],
-                    ),
-                  )).toList(),
-                ),
-              ),
-              const SizedBox(height: 28),
-              Row(
-                children: [
-                  Expanded(
-                    child: OutlinedButton.icon(
-                      style: OutlinedButton.styleFrom(side: BorderSide(color: Colors.grey.shade400, width: 1.5), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)), padding: const EdgeInsets.symmetric(vertical: 14)),
-                      onPressed: () {
-                        Navigator.of(context).pop();
-                        _clearForm();
-                      },
-                      icon: Icon(Icons.add_circle_outline_rounded, color: Colors.grey.shade700, size: 20),
-                      label: Text("Tambah Lagi", style: TextStyle(color: Colors.grey.shade700, fontWeight: FontWeight.w600, fontSize: 15)),
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: ElevatedButton.icon(
-                      style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF2E5D6F), foregroundColor: Colors.white, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)), padding: const EdgeInsets.symmetric(vertical: 14)),
-                      onPressed: () {
-                        Navigator.of(context).pop();
-                        Navigator.pop(context, newAsset);
-                      },
-                      icon: const Icon(Icons.list_rounded, size: 20),
-                      label: const Text("Lihat List", style: TextStyle(fontWeight: FontWeight.w600, fontSize: 15)),
-                    ),
-                  ),
-                ],
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  void _clearForm() {
-    _formKey.currentState?.reset();
-    setState(() {
-      _selectedStatus = null;
-      _wilayahController.clear();
-      _subWilayahController.clear();
-      _sectionController.clear();
-      _up3Controller.clear();
-      _ulpController.clear();
-      _penyulangController.clear();
-      _zonaProteksiController.clear();
-      _panjangKmsController.clear();
-      _roleController.clear();
-      _vendorVbController.clear();
-    });
   }
 
   Widget _buildField(String label, TextEditingController controller, {
     TextInputType keyboardType = TextInputType.text,
-    String? Function(String?)? validator,
-    String? suffixText,
+    String? Function(String?)? validator
   }) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -373,35 +319,19 @@ class _AddAssetsPageState extends State<AddAssetsPage> {
         TextFormField(
           controller: controller,
           keyboardType: keyboardType,
-          decoration: InputDecoration(
+          decoration: const InputDecoration(
             filled: true,
-            fillColor: const Color(0xFFF0F9FF),
-            border: const OutlineInputBorder(
+            fillColor: Color(0xFFF0F9FF),
+            border: OutlineInputBorder(
               borderSide: BorderSide.none,
               borderRadius: BorderRadius.all(Radius.circular(8)),
             ),
-            contentPadding: const EdgeInsets.all(16),
-            suffixText: suffixText,
+            contentPadding: EdgeInsets.all(16),
           ),
           validator: validator,
         ),
       ],
     );
-  }
-
-  @override
-  void dispose() {
-    _wilayahController.dispose();
-    _subWilayahController.dispose();
-    _sectionController.dispose();
-    _up3Controller.dispose();
-    _ulpController.dispose();
-    _penyulangController.dispose();
-    _zonaProteksiController.dispose();
-    _panjangKmsController.dispose();
-    _roleController.dispose();
-    _vendorVbController.dispose();
-    super.dispose();
   }
 
   @override
@@ -417,22 +347,13 @@ class _AddAssetsPageState extends State<AddAssetsPage> {
           onPressed: () => Navigator.of(context).pop(),
         ),
         title: const Text(
-          "Tambah Asset JTM",
+          "Edit Asset JTM",
           style: TextStyle(
             fontWeight: FontWeight.bold,
             color: Colors.white,
             fontSize: 20,
           ),
         ),
-        actions: [
-          TextButton(
-            onPressed: _clearForm,
-            child: const Text(
-              "Reset",
-              style: TextStyle(color: Colors.white),
-            ),
-          ),
-        ],
       ),
       body: Container(
         decoration: const BoxDecoration(
@@ -500,7 +421,6 @@ class _AddAssetsPageState extends State<AddAssetsPage> {
                 "Panjang (KMS)",
                 _panjangKmsController,
                 keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                suffixText: "km",
                 validator: (value) {
                   if (value == null || value.trim().isEmpty) {
                     return 'Panjang tidak boleh kosong';
@@ -556,10 +476,10 @@ class _AddAssetsPageState extends State<AddAssetsPage> {
                       borderRadius: BorderRadius.circular(25),
                     ),
                   ),
-                  onPressed: _isLoading ? null : _tambahAsset,
+                  onPressed: _isLoading ? null : _updateAsset,
                   child: _isLoading
                       ? const CircularProgressIndicator(color: Colors.white)
-                      : const Text("Simpan Asset"),
+                      : const Text("Simpan Perubahan"),
                 ),
               ),
             ],

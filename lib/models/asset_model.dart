@@ -49,6 +49,24 @@ class AssetModel {
     };
   }
 
+  /// 🔹 Convert Model → Map untuk update (tanpa createdAt)
+  Map<String, dynamic> toUpdateMap() {
+    return {
+      'wilayah': wilayah,
+      'subWilayah': subWilayah,
+      'section': section,
+      'up3': up3,
+      'ulp': ulp,
+      'penyulang': penyulang,
+      'zonaProteksi': zonaProteksi,
+      'panjangKms': panjangKms,
+      'status': status,
+      'role': role,
+      'vendorVb': vendorVb,
+      // Tidak include createdAt karena tidak boleh diubah
+    };
+  }
+
   /// 🔹 Convert Firestore → Model
   factory AssetModel.fromFirestore(Map<String, dynamic> data, String id) {
     return AssetModel(
@@ -67,6 +85,39 @@ class AssetModel {
       createdAt: data['createdAt'] is Timestamp
           ? (data['createdAt'] as Timestamp).toDate()
           : DateTime.now(),
+    );
+  }
+
+  /// 🔹 Copy with method untuk membuat instance baru dengan beberapa field yang diubah
+  AssetModel copyWith({
+    String? id,
+    String? wilayah,
+    String? subWilayah,
+    String? section,
+    String? up3,
+    String? ulp,
+    String? penyulang,
+    String? zonaProteksi,
+    double? panjangKms,
+    String? status,
+    String? role,
+    String? vendorVb,
+    DateTime? createdAt,
+  }) {
+    return AssetModel(
+      id: id ?? this.id,
+      wilayah: wilayah ?? this.wilayah,
+      subWilayah: subWilayah ?? this.subWilayah,
+      section: section ?? this.section,
+      up3: up3 ?? this.up3,
+      ulp: ulp ?? this.ulp,
+      penyulang: penyulang ?? this.penyulang,
+      zonaProteksi: zonaProteksi ?? this.zonaProteksi,
+      panjangKms: panjangKms ?? this.panjangKms,
+      status: status ?? this.status,
+      role: role ?? this.role,
+      vendorVb: vendorVb ?? this.vendorVb,
+      createdAt: createdAt ?? this.createdAt,
     );
   }
 }

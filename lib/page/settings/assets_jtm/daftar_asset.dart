@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter_application_2/models/asset_model.dart';
 import 'package:flutter_application_2/services/asset_service.dart';
+import 'edit_asset.dart';
 
 class DaftarAssetPage extends StatefulWidget {
   const DaftarAssetPage({super.key});
@@ -70,6 +71,112 @@ class _DaftarAssetPageState extends State<DaftarAssetPage> {
     return filtered;
   }
 
+  // Widget untuk menampilkan filter yang aktif
+  Widget _buildActiveFiltersContent() {
+    List<String> activeFilters = _selectedFilters.entries
+        .where((entry) => entry.value.isNotEmpty)
+        .map((entry) => entry.key)
+        .toList();
+
+    if (activeFilters.isEmpty) {
+      return const Text(
+        'Belum ada filter yang dipilih',
+        style: TextStyle(
+          fontSize: 12,
+          color: Colors.white70,
+          fontStyle: FontStyle.italic,
+        ),
+      );
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text(
+          'Filter Aktif:',
+          style: TextStyle(
+            fontSize: 14,
+            fontWeight: FontWeight.w600,
+            color: Colors.white,
+          ),
+        ),
+        const SizedBox(height: 8),
+        Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          children: activeFilters.map((filterType) {
+            return Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+              decoration: BoxDecoration(
+                color: Colors.white.withOpacity(0.2),
+                borderRadius: BorderRadius.circular(20),
+                border: Border.all(
+                  color: Colors.white.withOpacity(0.5),
+                  width: 1,
+                ),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    '$filterType: ${_selectedFilters[filterType]}',
+                    style: const TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w500,
+                      color: Colors.white,
+                    ),
+                  ),
+                  const SizedBox(width: 6),
+                  GestureDetector(
+                    onTap: () {
+                      setState(() {
+                        _selectedFilters[filterType] = '';
+                      });
+                    },
+                    child: const Icon(
+                      Icons.close,
+                      size: 16,
+                      color: Colors.white,
+                    ),
+                  ),
+                ],
+              ),
+            );
+          }).toList(),
+        ),
+        // Tombol clear all filters
+        if (activeFilters.isNotEmpty)
+          Padding(
+            padding: const EdgeInsets.only(top: 8),
+            child: TextButton.icon(
+              onPressed: () {
+                setState(() {
+                  _selectedFilters.updateAll((key, value) => '');
+                });
+              },
+              icon: const Icon(
+                Icons.clear_all,
+                size: 16,
+                color: Colors.white70,
+              ),
+              label: const Text(
+                'Hapus Semua Filter',
+                style: TextStyle(
+                  fontSize: 12,
+                  color: Colors.white70,
+                ),
+              ),
+              style: TextButton.styleFrom(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                minimumSize: Size.zero,
+                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+              ),
+            ),
+          ),
+      ],
+    );
+  }
+
   void _showFilterDialog() {
     showDialog(
       context: context,
@@ -117,6 +224,7 @@ class _DaftarAssetPageState extends State<DaftarAssetPage> {
                     Expanded(
                       child: ListView(
                         children: _selectedFilters.keys.map((filterType) {
+                          String currentValue = _selectedFilters[filterType] ?? '';
                           return ListTile(
                             title: Text(
                               filterType,
@@ -125,7 +233,31 @@ class _DaftarAssetPageState extends State<DaftarAssetPage> {
                                 fontWeight: FontWeight.w500,
                               ),
                             ),
-                            trailing: const Icon(Icons.arrow_forward_ios, size: 16),
+                            subtitle: currentValue.isNotEmpty
+                                ? Text(
+                                    'Filter: $currentValue',
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      color: const Color(0xFF125E72),
+                                      fontWeight: FontWeight.w500,
+                                    ),
+                                  )
+                                : null,
+                            trailing: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                if (currentValue.isNotEmpty)
+                                  IconButton(
+                                    onPressed: () {
+                                      setDialogState(() {
+                                        _selectedFilters[filterType] = '';
+                                      });
+                                    },
+                                    icon: const Icon(Icons.clear, size: 20, color: Colors.red),
+                                  ),
+                                const Icon(Icons.arrow_forward_ios, size: 16),
+                              ],
+                            ),
                             onTap: () {
                               _showFilterValueDialog(filterType, setDialogState);
                             },
@@ -147,12 +279,18 @@ class _DaftarAssetPageState extends State<DaftarAssetPage> {
                                 });
                                 setState(() {});
                               },
+                              style: TextButton.styleFrom(
+                                side: const BorderSide(color: Color(0xFF2E5D6F), width: 2),
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(25)),
+                                foregroundColor: const Color(0xFF2E5D6F),
+                              ),
                               child: const Text(
-                                'Clear',
-                                style: TextStyle(color: Colors.grey, fontSize: 16),
+                                'Reset Filter',
+                                style: TextStyle(fontSize: 16),
                               ),
                             ),
                           ),
+                          const SizedBox(width: 12),
                           Expanded(
                             child: ElevatedButton(
                               onPressed: () {
@@ -163,10 +301,10 @@ class _DaftarAssetPageState extends State<DaftarAssetPage> {
                                 backgroundColor: const Color(0xFF125E72),
                                 foregroundColor: Colors.white,
                                 shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(8),
+                                  borderRadius: BorderRadius.circular(25),
                                 ),
                               ),
-                              child: const Text('Done'),
+                              child: const Text('Selesai'),
                             ),
                           ),
                         ],
@@ -202,22 +340,41 @@ class _DaftarAssetPageState extends State<DaftarAssetPage> {
             ),
           ),
           actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text('Cancel'),
-            ),
-            ElevatedButton(
-              onPressed: () {
-                setDialogState(() {
-                  _selectedFilters[filterType] = controller.text;
-                });
-                Navigator.pop(context);
-              },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF125E72),
-                foregroundColor: Colors.white,
-              ),
-              child: const Text('Apply'),
+            Row(
+              children: [
+                Expanded(
+                  child: TextButton(
+                    onPressed: () => Navigator.pop(context),
+                    style: TextButton.styleFrom(
+                      side: const BorderSide(color: Color(0xFF2E5D6F), width: 2),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(25)),
+                      foregroundColor: const Color(0xFF2E5D6F),
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                    ),
+                    child: const Text('Batal'),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: ElevatedButton(
+                    onPressed: () {
+                      setDialogState(() {
+                        _selectedFilters[filterType] = controller.text;
+                      });
+                      Navigator.pop(context);
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF125E72),
+                      foregroundColor: Colors.white,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(25),
+                      ),
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                    ),
+                    child: const Text('Terapkan'),
+                  ),
+                ),
+              ],
             ),
           ],
         );
@@ -414,25 +571,18 @@ class _DaftarAssetPageState extends State<DaftarAssetPage> {
   }
 
   void _editAsset(AssetModel asset) {
-    // Navigate to edit page
-    // Navigator.pushNamed(context, '/edit-asset', arguments: asset);
-    
-    // For now, show a placeholder dialog
-    showDialog(
-      context: context,
-      builder: (context) {
-        return AlertDialog(
-          title: const Text('Edit Asset'),
-          content: Text('Edit asset: ${asset.penyulang}'),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text('Close'),
-            ),
-          ],
-        );
-      },
-    );
+    // Navigate to edit page with proper import
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => EditAssetPage(asset: asset),
+      ),
+    ).then((result) {
+      // Refresh data jika ada perubahan
+      if (result == true) {
+        setState(() {});
+      }
+    });
   }
 
   void _deleteAsset(AssetModel asset) {
@@ -443,35 +593,54 @@ class _DaftarAssetPageState extends State<DaftarAssetPage> {
           title: const Text('Hapus Asset'),
           content: Text('Apakah Anda yakin ingin menghapus asset "${asset.penyulang}"?'),
           actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text('Batal'),
-            ),
-            ElevatedButton(
-              onPressed: () async {
-                Navigator.pop(context);
-                try {
-                  await _assetService.deleteAsset(asset.id);
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text('Asset berhasil dihapus'),
-                      backgroundColor: Colors.green,
+            Row(
+              children: [
+                Expanded(
+                  child: TextButton(
+                    onPressed: () => Navigator.pop(context),
+                    style: TextButton.styleFrom(
+                      side: const BorderSide(color: Color(0xFF2E5D6F), width: 2),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(25)),
+                      foregroundColor: const Color(0xFF2E5D6F),
+                      padding: const EdgeInsets.symmetric(vertical: 12),
                     ),
-                  );
-                } catch (e) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text('Error: $e'),
+                    child: const Text('Batal'),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: ElevatedButton(
+                    onPressed: () async {
+                      Navigator.pop(context);
+                      try {
+                        await _assetService.deleteAsset(asset.id);
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('Asset berhasil dihapus'),
+                            backgroundColor: Colors.green,
+                          ),
+                        );
+                      } catch (e) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text('Error: $e'),
+                            backgroundColor: Colors.red,
+                          ),
+                        );
+                      }
+                    },
+                    style: ElevatedButton.styleFrom(
                       backgroundColor: Colors.red,
+                      foregroundColor: Colors.white,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(25),
+                      ),
+                      padding: const EdgeInsets.symmetric(vertical: 12),
                     ),
-                  );
-                }
-              },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.red,
-                foregroundColor: Colors.white,
-              ),
-              child: const Text('Hapus'),
+                    child: const Text('Hapus'),
+                  ),
+                ),
+              ],
             ),
           ],
         );
@@ -510,7 +679,7 @@ class _DaftarAssetPageState extends State<DaftarAssetPage> {
                     });
                   },
                   decoration: InputDecoration(
-                    hintText: 'Cari wilayah, section, UP3, ULP, role, vendor...',
+                    hintText: 'Cari...',
                     prefixIcon: const Icon(Icons.search),
                     filled: true,
                     fillColor: Colors.white,
@@ -522,6 +691,7 @@ class _DaftarAssetPageState extends State<DaftarAssetPage> {
                   ),
                 ),
                 const SizedBox(height: 12),
+                
                 // Filter Button
                 Row(
                   children: [
@@ -551,6 +721,25 @@ class _DaftarAssetPageState extends State<DaftarAssetPage> {
                       ),
                     ),
                   ],
+                ),
+                
+                // Container untuk Active Filters - DIPERLUAS KE BAWAH
+                Container(
+                  width: double.infinity,
+                  margin: const EdgeInsets.only(top: 16),
+                  padding: const EdgeInsets.all(12),
+                  constraints: const BoxConstraints(
+                    minHeight: 50, // Tinggi minimum container
+                  ),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(
+                      color: Colors.white.withOpacity(0.3),
+                      width: 1,
+                    ),
+                  ),
+                  child: _buildActiveFiltersContent(),
                 ),
               ],
             ),

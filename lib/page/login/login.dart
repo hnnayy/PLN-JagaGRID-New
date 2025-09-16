@@ -17,76 +17,136 @@ class _LoginPageState extends State<LoginPage> {
   bool _isLoading = false;
   String? _errorMessage;
 
+  // Modern color scheme
+  static const Color primaryColor = Color(0xFF125E72); // Indigo
+  static const Color primaryDark = Color(0xFF14A2B9); // Darker indigo
+  static const Color backgroundColor = Color(0xFFF8FAFC); // Light gray
+  static const Color cardColor = Colors.white;
+  static const Color accentColor = Color(0xFF10B981); // Emerald
+  static const Color textPrimary = Color(0xFF1E293B); // Dark gray
+  static const Color textSecondary = Color(0xFF64748B); // Medium gray
+  static const Color inputFill = Color(0xFFF1F5F9); // Light blue gray
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFF2E5D6F),
-      body: SafeArea(
-        child: Container(
-          decoration: const BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.only(
-              topLeft: Radius.circular(32),
-              topRight: Radius.circular(32),
-            ),
+      body: Container(
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [
+              primaryColor.withOpacity(0.1),
+              accentColor.withOpacity(0.05),
+              backgroundColor,
+            ],
+            stops: const [0.0, 0.5, 1.0],
           ),
+        ),
+        child: SafeArea(
           child: Center(
             child: SingleChildScrollView(
               child: Column(
                 children: [
-                  const SizedBox(height: 40),
+                  const SizedBox(height: 0),
+                  // Logo/Icon Section
                   Container(
-                    width: 85,
-                    height: 85,
-                    decoration: const BoxDecoration(
-                      color: Color(0xFF2E5D6F),
-                      shape: BoxShape.circle,
+                    width: 200,
+                    height: 200,
+                    child: Image.asset(
+                      'assets/logo/logo.png',
+                      width: 50,
+                      height: 50,
                     ),
-                    child: const Icon(Icons.lock_rounded, size: 55, color: Colors.white),
                   ),
-                  const SizedBox(height: 24),
+                  const SizedBox(height:0),
+                  
+                  // Welcome Text
                   const Text(
-                    'Login',
+                    'Selamat Datang',
                     style: TextStyle(
                       fontWeight: FontWeight.bold,
-                      color: Color(0xFF2E5D6F),
-                      fontSize: 26,
+                      color: textPrimary,
+                      fontSize: 28,
+                      letterSpacing: -0.5,
                     ),
                   ),
-                  const SizedBox(height: 10),
+                  const SizedBox(height: 8),
                   Text(
-                    'Masuk ke akun Anda',
-                    style: TextStyle(fontSize: 15, color: Colors.grey.shade600),
+                    'Masuk ke akun Anda untuk melanjutkan',
+                    style: TextStyle(
+                      fontSize: 16, 
+                      color: textSecondary,
+                      height: 1.4,
+                    ),
                   ),
-                  const SizedBox(height: 32),
+                  const SizedBox(height: 40),
+                  
+                  // Login Form Card
                   Container(
                     width: double.infinity,
                     margin: const EdgeInsets.symmetric(horizontal: 24),
-                    padding: const EdgeInsets.symmetric(vertical: 32, horizontal: 24),
+                    padding: const EdgeInsets.all(32),
                     decoration: BoxDecoration(
-                      color: const Color(0xFFF8FAFB),
-                      borderRadius: BorderRadius.circular(20),
+                      color: cardColor,
+                      borderRadius: BorderRadius.circular(24),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.04),
+                          blurRadius: 20,
+                          offset: const Offset(0, 4),
+                        ),
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.02),
+                          blurRadius: 40,
+                          offset: const Offset(0, 8),
+                        ),
+                      ],
                     ),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        // Username
-                        const Text('Username', style: TextStyle(fontSize: 12, color: Color(0xFF2E5D6F), fontWeight: FontWeight.w500)),
+                        // Username Field
+                        Text(
+                          'Username',
+                          style: TextStyle(
+                            fontSize: 14,
+                            color: textPrimary,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
                         const SizedBox(height: 8),
                         TextField(
                           controller: usernameController,
-                          decoration: _inputDecoration(),
+                          decoration: _inputDecoration(
+                            hintText: 'Masukkan username Anda',
+                            prefixIcon: Icons.person_outline,
+                          ),
                         ),
-                        const SizedBox(height: 20),
-                        // Password
-                        const Text('Password', style: TextStyle(fontSize: 12, color: Color(0xFF2E5D6F), fontWeight: FontWeight.w500)),
+                        const SizedBox(height: 24),
+                        
+                        // Password Field
+                        Text(
+                          'Password',
+                          style: TextStyle(
+                            fontSize: 14,
+                            color: textPrimary,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
                         const SizedBox(height: 8),
                         TextField(
                           controller: passwordController,
                           obscureText: _obscureText,
                           decoration: _inputDecoration(
+                            hintText: 'Masukkan password Anda',
+                            prefixIcon: Icons.lock_outline,
                             suffixIcon: IconButton(
-                              icon: Icon(_obscureText ? Icons.visibility_off : Icons.visibility, color: Colors.grey),
+                              icon: Icon(
+                                _obscureText ? Icons.visibility_off_outlined : Icons.visibility_outlined,
+                                color: textSecondary,
+                                size: 20,
+                              ),
                               onPressed: () {
                                 setState(() {
                                   _obscureText = !_obscureText;
@@ -95,28 +155,75 @@ class _LoginPageState extends State<LoginPage> {
                             ),
                           ),
                         ),
+                        
+                        // Error Message
                         if (_errorMessage != null) ...[
-                          const SizedBox(height: 12),
-                          Text(_errorMessage!, style: const TextStyle(color: Colors.red)),
+                          const SizedBox(height: 16),
+                          Container(
+                            width: double.infinity,
+                            padding: const EdgeInsets.all(12),
+                            decoration: BoxDecoration(
+                              color: Colors.red.shade50,
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(color: Colors.red.shade200),
+                            ),
+                            child: Row(
+                              children: [
+                                Icon(Icons.error_outline, color: Colors.red.shade600, size: 20),
+                                const SizedBox(width: 8),
+                                Expanded(
+                                  child: Text(
+                                    _errorMessage!,
+                                    style: TextStyle(color: Colors.red.shade700, fontSize: 14),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
                         ],
+                        
                         const SizedBox(height: 32),
+                        
+                        // Login Button
                         SizedBox(
                           width: double.infinity,
-                          height: 50,
+                          height: 56,
                           child: ElevatedButton(
                             style: ElevatedButton.styleFrom(
-                              backgroundColor: const Color(0xFF2E5D6F),
+                              backgroundColor: primaryColor,
                               foregroundColor: Colors.white,
-                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(25)),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(16),
+                              ),
+                              elevation: 0,
+                              shadowColor: Colors.transparent,
+                            ).copyWith(
+                              backgroundColor: MaterialStateProperty.resolveWith((states) {
+                                if (states.contains(MaterialState.pressed)) {
+                                  return primaryDark;
+                                }
+                                if (states.contains(MaterialState.disabled)) {
+                                  return textSecondary.withOpacity(0.3);
+                                }
+                                return primaryColor;
+                              }),
                             ),
                             onPressed: _isLoading ? null : _login,
                             child: _isLoading
-                                ? const CircularProgressIndicator(color: Colors.white)
+                                ? SizedBox(
+                                    height: 20,
+                                    width: 20,
+                                    child: CircularProgressIndicator(
+                                      color: Colors.white,
+                                      strokeWidth: 2,
+                                    ),
+                                  )
                                 : const Text(
-                                    'Log In',
+                                    'Masuk',
                                     style: TextStyle(
-                                      fontWeight: FontWeight.bold,
-                                      fontSize: 20,
+                                      fontWeight: FontWeight.w600,
+                                      fontSize: 16,
+                                      letterSpacing: 0.5,
                                     ),
                                   ),
                           ),
@@ -124,6 +231,8 @@ class _LoginPageState extends State<LoginPage> {
                       ],
                     ),
                   ),
+                  
+                  const SizedBox(height: 40),
                 ],
               ),
             ),
@@ -133,16 +242,40 @@ class _LoginPageState extends State<LoginPage> {
     );
   }
 
-  InputDecoration _inputDecoration({Widget? suffixIcon}) {
+  InputDecoration _inputDecoration({
+    Widget? suffixIcon,
+    IconData? prefixIcon,
+    String? hintText,
+  }) {
     return InputDecoration(
       filled: true,
-      fillColor: const Color(0xFFF3FFFA),
-      contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+      fillColor: inputFill,
+      contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+      hintText: hintText,
+      hintStyle: TextStyle(
+        color: textSecondary,
+        fontSize: 15,
+      ),
+      prefixIcon: prefixIcon != null
+          ? Icon(prefixIcon, color: textSecondary, size: 20)
+          : null,
+      suffixIcon: suffixIcon,
       border: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(12),
         borderSide: BorderSide.none,
       ),
-      suffixIcon: suffixIcon,
+      enabledBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(12),
+        borderSide: BorderSide.none,
+      ),
+      focusedBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(12),
+        borderSide: BorderSide(color: primaryColor, width: 2),
+      ),
+      errorBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(12),
+        borderSide: BorderSide(color: Colors.red.shade400, width: 1),
+      ),
     );
   }
 
@@ -167,12 +300,13 @@ class _LoginPageState extends State<LoginPage> {
 
       if (query.docs.isNotEmpty) {
         // Login success, navigate to home (NavigationMenu)
-  // Simpan session ke SharedPreferences
-  final userData = query.docs.first.data();
-  final prefs = await SharedPreferences.getInstance();
-  await prefs.setString('session_username', userData['username'] ?? '');
-  await prefs.setString('session_name', userData['name'] ?? '');
-  await prefs.setString('session_unit', userData['unit'] ?? '');
+        // Simpan session ke SharedPreferences
+        final userData = query.docs.first.data();
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setString('session_username', userData['username'] ?? '');
+        await prefs.setString('session_name', userData['name'] ?? '');
+        await prefs.setString('session_unit', userData['unit'] ?? '');
+        
         if (mounted) {
           Navigator.pushReplacement(
             context,
@@ -181,12 +315,12 @@ class _LoginPageState extends State<LoginPage> {
         }
       } else {
         setState(() {
-          _errorMessage = 'Login gagal. Cek data Anda.';
+          _errorMessage = 'Username atau password tidak valid. Silakan coba lagi.';
         });
       }
     } catch (e) {
       setState(() {
-        _errorMessage = 'Terjadi kesalahan. Coba lagi.';
+        _errorMessage = 'Terjadi kesalahan jaringan. Pastikan koneksi internet Anda stabil.';
       });
     } finally {
       setState(() {
