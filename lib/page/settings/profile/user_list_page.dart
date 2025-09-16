@@ -34,6 +34,7 @@ class _UserListPageState extends State<UserListPage> {
     }
   }
 
+  // PERBAIKAN 1: Ubah fungsi delete jadi soft delete
   void _deleteUser(String docId, String name) {
     showDialog(
       context: context,
@@ -55,7 +56,10 @@ class _UserListPageState extends State<UserListPage> {
           ElevatedButton(
             onPressed: () async {
               Navigator.pop(context);
-              await FirebaseFirestore.instance.collection("users").doc(docId).delete();
+              // SOFT DELETE: Update status jadi 0, bukan delete document
+              await FirebaseFirestore.instance.collection("users").doc(docId).update({
+                'status': 0
+              });
               _showSnackBar("$name berhasil dihapus", Colors.red, Icons.delete);
             },
             style: ElevatedButton.styleFrom(backgroundColor: Colors.red, foregroundColor: Colors.white),
@@ -152,7 +156,7 @@ class _UserListPageState extends State<UserListPage> {
               onChanged: (value) => setState(() => searchQuery = value),
             ),
           ),
-          // User Count
+          // User Count - Tetap seperti semula
           if (searchQuery.isEmpty)
             Container(
               margin: const EdgeInsets.symmetric(horizontal: 20),
@@ -168,13 +172,20 @@ class _UserListPageState extends State<UserListPage> {
               child: StreamBuilder<QuerySnapshot>(
                 stream: FirebaseFirestore.instance.collection("users").snapshots(),
                 builder: (context, snapshot) {
-                  final totalUsers = snapshot.hasData ? snapshot.data!.docs.length : 0;
+                  // Filter manual untuk menghitung user aktif
+                  int totalActiveUsers = 0;
+                  if (snapshot.hasData) {
+                    totalActiveUsers = snapshot.data!.docs.where((doc) {
+                      final data = doc.data() as Map<String, dynamic>;
+                      return (data['status'] ?? 1) == 1;
+                    }).length;
+                  }
                   return Row(
                     children: [
                       const Icon(Icons.people, color: Colors.white, size: 24),
                       const SizedBox(width: 12),
                       Text(
-                        "Total $totalUsers User Terdaftar",
+                        "Total $totalActiveUsers User Aktif",
                         style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.w600),
                       ),
                     ],
@@ -183,10 +194,12 @@ class _UserListPageState extends State<UserListPage> {
               ),
             ),
           const SizedBox(height: 20),
-          // User List
+          // User List - Filter manual untuk menampilkan user aktif
           Expanded(
             child: StreamBuilder<QuerySnapshot>(
-              stream: FirebaseFirestore.instance.collection("users").orderBy("added", descending: true).snapshots(),
+              stream: FirebaseFirestore.instance.collection("users")
+                  .orderBy("added", descending: true)
+                  .snapshots(),
               builder: (context, snapshot) {
                 if (snapshot.hasError) {
                   return Center(
@@ -206,7 +219,13 @@ class _UserListPageState extends State<UserListPage> {
                   );
                 }
 
-                final docs = snapshot.data!.docs.where((doc) {
+                // Filter manual: hanya tampilkan user aktif (status = 1)
+                final activeDocs = snapshot.data!.docs.where((doc) {
+                  final data = doc.data() as Map<String, dynamic>;
+                  return (data['status'] ?? 1) == 1; // Default 1 jika status tidak ada
+                }).toList();
+
+                final docs = activeDocs.where((doc) {
                   final data = doc.data() as Map<String, dynamic>;
                   final query = searchQuery.toLowerCase();
                   return data["name"].toString().toLowerCase().contains(query) ||
