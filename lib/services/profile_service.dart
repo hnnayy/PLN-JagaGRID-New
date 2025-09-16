@@ -2,6 +2,10 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter_application_2/models/profile.dart';
 
 class ProfileService {
+  // Update only specific fields in profile
+  Future<void> updateProfilePartial(String docId, Map<String, dynamic> data) async {
+    await profilesRef.doc(docId).update(data);
+  }
   final CollectionReference profilesRef =
       FirebaseFirestore.instance.collection('profiles');
 

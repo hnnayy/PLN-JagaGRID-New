@@ -3,6 +3,7 @@ class UserModel {
   final String name;
   final String username;
   final String unit;
+  final int level; // Field baru: 1 = unit induk, 2 = unit layanan
   final String added;
   final String password;
   final String usernameTelegram; // Perbaikan nama field
@@ -14,6 +15,7 @@ class UserModel {
     required this.name,
     required this.username,
     required this.unit,
+    required this.level,
     required this.added,
     required this.password,
     required this.usernameTelegram,
@@ -27,6 +29,7 @@ class UserModel {
     String? name,
     String? username,
     String? unit,
+    int? level,
     String? added,
     String? password,
     String? usernameTelegram,
@@ -38,6 +41,7 @@ class UserModel {
       name: name ?? this.name,
       username: username ?? this.username,
       unit: unit ?? this.unit,
+      level: level ?? this.level,
       added: added ?? this.added,
       password: password ?? this.password,
       usernameTelegram: usernameTelegram ?? this.usernameTelegram,
@@ -53,6 +57,7 @@ class UserModel {
       name: map['name'] ?? '',
       username: map['username'] ?? '',
       unit: map['unit'] ?? '',
+      level: map['level'] ?? 2, // Default level 2 jika tidak ada
       added: map['added'] ?? '',
       password: map['password'] ?? '',
       // Perbaikan: gunakan field name yang konsisten dengan database
@@ -68,6 +73,7 @@ class UserModel {
       'name': name,
       'username': username,
       'unit': unit,
+      'level': level,
       'added': added,
       'password': password,
       // Perbaikan: simpan dengan field name yang konsisten
@@ -84,6 +90,7 @@ class UserModel {
       name: json['name'] ?? '',
       username: json['username'] ?? '',
       unit: json['unit'] ?? '',
+      level: json['level'] ?? 2,
       added: json['added'] ?? '',
       password: json['password'] ?? '',
       usernameTelegram: json['username_telegram'] ?? '',
@@ -99,6 +106,7 @@ class UserModel {
       'name': name,
       'username': username,
       'unit': unit,
+      'level': level,
       'added': added,
       'password': password,
       'username_telegram': usernameTelegram,
@@ -111,6 +119,10 @@ class UserModel {
   bool get isActive => status == 1;
   bool get isDeleted => status == 0;
 
+  /// Helper methods untuk level
+  bool get isInduk => level == 1;
+  bool get isLayanan => level == 2;
+
   /// Method untuk soft delete
   UserModel markAsDeleted() => copyWith(status: 0);
   
@@ -119,7 +131,7 @@ class UserModel {
 
   @override
   String toString() {
-    return 'UserModel(id: $id, name: $name, username: $username, unit: $unit, status: $status)';
+    return 'UserModel(id: $id, name: $name, username: $username, unit: $unit, level: $level, status: $status)';
   }
 
   @override
@@ -130,6 +142,7 @@ class UserModel {
         other.name == name &&
         other.username == username &&
         other.unit == unit &&
+        other.level == level &&
         other.added == added &&
         other.password == password &&
         other.usernameTelegram == usernameTelegram &&
@@ -144,6 +157,7 @@ class UserModel {
       name,
       username,
       unit,
+      level,
       added,
       password,
       usernameTelegram,

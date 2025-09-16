@@ -144,6 +144,7 @@ class _EditUserPageState extends State<EditUserPage> {
   final _formKey = GlobalKey<FormState>();
   late TextEditingController fullNameController, usernameController, addedDateController, usernameTelegramController, chatIdTelegramController, passwordController;
   String? selectedUnit;
+  int selectedLevel = 2; // Default: 2 untuk unit layanan
   bool _isLoading = false;
   bool _obscurePassword = true;
 
@@ -158,6 +159,7 @@ class _EditUserPageState extends State<EditUserPage> {
     chatIdTelegramController = TextEditingController(text: widget.user["chat_id_telegram"]);
     passwordController = TextEditingController(text: widget.user["password"]);
     selectedUnit = widget.user["unit"];
+    selectedLevel = widget.user["level"] ?? 2; // Set level dari data user atau default 2
     addedDateController = TextEditingController(text: widget.user["added"] ?? "");
   }
 
@@ -185,6 +187,7 @@ class _EditUserPageState extends State<EditUserPage> {
         "name": fullNameController.text.trim(),
         "username": usernameController.text.trim().startsWith('@') ? usernameController.text.trim() : '@${usernameController.text.trim()}',
         "unit": selectedUnit!,
+        "level": selectedLevel,
         "username_telegram": usernameTelegramController.text.trim(),
         "chat_id_telegram": chatIdTelegramController.text.trim(),
         "password": passwordController.text.trim(),
@@ -195,7 +198,7 @@ class _EditUserPageState extends State<EditUserPage> {
         await FirebaseFirestore.instance.collection("users").doc(widget.docId).update(updatedUser);
         if (mounted) {
           setState(() => _isLoading = false);
-          _showSuccessDialog(Map<String, String>.from(updatedUser));
+          _showSuccessDialog(updatedUser);
         }
       } catch (e) {
         setState(() => _isLoading = false);
@@ -204,7 +207,7 @@ class _EditUserPageState extends State<EditUserPage> {
     }
   }
 
-  void _showSuccessDialog(Map<String, String> updatedUser) {
+  void _showSuccessDialog(Map<String, dynamic> updatedUser) {
     showDialog(
       context: context,
       barrierDismissible: false,
@@ -236,6 +239,7 @@ class _EditUserPageState extends State<EditUserPage> {
                     ("Nama", updatedUser["name"] ?? ""),
                     ("Username", updatedUser["username"] ?? ""),
                     ("Unit", updatedUser["unit"] ?? ""),
+                    ("Level", updatedUser["level"] == 1 ? "Unit Induk" : "Unit Layanan"),
                     ("Username Telegram", updatedUser["username_telegram"] ?? "-"),
                     ("Chat ID Telegram", updatedUser["chat_id_telegram"] ?? "-"),
                     ("Ditambahkan", updatedUser["added"] ?? ""),
@@ -262,7 +266,7 @@ class _EditUserPageState extends State<EditUserPage> {
                   ),
                   onPressed: () {
                     Navigator.of(context).pop();
-                    Navigator.pop(context, updatedUser);
+                    Navigator.pop(context); // Hanya kembali ke halaman sebelumnya tanpa mengirim data
                   },
                   icon: const Icon(Icons.list_rounded, size: 20),
                   label: const Text("Kembali ke List", style: TextStyle(fontWeight: FontWeight.w600, fontSize: 15)),
@@ -317,6 +321,44 @@ class _EditUserPageState extends State<EditUserPage> {
             padding: const EdgeInsets.all(24),
             children: [
               CustomDropdown(value: selectedUnit, items: units, labelText: "Unit Kerja", onChanged: (value) => setState(() => selectedUnit = value)),
+              const SizedBox(height: 20),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text("Pilih Level Unit", style: TextStyle(fontSize: 12, color: Colors.grey.shade600, fontWeight: FontWeight.w500)),
+                  const SizedBox(height: 8),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Row(
+                          children: [
+                            Radio<int>(
+                              value: 1,
+                              groupValue: selectedLevel,
+                              onChanged: (value) => setState(() => selectedLevel = value!),
+                              activeColor: const Color(0xFF2E5D6F),
+                            ),
+                            const Text('Unit Induk', style: TextStyle(fontSize: 16, color: Colors.black87)),
+                          ],
+                        ),
+                      ),
+                      Expanded(
+                        child: Row(
+                          children: [
+                            Radio<int>(
+                              value: 2,
+                              groupValue: selectedLevel,
+                              onChanged: (value) => setState(() => selectedLevel = value!),
+                              activeColor: const Color(0xFF2E5D6F),
+                            ),
+                            const Text('Unit Layanan', style: TextStyle(fontSize: 16, color: Colors.black87)),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
               const SizedBox(height: 20),
               _buildField("Nama Lengkap", fullNameController, validator: (value) => value?.isEmpty ?? true ? "Nama tidak boleh kosong" : null),
               const SizedBox(height: 20),

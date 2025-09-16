@@ -59,7 +59,7 @@ class _LoginPageState extends State<LoginPage> {
                       height: 50,
                     ),
                   ),
-                  const SizedBox(height:0),
+                  const SizedBox(height: 0),
                   
                   // Welcome Text
                   const Text(
@@ -300,13 +300,19 @@ class _LoginPageState extends State<LoginPage> {
 
       if (query.docs.isNotEmpty) {
         // Login success, navigate to home (NavigationMenu)
-        // Simpan session ke SharedPreferences
-        final userData = query.docs.first.data();
+        // Simpan semua data ke SharedPreferences
+        final userData = query.docs.first.data() as Map<String, dynamic>;
         final prefs = await SharedPreferences.getInstance();
         await prefs.setString('session_username', userData['username'] ?? '');
         await prefs.setString('session_name', userData['name'] ?? '');
         await prefs.setString('session_unit', userData['unit'] ?? '');
-        
+        await prefs.setInt('session_level', userData['level'] ?? 2);
+        await prefs.setString('session_added', userData['added'] ?? '');
+        await prefs.setString('session_username_telegram', userData['username_telegram'] ?? '');
+        await prefs.setString('session_chat_id_telegram', userData['chat_id_telegram'] ?? '');
+        await prefs.setInt('session_status', userData['status'] ?? 1);
+        await prefs.setString('session_id', query.docs.first.id);
+
         if (mounted) {
           Navigator.pushReplacement(
             context,
@@ -327,5 +333,12 @@ class _LoginPageState extends State<LoginPage> {
         _isLoading = false;
       });
     }
+  }
+
+  @override
+  void dispose() {
+    usernameController.dispose();
+    passwordController.dispose();
+    super.dispose();
   }
 }

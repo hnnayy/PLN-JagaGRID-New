@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'dart:async';
 import 'edit_user_page.dart';
 import 'form_add_user_page.dart';
 
@@ -60,7 +61,7 @@ class _UserListPageState extends State<UserListPage> {
               await FirebaseFirestore.instance.collection("users").doc(docId).update({
                 'status': 0
               });
-              _showSnackBar("$name berhasil dihapus", Colors.red, Icons.delete);
+              _showSuccessDialog(name);
             },
             style: ElevatedButton.styleFrom(backgroundColor: Colors.red, foregroundColor: Colors.white),
             child: const Text('Hapus'),
@@ -85,6 +86,44 @@ class _UserListPageState extends State<UserListPage> {
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
       ),
     );
+  }
+
+  void _showSuccessDialog(String name) {
+    showDialog(
+      context: context,
+      barrierDismissible: true,
+      builder: (context) => Dialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        child: Container(
+          padding: const EdgeInsets.all(28),
+          decoration: BoxDecoration(borderRadius: BorderRadius.circular(20), color: Colors.white),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 85,
+                height: 85,
+                decoration: const BoxDecoration(color: Color(0xFF2E5D6F), shape: BoxShape.circle),
+                child: const Icon(Icons.check_circle_rounded, size: 55, color: Colors.white),
+              ),
+              const SizedBox(height: 24),
+              const Text("Berhasil!", style: TextStyle(fontSize: 26, fontWeight: FontWeight.bold, color: Color(0xFF2E5D6F))),
+              const SizedBox(height: 10),
+              Text("User $name berhasil dihapus", style: TextStyle(fontSize: 15, color: Colors.grey.shade600), textAlign: TextAlign.center),
+              const SizedBox(height: 28),
+              // Button removed to match the provided image
+            ],
+          ),
+        ),
+      ),
+    ).then((_) {
+      // Auto close after 2 seconds
+      Timer(const Duration(seconds: 2), () {
+        if (mounted) {
+          Navigator.of(context).pop();
+        }
+      });
+    });
   }
 
   @override
@@ -138,7 +177,7 @@ class _UserListPageState extends State<UserListPage> {
             child: TextField(
               controller: searchController,
               decoration: InputDecoration(
-                hintText: "Cari berdasarkan nama, username, unit, atau telegram...",
+                hintText: "Cari",
                 hintStyle: TextStyle(color: Colors.grey[500], fontSize: 14),
                 prefixIcon: Icon(Icons.search, color: Colors.grey[400], size: 20),
                 suffixIcon: searchQuery.isNotEmpty
@@ -231,8 +270,7 @@ class _UserListPageState extends State<UserListPage> {
                   return data["name"].toString().toLowerCase().contains(query) ||
                       data["username"].toString().toLowerCase().contains(query) ||
                       data["unit"].toString().toLowerCase().contains(query) ||
-                      (data["username_telegram"] ?? "").toString().toLowerCase().contains(query) ||
-                      (data["chat_id_telegram"] ?? "").toString().toLowerCase().contains(query);
+                      (data["username_telegram"] ?? "").toString().toLowerCase().contains(query);
                 }).toList();
 
                 if (docs.isEmpty) {
@@ -378,15 +416,13 @@ class _UserListPageState extends State<UserListPage> {
             Row(
               children: [
                 Expanded(
+                  flex: 2,
                   child: _buildInfoRow("Unit", data["unit"] ?? "-"),
                 ),
                 const SizedBox(width: 20),
                 Expanded(
-                  child: _buildInfoRow("Username Telegram", data["username_telegram"] ?? "-"),
-                ),
-                const SizedBox(width: 20),
-                Expanded(
-                  child: _buildInfoRow("Chat ID Telegram", data["chat_id_telegram"] ?? "-"),
+                  flex: 1,
+                  child: _buildInfoRow("Level", data["level"] == 1 ? "Unit Induk" : "Unit Layanan"),
                 ),
               ],
             ),
@@ -408,7 +444,8 @@ class _UserListPageState extends State<UserListPage> {
         Text(
           value,
           style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500, color: Colors.black),
-          overflow: TextOverflow.ellipsis,
+          maxLines: null,
+          softWrap: true,
         ),
       ],
     );

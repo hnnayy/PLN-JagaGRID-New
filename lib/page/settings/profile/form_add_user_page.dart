@@ -181,7 +181,9 @@ class FormAddUserPage extends StatefulWidget {
 class _FormAddUserPageState extends State<FormAddUserPage> {
   final _formKey = GlobalKey<FormState>();
   String? selectedUnit;
+  int selectedLevel = 2; // Default: 2 untuk unit layanan
   final units = [
+    "UNIT INDUK UP3 PAREPARE",
     "ULP MATTIROTASI", 
     "ULP BARRU", 
     "ULP RAPPANG", 
@@ -232,6 +234,7 @@ class _FormAddUserPageState extends State<FormAddUserPage> {
             ? usernameController.text.trim() 
             : '@${usernameController.text.trim()}',
           "unit": selectedUnit!,
+          "level": selectedLevel,
           "password": passwordController.text.trim(),
           "added": getCurrentDate(),
           "username_telegram": telegramUsernameController.text.trim(),
@@ -354,6 +357,7 @@ class _FormAddUserPageState extends State<FormAddUserPage> {
     _formKey.currentState?.reset();
     setState(() {
       selectedUnit = null;
+      selectedLevel = 2; // Reset ke default
       fullNameController.clear();
       usernameController.clear();
       telegramUsernameController.clear();
@@ -447,6 +451,66 @@ class _FormAddUserPageState extends State<FormAddUserPage> {
                 items: units, 
                 labelText: "Pilih Unit Kerja", 
                 onChanged: (value) => setState(() => selectedUnit = value)
+              ),
+              
+              const SizedBox(height: 20),
+              
+              // Radio Pilihan Level (setelah unit kerja)
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    "Pilih Level Unit", 
+                    style: TextStyle(
+                      fontSize: 12, 
+                      color: Colors.grey.shade600, 
+                      fontWeight: FontWeight.w500
+                    )
+                  ),
+                  const SizedBox(height: 8),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Row(
+                          children: [
+                            Radio<int>(
+                              value: 1,
+                              groupValue: selectedLevel,
+                              onChanged: (value) => setState(() => selectedLevel = value!),
+                              activeColor: const Color(0xFF2E5D6F),
+                            ),
+                            const Text(
+                              'Unit Induk',
+                              style: TextStyle(
+                                fontSize: 16,
+                                color: Colors.black87,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      Expanded(
+                        child: Row(
+                          children: [
+                            Radio<int>(
+                              value: 2,
+                              groupValue: selectedLevel,
+                              onChanged: (value) => setState(() => selectedLevel = value!),
+                              activeColor: const Color(0xFF2E5D6F),
+                            ),
+                            const Text(
+                              'Unit Layanan',
+                              style: TextStyle(
+                                fontSize: 16,
+                                color: Colors.black87,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
               ),
               
               const SizedBox(height: 20),

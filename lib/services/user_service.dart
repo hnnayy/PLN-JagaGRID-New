@@ -2,6 +2,10 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import '../models/user.dart';
 
 class UserService {
+  // Update hanya field tertentu
+  Future<void> updateUserPartial(String docId, Map<String, dynamic> data) async {
+    await usersCollection.doc(docId).update(data);
+  }
   final CollectionReference usersCollection =
       FirebaseFirestore.instance.collection('users');
 
