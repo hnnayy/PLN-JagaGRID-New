@@ -2,7 +2,6 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:firebase_app_check/firebase_app_check.dart';
-
 import 'firebase_options.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:overlay_support/overlay_support.dart';
@@ -12,6 +11,7 @@ import 'providers/notification_provider.dart';
 import 'page/splash_screen.dart';
 import 'page/peta_pohon/map_page.dart';
 import 'page/peta_pohon/add_data_page.dart';
+import 'page/report/treemapping_report.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -54,8 +54,9 @@ class MyApp extends StatelessWidget {
         debugShowCheckedModeBanner: false,
         home: const SplashScreen(),
         routes: {
-          '/map': (context) => const MapPage(),
-          '/addData': (context) => const AddDataPage(),
+          '/map': (context) => MapPage(),
+          '/addData': (context) => AddDataPage(),
+          '/report': (context) => TreeMappingReportPage(),
         },
       ),
     );

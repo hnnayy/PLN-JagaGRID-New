@@ -134,7 +134,7 @@ class _UserListPageState extends State<UserListPage> {
             child: TextField(
               controller: searchController,
               decoration: InputDecoration(
-                hintText: "Cari berdasarkan nama, username, atau unit...",
+                hintText: "Cari berdasarkan nama, username, unit, atau telegram...",
                 hintStyle: TextStyle(color: Colors.grey[500], fontSize: 14),
                 prefixIcon: Icon(Icons.search, color: Colors.grey[400], size: 20),
                 suffixIcon: searchQuery.isNotEmpty
@@ -211,7 +211,9 @@ class _UserListPageState extends State<UserListPage> {
                   final query = searchQuery.toLowerCase();
                   return data["name"].toString().toLowerCase().contains(query) ||
                       data["username"].toString().toLowerCase().contains(query) ||
-                      data["unit"].toString().toLowerCase().contains(query);
+                      data["unit"].toString().toLowerCase().contains(query) ||
+                      (data["username_telegram"] ?? "").toString().toLowerCase().contains(query) ||
+                      (data["chat_id_telegram"] ?? "").toString().toLowerCase().contains(query);
                 }).toList();
 
                 if (docs.isEmpty) {
@@ -353,6 +355,7 @@ class _UserListPageState extends State<UserListPage> {
             const SizedBox(height: 16),
             Divider(color: Colors.grey[200], height: 1),
             const SizedBox(height: 16),
+            // Info rows
             Row(
               children: [
                 Expanded(
@@ -360,7 +363,11 @@ class _UserListPageState extends State<UserListPage> {
                 ),
                 const SizedBox(width: 20),
                 Expanded(
-                  child: _buildInfoRow("Ditambahkan", data["added"] ?? "-"),
+                  child: _buildInfoRow("Username Telegram", data["username_telegram"] ?? "-"),
+                ),
+                const SizedBox(width: 20),
+                Expanded(
+                  child: _buildInfoRow("Chat ID Telegram", data["chat_id_telegram"] ?? "-"),
                 ),
               ],
             ),

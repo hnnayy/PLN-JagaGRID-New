@@ -10,11 +10,10 @@ class DataPohonService {
 
   static const String _imageKitUploadUrl = 'https://upload.imagekit.io/api/v1/files/upload';
   final String _privateKey = dotenv.env['IMAGEKIT_PRIVATE_KEY'] ?? '';
-  // final String _imageKitId = dotenv.env['IMAGEKIT_ID'] ?? '';
 
   Future<void> addDataPohon(DataPohon pohon, File? fotoFile) async {
     try {
-      String? fotoUrl; // Ubah ke nullable
+      String? fotoUrl;
       if (fotoFile != null) {
         if (!fotoFile.existsSync()) {
           print("File foto tidak ditemukan: '${fotoFile.path}'");
@@ -46,7 +45,6 @@ class DataPohonService {
         print('Tidak ada gambar yang diunggah, fotoUrl akan null.');
       }
 
-      // Hitung scheduleDate dan notificationDate berdasarkan growthRate dan initialHeight
       double growthRate = DataPohon.growthRates[pohon.namaPohon]! / 100; // cm to meters
       double timeToRiskYears = (3.0 - pohon.initialHeight) / growthRate;
       if (pohon.prioritas == 3) timeToRiskYears *= 0.8; // High
@@ -60,7 +58,8 @@ class DataPohonService {
         ..update('schedule_date', (_) => estimatedRiskDate.toIso8601String())
         ..update('notification_date', (_) => notificationDate.toIso8601String())
         ..update('growth_rate', (_) => DataPohon.growthRates[pohon.namaPohon]!, ifAbsent: () => 0.0)
-        ..update('initial_height', (_) => pohon.initialHeight, ifAbsent: () => 0.0);
+        ..update('initial_height', (_) => pohon.initialHeight, ifAbsent: () => 0.0)
+        ..update('status', (_) => 1); // Set status aktif saat menambah data
       final docRef = await _db.collection('data_pohon').add(dataToSave).timeout(const Duration(seconds: 30));
       await docRef.update({'id': docRef.id});
       print('Data berhasil disimpan dengan ID: ${docRef.id} dan fotoUrl: ${fotoUrl ?? "null"}');
@@ -72,7 +71,7 @@ class DataPohonService {
 
   Stream<List<DataPohon>> getAllDataPohon() {
     return _db.collection('data_pohon')
-        .orderBy('createddate', descending: true) // Sort by createddate, newest first
+        .where('status', isEqualTo: 1) // Hanya ambil data dengan status aktif
         .snapshots()
         .map(
           (snapshot) => snapshot.docs.map((doc) {
@@ -102,15 +101,26 @@ class DataPohonService {
               'growth_rate': (data['growth_rate'] as num?)?.toDouble() ?? 0.0,
               'initial_height': (data['initial_height'] as num?)?.toDouble() ?? 0.0,
               'notification_date': (data['notification_date'] as String?) ?? DateTime.now().toIso8601String(),
+              'status': (data['status'] as int?) ?? 1,
             });
           }).toList(),
         );
   }
 
-  Future<void> deleteDataPohon(String idPohon) async {
+  Future<void> deleteDataPohon(String id) async {
+    if (id.isEmpty) {
+      throw ArgumentError('Document ID cannot be empty');
+    }
     try {
-      await _db.collection('data_pohon').doc(idPohon).delete().timeout(const Duration(seconds: 30));
-      print('Data pohon dengan ID: $idPohon berhasil dihapus');
+      // Periksa apakah dokumen ada sebelum mencoba update
+      final docSnapshot = await _db.collection('data_pohon').doc(id).get();
+      if (!docSnapshot.exists) {
+        throw Exception('Dokumen dengan ID $id tidak ditemukan');
+      }
+      await _db.collection('data_pohon').doc(id).update({
+        'status': 0, // Soft delete: set status ke 0
+      }).timeout(const Duration(seconds: 30));
+      print('Data pohon dengan ID: $id berhasil di-soft delete');
     } catch (e) {
       print('Error menghapus data pohon: $e');
       rethrow;

@@ -16,7 +16,6 @@ class TreeMappingReportPage extends StatelessWidget {
 
   TreeMappingReportPage({this.filterType});
 
-  // Fungsi untuk menampilkan dialog konfirmasi hapus
   Future<bool?> _showDeleteConfirmationDialog(BuildContext context, String idPohon) async {
     return showDialog<bool>(
       context: context,
@@ -37,7 +36,6 @@ class TreeMappingReportPage extends StatelessWidget {
     );
   }
 
-  // Fungsi untuk mengonversi prioritas ke teks
   String _getPrioritasText(int prioritas) {
     switch (prioritas) {
       case 1:
@@ -51,7 +49,6 @@ class TreeMappingReportPage extends StatelessWidget {
     }
   }
 
-  // Fungsi untuk mengonversi tujuan penjadwalan ke teks
   String _getTujuanPenjadwalanText(int tujuan) {
     switch (tujuan) {
       case 1:
@@ -63,9 +60,10 @@ class TreeMappingReportPage extends StatelessWidget {
     }
   }
 
-  // Fungsi untuk filter dan sort list berdasarkan filterType
   List<DataPohon> _filterAndSortList(List<DataPohon> pohonList) {
-    List<DataPohon> filteredList = pohonList;
+    List<DataPohon> filteredList = List.from(pohonList);
+
+    print('Jumlah data awal sebelum filter: ${pohonList.length}');
 
     if (filterType == 'high_priority') {
       filteredList = filteredList.where((p) => p.prioritas == 3).toList();
@@ -77,17 +75,23 @@ class TreeMappingReportPage extends StatelessWidget {
       filteredList = filteredList.where((p) => p.tujuanPenjadwalan == 2).toList();
     } else if (filterType == 'tebang_pangkas') {
       filteredList = filteredList.where((p) => p.tujuanPenjadwalan == 1).toList();
-    } else if (filterType == 'total_pohon' || filterType == 'prioritas') {
-      // Untuk total atau prioritas, tampilkan semua
+    } else if (filterType == 'total_pohon' || filterType == 'prioritas' || filterType == null) {
+      // Tampilkan semua data tanpa filter tambahan
+    } else {
+      print('FilterType tidak dikenali: $filterType');
     }
 
-    // Selalu sort by prioritas descending (tinggi dulu)
-    filteredList.sort((a, b) => b.prioritas.compareTo(a.prioritas));
+    print('Jumlah data setelah filter: ${filteredList.length}');
+
+    if (filterType == null || filterType == 'total_pohon') {
+      filteredList.sort((a, b) => b.createdDate.compareTo(a.createdDate));
+    } else {
+      filteredList.sort((a, b) => b.prioritas.compareTo(a.prioritas));
+    }
 
     return filteredList;
   }
 
-  // Fungsi untuk mendapatkan title berdasarkan filterType
   String _getTitle() {
     if (filterType == 'high_priority') return 'Laporan Prioritas Tinggi';
     if (filterType == 'medium_priority') return 'Laporan Prioritas Sedang';
@@ -95,17 +99,14 @@ class TreeMappingReportPage extends StatelessWidget {
     if (filterType == 'tebang_habis') return 'Laporan Tebang Habis';
     if (filterType == 'tebang_pangkas') return 'Laporan Tebang Pangkas';
     if (filterType == 'prioritas') return 'Laporan Semua Prioritas';
-    return 'Laporan Peta Pohon';
+    return 'Laporan Semua Data Pohon';
   }
 
-  // Fungsi untuk membuat dan menyimpan file Excel
   Future<void> _exportToExcel(BuildContext context, List<DataPohon> pohonList) async {
     try {
-      // Buat instance Excel
       var excel = Excel.createExcel();
       Sheet sheet = excel['Sheet1'];
 
-      // Tambahkan header sesuai dengan field DataPohon (tanpa Parent ID, Unit ID, Aset JTM ID, Tanggal Notifikasi)
       sheet.appendRow([
         'ID',
         'ID Pohon',
@@ -129,7 +130,6 @@ class TreeMappingReportPage extends StatelessWidget {
         'Tinggi Awal (m)',
       ]);
 
-      // Tambahkan data pohon
       for (var pohon in pohonList) {
         sheet.appendRow([
           pohon.id,
@@ -155,20 +155,19 @@ class TreeMappingReportPage extends StatelessWidget {
         ]);
       }
 
-      // Tentukan path penyimpanan
       final directory = await getTemporaryDirectory();
       final fileName = 'Laporan_Pohon_${DateTime.now().millisecondsSinceEpoch}.xlsx';
       final filePath = '${directory.path}/$fileName';
 
-      // Simpan file Excel
       final fileBytes = excel.encode();
       final file = File(filePath);
       await file.writeAsBytes(fileBytes!);
 
-      // Buka file dengan aplikasi default
       await OpenFile.open(filePath);
     } catch (e) {
-      // Tidak menampilkan alert untuk error
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Gagal mengekspor ke Excel: $e')),
+      );
     }
   }
 
@@ -179,7 +178,7 @@ class TreeMappingReportPage extends StatelessWidget {
         backgroundColor: AppColors.tealGelap,
         title: Text(
           _getTitle(),
-          style: TextStyle(
+          style: const TextStyle(
             color: AppColors.yellow,
             fontSize: 20,
             fontWeight: FontWeight.bold,
@@ -194,6 +193,10 @@ class TreeMappingReportPage extends StatelessWidget {
               final filteredList = _filterAndSortList(pohonList);
               if (filteredList.isNotEmpty) {
                 await _exportToExcel(context, filteredList);
+              } else {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Tidak ada data untuk diekspor')),
+                );
               }
             },
           ),
@@ -206,14 +209,17 @@ class TreeMappingReportPage extends StatelessWidget {
             return const Center(child: CircularProgressIndicator());
           }
           if (snapshot.hasError) {
+            print('Error snapshot: ${snapshot.error}');
             return Center(child: Text('Error: ${snapshot.error}'));
           }
           if (!snapshot.hasData || snapshot.data!.isEmpty) {
+            print('Tidak ada data atau snapshot kosong');
             return const Center(child: Text('Tidak ada data pohon tersedia'));
           }
 
           final pohonList = _filterAndSortList(snapshot.data!);
           if (pohonList.isEmpty) {
+            print('Data kosong setelah filter: filterType = $filterType');
             return const Center(child: Text('Tidak ada data yang sesuai filter'));
           }
           return ListView.builder(
@@ -238,7 +244,8 @@ class TreeMappingReportPage extends StatelessWidget {
                       final confirmed = await _showDeleteConfirmationDialog(context, pohon.idPohon);
                       if (confirmed == true) {
                         try {
-                          await _dataPohonService.deleteDataPohon(pohon.idPohon);
+                          print('Attempting to delete document with ID: ${pohon.id}, idPohon: ${pohon.idPohon}');
+                          await _dataPohonService.deleteDataPohon(pohon.id);
                           ScaffoldMessenger.of(context).showSnackBar(
                             SnackBar(content: Text('Pohon ID #${pohon.idPohon} berhasil dihapus')),
                           );
@@ -256,37 +263,57 @@ class TreeMappingReportPage extends StatelessWidget {
                       leading: pohon.fotoPohon.isNotEmpty
                           ? CachedNetworkImage(
                               imageUrl: pohon.fotoPohon,
-                              width: 40,
-                              height: 40,
-                              fit: BoxFit.contain,
+                              width: 50,
+                              height: 50,
+                              fit: BoxFit.cover,
                               placeholder: (context, url) => Image.asset(
                                 'assets/logo/logo.png',
-                                width: 40,
-                                height: 40,
-                                fit: BoxFit.contain,
+                                width: 50,
+                                height: 50,
+                                fit: BoxFit.cover,
                               ),
                               errorWidget: (context, url, error) => Image.asset(
                                 'assets/logo/logo.png',
-                                width: 40,
-                                height: 40,
-                                fit: BoxFit.contain,
+                                width: 50,
+                                height: 50,
+                                fit: BoxFit.cover,
                               ),
                             )
                           : Image.asset(
                               'assets/logo/logo.png',
-                              width: 40,
-                              height: 40,
-                              fit: BoxFit.contain,
+                              width: 50,
+                              height: 50,
+                              fit: BoxFit.cover,
                             ),
                       title: Text(
-                        'Pohon ID #${pohon.idPohon}',
-                        style: const TextStyle(fontSize: 16),
+                        'Pohon ID #${pohon.idPohon} - ${pohon.namaPohon}',
+                        style: const TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
-                      subtitle: Text(
-                        'Lokasi: ${pohon.up3}, ${pohon.ulp}',
-                        style: const TextStyle(fontSize: 14),
+                      subtitle: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text('Lokasi: ${pohon.up3}, ${pohon.ulp}'),
+                          Text('Penyulang: ${pohon.penyulang}'),
+                          Text('Zona Proteksi: ${pohon.zonaProteksi}'),
+                          Text('Section: ${pohon.section}'),
+                          Text('KMS Aset: ${pohon.kmsAset}'),
+                          Text('Vendor: ${pohon.vendor}'),
+                          Text('Prioritas: ${_getPrioritasText(pohon.prioritas)}'),
+                          Text('Tujuan: ${_getTujuanPenjadwalanText(pohon.tujuanPenjadwalan)}'),
+                          Text('Koordinat: ${pohon.koordinat}'),
+                          Text('Tanggal Penjadwalan: ${pohon.scheduleDate.toString().substring(0, 10)}'),
+                          Text('Laju Pertumbuhan: ${pohon.growthRate} cm/tahun'),
+                          Text('Tinggi Awal: ${pohon.initialHeight} m'),
+                          Text('Catatan: ${pohon.catatan.isEmpty ? 'Tidak ada' : pohon.catatan}'),
+                          Text('Dibuat Oleh: ${pohon.createdBy}'),
+                          Text('Tanggal Dibuat: ${pohon.createdDate.toString().substring(0, 10)}'),
+                        ],
                       ),
                       trailing: const Icon(Icons.chevron_right),
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                       onTap: () {
                         Navigator.push(
                           context,
@@ -298,7 +325,7 @@ class TreeMappingReportPage extends StatelessWidget {
                     ),
                   ),
                   if (index < pohonList.length - 1)
-                    Divider(color: AppColors.cyan, thickness: 1),
+                    const Divider(color: AppColors.cyan, thickness: 1),
                 ],
               );
             },
