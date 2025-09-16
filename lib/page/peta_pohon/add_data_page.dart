@@ -4,6 +4,8 @@ import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import 'package:permission_handler/permission_handler.dart';
 import '../notification/notification_page.dart';
 import '../../providers/notification_provider.dart';
 import '../../providers/data_pohon_provider.dart';
@@ -184,6 +186,12 @@ class AddDataPage extends StatefulWidget {
 }
 
 class _AddDataPageState extends State<AddDataPage> {
+  Future<void> _requestNotificationPermission() async {
+    if (await Permission.notification.isDenied) {
+      await Permission.notification.request();
+    }
+  }
+  final FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin = FlutterLocalNotificationsPlugin();
   final _formKey = GlobalKey<FormState>();
   final _idController = TextEditingController();
   final _up3Controller = TextEditingController(text: 'PAREPARE');
@@ -231,7 +239,15 @@ class _AddDataPageState extends State<AddDataPage> {
     _generateRandomIdPohon();
     _loadSessionUnit();
     _loadDropdownData();
+    _initLocalNotification();
   }
+
+  Future<void> _initLocalNotification() async {
+    const AndroidInitializationSettings initializationSettingsAndroid = AndroidInitializationSettings('@mipmap/ic_launcher');
+    const InitializationSettings initializationSettings = InitializationSettings(android: initializationSettingsAndroid);
+    await flutterLocalNotificationsPlugin.initialize(initializationSettings);
+  }
+
 
   Future<void> _loadDropdownData() async {
     final assetService = AssetService();
@@ -770,6 +786,8 @@ class _AddDataPageState extends State<AddDataPage> {
                                         ),
                                       );
                                       if (!mounted) return;
+                                      await _requestNotificationPermission();
+                                      // Hapus notifikasi lokal di sini, hanya gunakan NotificationProvider
                                       await showDialog(
                                         context: context,
                                         builder: (ctx) => Dialog(
