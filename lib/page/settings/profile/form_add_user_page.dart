@@ -7,7 +7,13 @@ class CustomDropdown extends StatefulWidget {
   final String labelText;
   final Function(String?) onChanged;
 
-  const CustomDropdown({super.key, required this.value, required this.items, required this.labelText, required this.onChanged});
+  const CustomDropdown({
+    super.key, 
+    required this.value, 
+    required this.items, 
+    required this.labelText, 
+    required this.onChanged
+  });
 
   @override
   State<CustomDropdown> createState() => _CustomDropdownState();
@@ -23,7 +29,10 @@ class _CustomDropdownState extends State<CustomDropdown> with SingleTickerProvid
   @override
   void initState() {
     super.initState();
-    _controller = AnimationController(duration: const Duration(milliseconds: 200), vsync: this);
+    _controller = AnimationController(
+      duration: const Duration(milliseconds: 200), 
+      vsync: this
+    );
   }
 
   @override
@@ -57,7 +66,11 @@ class _CustomDropdownState extends State<CustomDropdown> with SingleTickerProvid
                 alignment: Alignment.topCenter,
                 child: Container(
                   constraints: const BoxConstraints(maxHeight: 200),
-                  decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(8), border: Border.all(color: Colors.grey.shade300)),
+                  decoration: BoxDecoration(
+                    color: Colors.white, 
+                    borderRadius: BorderRadius.circular(8), 
+                    border: Border.all(color: Colors.grey.shade300)
+                  ),
                   child: ListView.builder(
                     shrinkWrap: true,
                     padding: EdgeInsets.zero,
@@ -69,13 +82,21 @@ class _CustomDropdownState extends State<CustomDropdown> with SingleTickerProvid
                       },
                       child: Container(
                         padding: const EdgeInsets.all(16),
-                        decoration: BoxDecoration(color: widget.value == widget.items[index] ? const Color(0xFFF0F9FF) : null),
+                        decoration: BoxDecoration(
+                          color: widget.value == widget.items[index] 
+                            ? const Color(0xFFF0F9FF) 
+                            : null
+                        ),
                         child: Text(
                           widget.items[index],
                           style: TextStyle(
                             fontSize: 16,
-                            color: widget.value == widget.items[index] ? const Color(0xFF2E5D6F) : Colors.black87,
-                            fontWeight: widget.value == widget.items[index] ? FontWeight.w500 : FontWeight.normal,
+                            color: widget.value == widget.items[index] 
+                              ? const Color(0xFF2E5D6F) 
+                              : Colors.black87,
+                            fontWeight: widget.value == widget.items[index] 
+                              ? FontWeight.w500 
+                              : FontWeight.normal,
                           ),
                         ),
                       ),
@@ -101,7 +122,14 @@ class _CustomDropdownState extends State<CustomDropdown> with SingleTickerProvid
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(widget.labelText, style: TextStyle(fontSize: 12, color: Colors.grey.shade600, fontWeight: FontWeight.w500)),
+        Text(
+          widget.labelText, 
+          style: TextStyle(
+            fontSize: 12, 
+            color: Colors.grey.shade600, 
+            fontWeight: FontWeight.w500
+          )
+        ),
         const SizedBox(height: 8),
         CompositedTransformTarget(
           link: _layerLink,
@@ -111,11 +139,28 @@ class _CustomDropdownState extends State<CustomDropdown> with SingleTickerProvid
             child: Container(
               width: double.infinity,
               padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(color: const Color(0xFFF0F9FF), borderRadius: BorderRadius.circular(8)),
+              decoration: BoxDecoration(
+                color: const Color(0xFFF0F9FF), 
+                borderRadius: BorderRadius.circular(8)
+              ),
               child: Row(
                 children: [
-                  Expanded(child: Text(widget.value ?? 'Pilih unit kerja', style: TextStyle(fontSize: 16, color: widget.value != null ? Colors.black87 : Colors.grey.shade500))),
-                  AnimatedRotation(turns: isExpanded ? 0.5 : 0, duration: const Duration(milliseconds: 200), child: Icon(Icons.keyboard_arrow_down, color: Colors.grey.shade600)),
+                  Expanded(
+                    child: Text(
+                      widget.value ?? 'Pilih unit kerja', 
+                      style: TextStyle(
+                        fontSize: 16, 
+                        color: widget.value != null 
+                          ? Colors.black87 
+                          : Colors.grey.shade500
+                      )
+                    )
+                  ),
+                  AnimatedRotation(
+                    turns: isExpanded ? 0.5 : 0, 
+                    duration: const Duration(milliseconds: 200), 
+                    child: Icon(Icons.keyboard_arrow_down, color: Colors.grey.shade600)
+                  ),
                 ],
               ),
             ),
@@ -136,24 +181,43 @@ class FormAddUserPage extends StatefulWidget {
 class _FormAddUserPageState extends State<FormAddUserPage> {
   final _formKey = GlobalKey<FormState>();
   String? selectedUnit;
-  final units = ["ULP MATTIROTASI", "ULP BARRU", "ULP RAPPANG", "ULP PANGSID", "ULP TANRUTEDONG", "ULP SOPPENG", "ULP PAJALESANG", "ULP MAKASSAR", "ULP BONE"];
+  final units = [
+    "ULP MATTIROTASI", 
+    "ULP BARRU", 
+    "ULP RAPPANG", 
+    "ULP PANGSID", 
+    "ULP TANRUTEDONG", 
+    "ULP SOPPENG", 
+    "ULP PAJALESANG", 
+    "ULP MAKASSAR", 
+    "ULP BONE"
+  ];
+  
   final fullNameController = TextEditingController();
   final usernameController = TextEditingController();
   final telegramUsernameController = TextEditingController();
   final telegramChatIdController = TextEditingController();
   final passwordController = TextEditingController();
-  bool _isPasswordVisible = false, _isLoading = false;
+  
+  bool _isPasswordVisible = false;
+  bool _isLoading = false;
 
   String getCurrentDate() {
     final now = DateTime.now();
-    final months = ['Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'];
+    final months = [
+      'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni',
+      'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'
+    ];
     return '${now.day} ${months[now.month - 1]} ${now.year}';
   }
 
   Future<void> _saveUser() async {
     if (selectedUnit == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Pilih unit kerja terlebih dahulu"), backgroundColor: Colors.red)
+        const SnackBar(
+          content: Text("Pilih unit kerja terlebih dahulu"), 
+          backgroundColor: Colors.red
+        )
       );
       return;
     }
@@ -162,7 +226,6 @@ class _FormAddUserPageState extends State<FormAddUserPage> {
       setState(() => _isLoading = true);
 
       try {
-        // PERBAIKAN: Gunakan nama field yang konsisten
         final newUser = {
           "name": fullNameController.text.trim(),
           "username": usernameController.text.trim().startsWith('@') 
@@ -171,130 +234,114 @@ class _FormAddUserPageState extends State<FormAddUserPage> {
           "unit": selectedUnit!,
           "password": passwordController.text.trim(),
           "added": getCurrentDate(),
-          // FIELD TELEGRAM DENGAN NAMA YANG BENAR
           "username_telegram": telegramUsernameController.text.trim(),
           "chat_id_telegram": telegramChatIdController.text.trim(),
-          // FIELD STATUS: 1 = aktif, 0 = terhapus
           "status": 1,
         };
 
-        final docRef = await FirebaseFirestore.instance.collection("users").add(newUser);
+        final docRef = await FirebaseFirestore.instance
+            .collection("users")
+            .add(newUser);
+        
         newUser["id"] = docRef.id;
 
         if (mounted) {
           setState(() => _isLoading = false);
-          _showSuccessDialog(Map<String, String>.from(newUser));
+          _showSuccessAlert();
         }
       } catch (e) {
         setState(() => _isLoading = false);
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text("Gagal menyimpan user: $e"), backgroundColor: Colors.red)
+          SnackBar(
+            content: Text("Gagal menyimpan user: $e"), 
+            backgroundColor: Colors.red
+          )
         );
       }
     }
   }
 
-  void _showSuccessDialog(Map<String, String> newUser) {
+  void _showSuccessAlert() {
     showDialog(
       context: context,
       barrierDismissible: false,
       builder: (context) => Dialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         child: Container(
-          padding: const EdgeInsets.all(28),
-          decoration: BoxDecoration(borderRadius: BorderRadius.circular(20), color: Colors.white),
+          padding: const EdgeInsets.all(32),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(16), 
+            color: Colors.white
+          ),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
+              // Success Icon
               Container(
-                width: 85, 
-                height: 85,
-                decoration: const BoxDecoration(color: Color(0xFF2E5D6F), shape: BoxShape.circle),
-                child: const Icon(Icons.check_circle_rounded, size: 55, color: Colors.white),
-              ),
-              const SizedBox(height: 24),
-              const Text("Berhasil!", style: TextStyle(fontSize: 26, fontWeight: FontWeight.bold, color: Color(0xFF2E5D6F))),
-              const SizedBox(height: 10),
-              Text(
-                "User ${newUser["name"]} berhasil ditambahkan ke sistem", 
-                style: TextStyle(fontSize: 15, color: Colors.grey.shade600), 
-                textAlign: TextAlign.center
-              ),
-              const SizedBox(height: 24),
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.all(20),
-                decoration: BoxDecoration(color: const Color(0xFFF8FAFB), borderRadius: BorderRadius.circular(15)),
-                child: Column(
-                  children: [
-                    ("Nama", newUser["name"] ?? ""),
-                    ("Username", newUser["username"] ?? ""),
-                    ("Unit", newUser["unit"] ?? ""),
-                    ("Ditambahkan", newUser["added"] ?? ""),
-                    // PERBAIKAN: Tampilkan dengan field name yang benar
-                    ("Username Telegram", newUser["username_telegram"] ?? ""),
-                    ("Chat ID Telegram", newUser["chat_id_telegram"] ?? ""),
-                  ].map((detail) => Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 6),
-                    child: Row(
-                      children: [
-                        SizedBox(
-                          width: 90, 
-                          child: Text(
-                            "${detail.$1}:", 
-                            style: TextStyle(color: Colors.grey.shade700, fontWeight: FontWeight.w600, fontSize: 14)
-                          )
-                        ),
-                        Expanded(
-                          child: Text(
-                            detail.$2, 
-                            style: const TextStyle(color: Color(0xFF2E5D6F), fontSize: 14, fontWeight: FontWeight.w500)
-                          )
-                        ),
-                      ],
-                    ),
-                  )).toList(),
+                width: 80, 
+                height: 80,
+                decoration: const BoxDecoration(
+                  color: Color(0xFF2E5D6F), 
+                  shape: BoxShape.circle
+                ),
+                child: const Icon(
+                  Icons.check, 
+                  size: 45, 
+                  color: Colors.white
                 ),
               ),
-              const SizedBox(height: 28),
-              Row(
-                children: [
-                  Expanded(
-                    child: OutlinedButton.icon(
-                      style: OutlinedButton.styleFrom(
-                        side: BorderSide(color: Colors.grey.shade400, width: 1.5), 
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)), 
-                        padding: const EdgeInsets.symmetric(vertical: 14)
-                      ),
-                      onPressed: () {
-                        Navigator.of(context).pop();
-                        _resetForm();
-                      },
-                      icon: Icon(Icons.person_add_rounded, color: Colors.grey.shade700, size: 20),
-                      label: Text(
-                        "Tambah Lagi", 
-                        style: TextStyle(color: Colors.grey.shade700, fontWeight: FontWeight.w600, fontSize: 15)
-                      ),
-                    ),
+              
+              const SizedBox(height: 24),
+              
+              // Title
+              const Text(
+                "Berhasil!",
+                style: TextStyle(
+                  fontSize: 24, 
+                  fontWeight: FontWeight.bold, 
+                  color: Color(0xFF2E5D6F)
+                )
+              ),
+              
+              const SizedBox(height: 12),
+              
+              // Description
+              Text(
+                "User berhasil ditambahkan ke sistem",
+                style: TextStyle(
+                  fontSize: 16, 
+                  color: Colors.grey.shade600
+                ), 
+                textAlign: TextAlign.center
+              ),
+              
+              const SizedBox(height: 32),
+              
+              // OK Button
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF2E5D6F), 
+                    foregroundColor: Colors.white, 
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12)
+                    ), 
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    elevation: 0,
                   ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: ElevatedButton.icon(
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFF2E5D6F), 
-                        foregroundColor: Colors.white, 
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)), 
-                        padding: const EdgeInsets.symmetric(vertical: 14)
-                      ),
-                      onPressed: () {
-                        Navigator.of(context).pop();
-                        Navigator.pop(context, newUser);
-                      },
-                      icon: const Icon(Icons.list_rounded, size: 20),
-                      label: const Text("Lihat List", style: TextStyle(fontWeight: FontWeight.w600, fontSize: 15)),
-                    ),
+                  onPressed: () {
+                    Navigator.of(context).pop(); // Close dialog
+                    _resetForm(); // Reset form
+                  },
+                  child: const Text(
+                    "OK", 
+                    style: TextStyle(
+                      fontWeight: FontWeight.w600, 
+                      fontSize: 16
+                    )
                   ),
-                ],
+                ),
               ),
             ],
           ),
@@ -312,28 +359,44 @@ class _FormAddUserPageState extends State<FormAddUserPage> {
       telegramUsernameController.clear();
       telegramChatIdController.clear();
       passwordController.clear();
+      _isPasswordVisible = false;
     });
   }
 
-  Widget _buildField(String label, TextEditingController controller, {
+  Widget _buildField(
+    String label, 
+    TextEditingController controller, {
     bool obscureText = false, 
     Widget? suffixIcon, 
-    String? Function(String?)? validator
+    String? Function(String?)? validator,
+    TextInputType keyboardType = TextInputType.text,
   }) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(label, style: TextStyle(fontSize: 12, color: Colors.grey.shade600, fontWeight: FontWeight.w500)),
+        Text(
+          label, 
+          style: TextStyle(
+            fontSize: 12, 
+            color: Colors.grey.shade600, 
+            fontWeight: FontWeight.w500
+          )
+        ),
         const SizedBox(height: 8),
         TextFormField(
           controller: controller,
           obscureText: obscureText,
+          keyboardType: keyboardType,
           decoration: InputDecoration(
             filled: true,
             fillColor: const Color(0xFFF0F9FF),
             border: const OutlineInputBorder(
               borderSide: BorderSide.none, 
               borderRadius: BorderRadius.all(Radius.circular(8))
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderSide: const BorderSide(color: Color(0xFF2E5D6F), width: 2),
+              borderRadius: BorderRadius.circular(8),
             ),
             contentPadding: const EdgeInsets.all(16),
             suffixIcon: suffixIcon,
@@ -358,50 +421,88 @@ class _FormAddUserPageState extends State<FormAddUserPage> {
         ),
         title: const Text(
           "Tambah User Baru", 
-          style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white, fontSize: 20)
+          style: TextStyle(
+            fontWeight: FontWeight.bold, 
+            color: Colors.white, 
+            fontSize: 20
+          )
         ),
       ),
       body: Container(
         decoration: const BoxDecoration(
           color: Colors.white, 
-          borderRadius: BorderRadius.only(topLeft: Radius.circular(32), topRight: Radius.circular(32))
+          borderRadius: BorderRadius.only(
+            topLeft: Radius.circular(32), 
+            topRight: Radius.circular(32)
+          )
         ),
         child: Form(
           key: _formKey,
           child: ListView(
             padding: const EdgeInsets.all(24),
             children: [
+              // Unit Kerja Dropdown
               CustomDropdown(
                 value: selectedUnit, 
                 items: units, 
                 labelText: "Pilih Unit Kerja", 
                 onChanged: (value) => setState(() => selectedUnit = value)
               ),
+              
               const SizedBox(height: 20),
+              
+              // Nama Lengkap
               _buildField(
                 "Nama Lengkap", 
                 fullNameController, 
-                validator: (value) => value?.isEmpty ?? true ? "Nama tidak boleh kosong" : null
+                validator: (value) => value?.trim().isEmpty ?? true 
+                  ? "Nama tidak boleh kosong" 
+                  : null
               ),
+              
               const SizedBox(height: 20),
+              
+              // Username
               _buildField(
                 "Username", 
                 usernameController, 
-                validator: (value) => value?.isEmpty ?? true ? "Username tidak boleh kosong" : null
+                validator: (value) {
+                  if (value?.trim().isEmpty ?? true) {
+                    return "Username tidak boleh kosong";
+                  }
+                  if (value!.trim().length < 3) {
+                    return "Username minimal 3 karakter";
+                  }
+                  return null;
+                }
               ),
+              
               const SizedBox(height: 20),
+              
+              // Username Telegram
               _buildField(
                 "Username Telegram", 
                 telegramUsernameController, 
-                validator: (value) => value?.isEmpty ?? true ? "Username Telegram tidak boleh kosong" : null
+                validator: (value) => value?.trim().isEmpty ?? true 
+                  ? "Username Telegram tidak boleh kosong" 
+                  : null
               ),
+              
               const SizedBox(height: 20),
+              
+              // Chat ID Telegram
               _buildField(
                 "Chat ID Telegram", 
-                telegramChatIdController, 
-                validator: (value) => value?.isEmpty ?? true ? "Chat ID Telegram tidak boleh kosong" : null
+                telegramChatIdController,
+                keyboardType: TextInputType.number,
+                validator: (value) => value?.trim().isEmpty ?? true 
+                  ? "Chat ID Telegram tidak boleh kosong" 
+                  : null
               ),
+              
               const SizedBox(height: 20),
+              
+              // Password
               _buildField(
                 "Password", 
                 passwordController,
@@ -413,24 +514,53 @@ class _FormAddUserPageState extends State<FormAddUserPage> {
                   ), 
                   onPressed: () => setState(() => _isPasswordVisible = !_isPasswordVisible)
                 ),
-                validator: (value) => (value?.length ?? 0) < 6 ? "Password minimal 6 karakter" : null,
+                validator: (value) {
+                  if (value?.isEmpty ?? true) {
+                    return "Password tidak boleh kosong";
+                  }
+                  if (value!.length < 6) {
+                    return "Password minimal 6 karakter";
+                  }
+                  return null;
+                },
               ),
+              
               const SizedBox(height: 32),
+              
+              // Submit Button
               SizedBox(
                 width: double.infinity,
-                height: 50,
+                height: 54,
                 child: ElevatedButton(
                   style: ElevatedButton.styleFrom(
                     backgroundColor: const Color(0xFF2E5D6F), 
                     foregroundColor: Colors.white, 
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(25))
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12)
+                    ),
+                    elevation: 0,
                   ),
                   onPressed: _isLoading ? null : _saveUser,
                   child: _isLoading 
-                    ? const CircularProgressIndicator(color: Colors.white) 
-                    : const Text("Simpan User"),
+                    ? const SizedBox(
+                        width: 24,
+                        height: 24,
+                        child: CircularProgressIndicator(
+                          color: Colors.white,
+                          strokeWidth: 2,
+                        ),
+                      )
+                    : const Text(
+                        "Simpan User",
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
                 ),
               ),
+              
+              const SizedBox(height: 20),
             ],
           ),
         ),
