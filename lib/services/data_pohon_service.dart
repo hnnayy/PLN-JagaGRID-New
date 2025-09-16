@@ -45,21 +45,16 @@ class DataPohonService {
         print('Tidak ada gambar yang diunggah, fotoUrl akan null.');
       }
 
-      double growthRate = DataPohon.growthRates[pohon.namaPohon]! / 100; // cm to meters
-      double timeToRiskYears = (3.0 - pohon.initialHeight) / growthRate;
-      if (pohon.prioritas == 3) timeToRiskYears *= 0.8; // High
-      else if (pohon.prioritas == 1) timeToRiskYears *= 1.2; // Low
-      int timeToRiskDays = (timeToRiskYears * 365).round();
-      DateTime estimatedRiskDate = DateTime.now().add(Duration(days: timeToRiskDays));
-      DateTime notificationDate = estimatedRiskDate.subtract(const Duration(days: 3));
+      // Use the provided scheduleDate and calculate notificationDate
+      final notificationDate = pohon.scheduleDate.subtract(const Duration(days: 3));
 
       final dataToSave = pohon.toMap()
         ..update('foto_pohon', (_) => fotoUrl, ifAbsent: () => fotoUrl)
-        ..update('schedule_date', (_) => estimatedRiskDate.toIso8601String())
-        ..update('notification_date', (_) => notificationDate.toIso8601String())
         ..update('growth_rate', (_) => DataPohon.growthRates[pohon.namaPohon]!, ifAbsent: () => 0.0)
         ..update('initial_height', (_) => pohon.initialHeight, ifAbsent: () => 0.0)
+        ..update('notification_date', (_) => Timestamp.fromDate(notificationDate.subtract(const Duration(hours: 8))), ifAbsent: () => Timestamp.fromDate(notificationDate.subtract(const Duration(hours: 8))))
         ..update('status', (_) => 1); // Set status aktif saat menambah data
+
       final docRef = await _db.collection('data_pohon').add(dataToSave).timeout(const Duration(seconds: 30));
       await docRef.update({'id': docRef.id});
       print('Data berhasil disimpan dengan ID: ${docRef.id} dan fotoUrl: ${fotoUrl ?? "null"}');
@@ -89,7 +84,7 @@ class DataPohonService {
               'parent_id': (data['parent_id'] as int?) ?? 0,
               'unit_id': (data['unit_id'] as int?) ?? 0,
               'aset_jtm_id': (data['aset_jtm_id'] as int?) ?? 0,
-              'schedule_date': (data['schedule_date'] as String?) ?? DateTime.now().toIso8601String(),
+              'schedule_date': data['schedule_date'], // Handled in fromMap
               'prioritas': (data['prioritas'] as int?) ?? 1,
               'nama_pohon': data['nama_pohon'] as String? ?? '',
               'foto_pohon': data['foto_pohon'] as String? ?? '',
@@ -97,10 +92,10 @@ class DataPohonService {
               'tujuan_penjadwalan': (data['tujuan_penjadwalan'] as int?) ?? 1,
               'catatan': data['catatan'] as String? ?? '',
               'createdby': (data['createdby'] as int?) ?? 0,
-              'createddate': (data['createddate'] as String?) ?? DateTime.now().toIso8601String(),
+              'createddate': data['createddate'], // Handled in fromMap
               'growth_rate': (data['growth_rate'] as num?)?.toDouble() ?? 0.0,
               'initial_height': (data['initial_height'] as num?)?.toDouble() ?? 0.0,
-              'notification_date': (data['notification_date'] as String?) ?? DateTime.now().toIso8601String(),
+              'notification_date': data['notification_date'], // Handled in fromMap
               'status': (data['status'] as int?) ?? 1,
             });
           }).toList(),
@@ -112,7 +107,6 @@ class DataPohonService {
       throw ArgumentError('Document ID cannot be empty');
     }
     try {
-      // Periksa apakah dokumen ada sebelum mencoba update
       final docSnapshot = await _db.collection('data_pohon').doc(id).get();
       if (!docSnapshot.exists) {
         throw Exception('Dokumen dengan ID $id tidak ditemukan');

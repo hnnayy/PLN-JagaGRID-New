@@ -6,6 +6,7 @@ import 'package:geolocator/geolocator.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:permission_handler/permission_handler.dart';
+import 'package:intl/intl.dart';
 import '../notification/notification_page.dart';
 import '../../providers/notification_provider.dart';
 import '../../providers/data_pohon_provider.dart';
@@ -14,7 +15,7 @@ import '../../models/asset_model.dart';
 import '../../services/asset_service.dart';
 import 'pick_location_page.dart';
 
-// CustomDropdown Widget
+// CustomDropdown Widget remains unchanged
 class CustomDropdown extends StatefulWidget {
   final String? value;
   final List<String> items;
@@ -191,6 +192,7 @@ class _AddDataPageState extends State<AddDataPage> {
       await Permission.notification.request();
     }
   }
+
   final FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin = FlutterLocalNotificationsPlugin();
   final _formKey = GlobalKey<FormState>();
   final _idController = TextEditingController();
@@ -204,6 +206,7 @@ class _AddDataPageState extends State<AddDataPage> {
   final _dateController = TextEditingController();
   final _coordinatesController = TextEditingController();
   final _noteController = TextEditingController();
+  final _initialHeightController = TextEditingController();
   File? _fotoPohon;
 
   int? _selectedTujuan;
@@ -248,7 +251,6 @@ class _AddDataPageState extends State<AddDataPage> {
     await flutterLocalNotificationsPlugin.initialize(initializationSettings);
   }
 
-
   Future<void> _loadDropdownData() async {
     final assetService = AssetService();
     final assets = await assetService.getAssets().first;
@@ -279,7 +281,7 @@ class _AddDataPageState extends State<AddDataPage> {
   }
 
   Widget _buildField(String label, TextEditingController controller,
-      {bool readOnly = false, Icon? suffixIcon, void Function()? onTap, String? Function(String?)? validator}) {
+      {bool readOnly = false, Icon? suffixIcon, void Function()? onTap, String? Function(String?)? validator, TextInputType? keyboardType}) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -292,6 +294,7 @@ class _AddDataPageState extends State<AddDataPage> {
           controller: controller,
           readOnly: readOnly,
           onTap: onTap,
+          keyboardType: keyboardType,
           style: const TextStyle(color: Colors.black),
           decoration: InputDecoration(
             filled: true,
@@ -357,12 +360,14 @@ class _AddDataPageState extends State<AddDataPage> {
     _dateController.dispose();
     _coordinatesController.dispose();
     _noteController.dispose();
+    _initialHeightController.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-  return Scaffold(
+    final dateFormat = DateFormat('d-M-y'); // Format d-M-y for UI
+    return Scaffold(
       backgroundColor: const Color(0xFF2E5D6F),
       appBar: AppBar(
         backgroundColor: const Color(0xFF2E5D6F),
@@ -502,8 +507,7 @@ class _AddDataPageState extends State<AddDataPage> {
                     },
                   );
                   if (pickedDate != null) {
-                    _dateController.text =
-                        "${pickedDate.day.toString().padLeft(2, '0')}-${pickedDate.month.toString().padLeft(2, '0')}-${pickedDate.year}";
+                    _dateController.text = dateFormat.format(pickedDate);
                   }
                 },
               ),
@@ -516,6 +520,18 @@ class _AddDataPageState extends State<AddDataPage> {
                   setState(() {
                     _selectedNamaPohon = value;
                   });
+                },
+              ),
+              const SizedBox(height: 20),
+              _buildField(
+                'Tinggi Awal (meter)',
+                _initialHeightController,
+                keyboardType: TextInputType.number,
+                validator: (value) {
+                  if (value == null || value.isEmpty) return 'Tinggi awal wajib diisi';
+                  final height = double.tryParse(value);
+                  if (height == null || height < 0) return 'Tinggi awal harus angka valid';
+                  return null;
                 },
               ),
               const SizedBox(height: 20),
@@ -739,213 +755,203 @@ class _AddDataPageState extends State<AddDataPage> {
                                   setState(() {
                                     _isLoading = true;
                                   });
-                                  List<String> dateParts = _dateController.text.split('-');
-                                  if (dateParts.length == 3) {
-                                    try {
-                                      final pohon = DataPohon(
-                                        id: '',
-                                        idPohon: _idController.text,
-                                        up3: _up3Controller.text,
-                                        ulp: _ulpController.text,
-                                        penyulang: _penyulangController.text,
-                                        zonaProteksi: _zonaProteksiController.text,
-                                        section: _sectionController.text,
-                                        kmsAset: _kmsAsetController.text,
-                                        vendor: _vendorController.text,
-                                        parentId: int.tryParse(_up3Controller.text) ?? 0,
-                                        unitId: int.tryParse(_ulpController.text) ?? 0,
-                                        asetJtmId: int.tryParse(_kmsAsetController.text) ?? 0,
-                                        scheduleDate: DateTime(
-                                          int.parse(dateParts[2]),
-                                          int.parse(dateParts[1]),
-                                          int.parse(dateParts[0]),
-                                        ),
-                                        prioritas: _selectedPrioritas ?? 1,
-                                        namaPohon: _selectedNamaPohon ?? '',
-                                        fotoPohon: '',
-                                        koordinat: _coordinatesController.text,
-                                        tujuanPenjadwalan: _selectedTujuan ?? 1,
-                                        catatan: _noteController.text,
-                                        createdBy: 1,
-                                        createdDate: DateTime.now(),
-                                        growthRate: DataPohon.growthRates[_selectedNamaPohon!] ?? 0,
-                                        initialHeight: 0,
-                                        notificationDate: DateTime.now(),
-                                      );
+                                  try {
+                                    // Parse the date from d-M-y to DateTime in WITA
+                                    final DateFormat formatter = DateFormat('d-M-y');
+                                    final DateTime parsedDate = formatter.parse(_dateController.text);
+                                    // Create DateTime in WITA (UTC+8)
+                                    final DateTime scheduleDate = DateTime(parsedDate.year, parsedDate.month, parsedDate.day);
 
-                                      await Provider.of<DataPohonProvider>(context, listen: false)
-                                          .addPohon(pohon, _fotoPohon);
-                                      final notifMsg =
-                                          '${_selectedNamaPohon ?? ''} dengan ID ${_idController.text} baru ditambahkan dengan perkiraan tanggal penebangan ${_dateController.text}.';
-                                      await Provider.of<NotificationProvider>(context, listen: false)
-                                          .addNotification(
-                                        AppNotification(
-                                          title: 'Pohon Baru Ditambahkan',
-                                          message: notifMsg,
-                                          date: DateTime.now(),
-                                        ),
-                                      );
-                                      if (!mounted) return;
-                                      await _requestNotificationPermission();
-                                      // Hapus notifikasi lokal di sini, hanya gunakan NotificationProvider
-                                      await showDialog(
-                                        context: context,
-                                        builder: (ctx) => Dialog(
-                                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-                                          child: Container(
-                                            padding: const EdgeInsets.all(28),
-                                            decoration: BoxDecoration(
-                                              borderRadius: BorderRadius.circular(20),
-                                              color: Colors.white,
-                                            ),
-                                            child: Column(
-                                              mainAxisSize: MainAxisSize.min,
-                                              children: [
-                                                Container(
-                                                  width: 85,
-                                                  height: 85,
-                                                  decoration: BoxDecoration(
-                                                    color: const Color(0xFF2E5D6F),
-                                                    shape: BoxShape.circle,
-                                                  ),
-                                                  child: const Icon(
-                                                    Icons.check_circle_rounded,
-                                                    size: 55,
-                                                    color: Colors.white,
-                                                  ),
-                                                ),
-                                                const SizedBox(height: 24),
-                                                const Text(
-                                                  "Berhasil!",
-                                                  style: TextStyle(
-                                                    fontSize: 26,
-                                                    fontWeight: FontWeight.bold,
-                                                    color: Color(0xFF2E5D6F),
-                                                  ),
-                                                ),
-                                                const SizedBox(height: 10),
-                                                Text(
-                                                  "Data pohon berhasil ditambahkan ke sistem",
-                                                  style: TextStyle(
-                                                    fontSize: 15,
-                                                    color: Colors.grey.shade600,
-                                                  ),
-                                                  textAlign: TextAlign.center,
-                                                ),
-                                                const SizedBox(height: 24),
-                                                ElevatedButton(
-                                                  style: ElevatedButton.styleFrom(
-                                                    backgroundColor: const Color(0xFF2E5D6F),
-                                                    foregroundColor: Colors.white,
-                                                    shape: RoundedRectangleBorder(
-                                                      borderRadius: BorderRadius.circular(12),
-                                                    ),
-                                                    padding: const EdgeInsets.symmetric(vertical: 14),
-                                                  ),
-                                                  onPressed: () {
-                                                    Navigator.of(ctx).pop();
-                                                    Navigator.pop(context);
-                                                  },
-                                                  child: const Text(
-                                                    "OK",
-                                                    style: TextStyle(
-                                                      fontWeight: FontWeight.w600,
-                                                      fontSize: 15,
-                                                    ),
-                                                  ),
-                                                ),
-                                              ],
-                                            ),
-                                          ),
-                                        ),
-                                      );
-                                    } catch (e) {
-                                      if (!mounted) return;
-                                      await showDialog(
-                                        context: context,
-                                        builder: (ctx) => Dialog(
-                                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-                                          child: Container(
-                                            padding: const EdgeInsets.all(28),
-                                            decoration: BoxDecoration(
-                                              borderRadius: BorderRadius.circular(20),
-                                              color: Colors.white,
-                                            ),
-                                            child: Column(
-                                              mainAxisSize: MainAxisSize.min,
-                                              children: [
-                                                Container(
-                                                  width: 85,
-                                                  height: 85,
-                                                  decoration: BoxDecoration(
-                                                    color: Colors.red,
-                                                    shape: BoxShape.circle,
-                                                  ),
-                                                  child: const Icon(
-                                                    Icons.error_outline_rounded,
-                                                    size: 55,
-                                                    color: Colors.white,
-                                                  ),
-                                                ),
-                                                const SizedBox(height: 24),
-                                                const Text(
-                                                  "Gagal!",
-                                                  style: TextStyle(
-                                                    fontSize: 26,
-                                                    fontWeight: FontWeight.bold,
-                                                    color: Color(0xFF2E5D6F),
-                                                  ),
-                                                ),
-                                                const SizedBox(height: 10),
-                                                Text(
-                                                  "Terjadi kesalahan saat menyimpan data:\n${e.toString()}",
-                                                  style: TextStyle(
-                                                    fontSize: 15,
-                                                    color: Colors.grey.shade600,
-                                                  ),
-                                                  textAlign: TextAlign.center,
-                                                ),
-                                                const SizedBox(height: 24),
-                                                ElevatedButton(
-                                                  style: ElevatedButton.styleFrom(
-                                                    backgroundColor: const Color(0xFF2E5D6F),
-                                                    foregroundColor: Colors.white,
-                                                    shape: RoundedRectangleBorder(
-                                                      borderRadius: BorderRadius.circular(12),
-                                                    ),
-                                                    padding: const EdgeInsets.symmetric(vertical: 14),
-                                                  ),
-                                                  onPressed: () => Navigator.of(ctx).pop(),
-                                                  child: const Text(
-                                                    "OK",
-                                                    style: TextStyle(
-                                                      fontWeight: FontWeight.w600,
-                                                      fontSize: 15,
-                                                    ),
-                                                  ),
-                                                ),
-                                              ],
-                                            ),
-                                          ),
-                                        ),
-                                      );
-                                    } finally {
-                                      if (mounted) {
-                                        setState(() {
-                                          _isLoading = false;
-                                        });
-                                      }
-                                    }
-                                  } else {
-                                    setState(() {
-                                      _isLoading = false;
-                                    });
-                                    ScaffoldMessenger.of(context).showSnackBar(
-                                      const SnackBar(
-                                        content: Text('Format tanggal tidak valid'),
-                                        backgroundColor: Colors.red,
+                                    final double initialHeight = double.parse(_initialHeightController.text);
+
+                                    final pohon = DataPohon(
+                                      id: '',
+                                      idPohon: _idController.text,
+                                      up3: _up3Controller.text,
+                                      ulp: _ulpController.text,
+                                      penyulang: _penyulangController.text,
+                                      zonaProteksi: _zonaProteksiController.text,
+                                      section: _sectionController.text,
+                                      kmsAset: _kmsAsetController.text,
+                                      vendor: _vendorController.text,
+                                      parentId: int.tryParse(_up3Controller.text) ?? 0,
+                                      unitId: int.tryParse(_ulpController.text) ?? 0,
+                                      asetJtmId: int.tryParse(_kmsAsetController.text) ?? 0,
+                                      scheduleDate: scheduleDate,
+                                      prioritas: _selectedPrioritas ?? 1,
+                                      namaPohon: _selectedNamaPohon ?? '',
+                                      fotoPohon: '',
+                                      koordinat: _coordinatesController.text,
+                                      tujuanPenjadwalan: _selectedTujuan ?? 1,
+                                      catatan: _noteController.text,
+                                      createdBy: 1,
+                                      createdDate: DateTime.now(),
+                                      growthRate: DataPohon.growthRates[_selectedNamaPohon!] ?? 0,
+                                      initialHeight: initialHeight,
+                                      notificationDate: scheduleDate.subtract(const Duration(days: 3)),
+                                    );
+
+                                    await Provider.of<DataPohonProvider>(context, listen: false)
+                                        .addPohon(pohon, _fotoPohon);
+                                    final notifMsg =
+                                        '${_selectedNamaPohon ?? ''} dengan ID ${_idController.text} baru ditambahkan dengan tanggal penjadwalan ${_dateController.text}.';
+                                    await Provider.of<NotificationProvider>(context, listen: false)
+                                        .addNotification(
+                                      AppNotification(
+                                        title: 'Pohon Baru Ditambahkan',
+                                        message: notifMsg,
+                                        date: DateTime.now(),
                                       ),
                                     );
+                                    if (!mounted) return;
+                                    await _requestNotificationPermission();
+                                    await showDialog(
+                                      context: context,
+                                      builder: (ctx) => Dialog(
+                                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                                        child: Container(
+                                          padding: const EdgeInsets.all(28),
+                                          decoration: BoxDecoration(
+                                            borderRadius: BorderRadius.circular(20),
+                                            color: Colors.white,
+                                          ),
+                                          child: Column(
+                                            mainAxisSize: MainAxisSize.min,
+                                            children: [
+                                              Container(
+                                                width: 85,
+                                                height: 85,
+                                                decoration: BoxDecoration(
+                                                  color: const Color(0xFF2E5D6F),
+                                                  shape: BoxShape.circle,
+                                                ),
+                                                child: const Icon(
+                                                  Icons.check_circle_rounded,
+                                                  size: 55,
+                                                  color: Colors.white,
+                                                ),
+                                              ),
+                                              const SizedBox(height: 24),
+                                              const Text(
+                                                "Berhasil!",
+                                                style: TextStyle(
+                                                  fontSize: 26,
+                                                  fontWeight: FontWeight.bold,
+                                                  color: Color(0xFF2E5D6F),
+                                                ),
+                                              ),
+                                              const SizedBox(height: 10),
+                                              Text(
+                                                "Data pohon berhasil ditambahkan ke sistem",
+                                                style: TextStyle(
+                                                  fontSize: 15,
+                                                  color: Colors.grey.shade600,
+                                                ),
+                                                textAlign: TextAlign.center,
+                                              ),
+                                              const SizedBox(height: 24),
+                                              ElevatedButton(
+                                                style: ElevatedButton.styleFrom(
+                                                  backgroundColor: const Color(0xFF2E5D6F),
+                                                  foregroundColor: Colors.white,
+                                                  shape: RoundedRectangleBorder(
+                                                    borderRadius: BorderRadius.circular(12),
+                                                  ),
+                                                  padding: const EdgeInsets.symmetric(vertical: 14),
+                                                ),
+                                                onPressed: () {
+                                                  Navigator.of(ctx).pop();
+                                                  Navigator.pop(context);
+                                                },
+                                                child: const Text(
+                                                  "OK",
+                                                  style: TextStyle(
+                                                    fontWeight: FontWeight.w600,
+                                                    fontSize: 15,
+                                                  ),
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                      ),
+                                    );
+                                  } catch (e) {
+                                    if (!mounted) return;
+                                    await showDialog(
+                                      context: context,
+                                      builder: (ctx) => Dialog(
+                                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                                        child: Container(
+                                          padding: const EdgeInsets.all(28),
+                                          decoration: BoxDecoration(
+                                            borderRadius: BorderRadius.circular(20),
+                                            color: Colors.white,
+                                          ),
+                                          child: Column(
+                                            mainAxisSize: MainAxisSize.min,
+                                            children: [
+                                              Container(
+                                                width: 85,
+                                                height: 85,
+                                                decoration: BoxDecoration(
+                                                  color: Colors.red,
+                                                  shape: BoxShape.circle,
+                                                ),
+                                                child: const Icon(
+                                                  Icons.error_outline_rounded,
+                                                  size: 55,
+                                                  color: Colors.white,
+                                                ),
+                                              ),
+                                              const SizedBox(height: 24),
+                                              const Text(
+                                                "Gagal!",
+                                                style: TextStyle(
+                                                  fontSize: 26,
+                                                  fontWeight: FontWeight.bold,
+                                                  color: Color(0xFF2E5D6F),
+                                                ),
+                                              ),
+                                              const SizedBox(height: 10),
+                                              Text(
+                                                "Terjadi kesalahan saat menyimpan data:\n${e.toString()}",
+                                                style: TextStyle(
+                                                  fontSize: 15,
+                                                  color: Colors.grey.shade600,
+                                                ),
+                                                textAlign: TextAlign.center,
+                                              ),
+                                              const SizedBox(height: 24),
+                                              ElevatedButton(
+                                                style: ElevatedButton.styleFrom(
+                                                  backgroundColor: const Color(0xFF2E5D6F),
+                                                  foregroundColor: Colors.white,
+                                                  shape: RoundedRectangleBorder(
+                                                    borderRadius: BorderRadius.circular(12),
+                                                  ),
+                                                  padding: const EdgeInsets.symmetric(vertical: 14),
+                                                ),
+                                                onPressed: () => Navigator.of(ctx).pop(),
+                                                child: const Text(
+                                                  "OK",
+                                                  style: TextStyle(
+                                                    fontWeight: FontWeight.w600,
+                                                    fontSize: 15,
+                                                  ),
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                      ),
+                                    );
+                                  } finally {
+                                    if (mounted) {
+                                      setState(() {
+                                        _isLoading = false;
+                                      });
+                                    }
                                   }
                                 } else {
                                   setState(() {

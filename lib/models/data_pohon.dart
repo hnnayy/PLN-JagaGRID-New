@@ -1,3 +1,5 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
+
 class DataPohon {
   final String id;
   final String idPohon; // UNIQUE constraint
@@ -67,6 +69,11 @@ class DataPohon {
   });
 
   Map<String, dynamic> toMap() {
+    // Convert WITA DateTime to UTC for Firestore
+    final scheduleDateUtc = scheduleDate.subtract(const Duration(hours: 8));
+    final notificationDateUtc = notificationDate.subtract(const Duration(hours: 8));
+    final createdDateUtc = createdDate.subtract(const Duration(hours: 8));
+
     return {
       'id': id,
       'id_pohon': idPohon,
@@ -80,7 +87,7 @@ class DataPohon {
       'parent_id': parentId,
       'unit_id': unitId,
       'aset_jtm_id': asetJtmId,
-      'schedule_date': scheduleDate.toIso8601String(),
+      'schedule_date': Timestamp.fromDate(scheduleDateUtc),
       'prioritas': prioritas,
       'nama_pohon': namaPohon,
       'foto_pohon': fotoPohon,
@@ -88,15 +95,34 @@ class DataPohon {
       'tujuan_penjadwalan': tujuanPenjadwalan,
       'catatan': catatan,
       'createdby': createdBy,
-      'createddate': createdDate.toIso8601String(),
+      'createddate': Timestamp.fromDate(createdDateUtc),
       'growth_rate': growthRate,
       'initial_height': initialHeight,
-      'notification_date': notificationDate.toIso8601String(),
+      'notification_date': Timestamp.fromDate(notificationDateUtc),
       'status': status,
     };
   }
 
   factory DataPohon.fromMap(Map<String, dynamic> map) {
+    // Handle both Timestamp and String for date fields
+    DateTime parseDate(dynamic value) {
+      if (value is Timestamp) {
+        return value.toDate().add(const Duration(hours: 8)); // Convert UTC to WITA
+      } else if (value is String) {
+        try {
+          return DateTime.parse(value).add(const Duration(hours: 8)); // Parse string and convert to WITA
+        } catch (e) {
+          print('Error parsing date string: $value, error: $e');
+          return DateTime.now(); // Fallback to current time
+        }
+      }
+      return DateTime.now(); // Fallback if value is null or invalid
+    }
+
+    final scheduleDate = parseDate(map['schedule_date']);
+    final createdDate = parseDate(map['createddate']);
+    final notificationDate = parseDate(map['notification_date']);
+
     return DataPohon(
       id: map['id'] ?? '',
       idPohon: map['id_pohon'] ?? '',
@@ -110,7 +136,7 @@ class DataPohon {
       parentId: map['parent_id'] ?? 0,
       unitId: map['unit_id'] ?? 0,
       asetJtmId: map['aset_jtm_id'] ?? 0,
-      scheduleDate: DateTime.parse(map['schedule_date'] ?? DateTime.now().toIso8601String()),
+      scheduleDate: scheduleDate,
       prioritas: map['prioritas'] ?? 1,
       namaPohon: map['nama_pohon'] ?? '',
       fotoPohon: map['foto_pohon'] ?? '',
@@ -118,10 +144,10 @@ class DataPohon {
       tujuanPenjadwalan: map['tujuan_penjadwalan'] ?? 1,
       catatan: map['catatan'] ?? '',
       createdBy: map['createdby'] ?? 0,
-      createdDate: DateTime.parse(map['createddate'] ?? DateTime.now().toIso8601String()),
+      createdDate: createdDate,
       growthRate: (map['growth_rate'] as num?)?.toDouble() ?? 0.0,
       initialHeight: (map['initial_height'] as num?)?.toDouble() ?? 0.0,
-      notificationDate: DateTime.parse(map['notification_date'] ?? DateTime.now().toIso8601String()),
+      notificationDate: notificationDate,
       status: map['status'] ?? 1,
     );
   }
