@@ -21,15 +21,10 @@ class _MapPageState extends State<MapPage> {
 
   MapType _currentMapType = MapType.satellite;
 
-  // Map<int, BitmapDescriptor> _priorityIcons = {}; // dihapus, tidak dipakai
-
   @override
   void initState() {
     super.initState();
-  // _loadMarkerIcons(); // dihapus, tidak dipakai
   }
-
-  // Hapus _loadMarkerIcons, tidak perlu custom asset marker
 
   void _onMapCreated(GoogleMapController controller) {
     _mapController = controller;
@@ -44,6 +39,21 @@ class _MapPageState extends State<MapPage> {
     // Biar cuma tambah marker dari AddDataPage, kosongin dulu
   }
 
+  String _getMapTypeLabel(MapType mapType) {
+    switch (mapType) {
+      case MapType.normal:
+        return 'Normal';
+      case MapType.satellite:
+        return 'Satelit';
+      case MapType.terrain:
+        return 'Terrain';
+      case MapType.hybrid:
+        return 'Hybrid';
+      default:
+        return 'Normal';
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -54,7 +64,7 @@ class _MapPageState extends State<MapPage> {
             // Header
             Container(
               width: double.infinity,
-              margin: const EdgeInsets.only(top: 18, left: 0, right: 0, bottom: 8),
+              margin: const EdgeInsets.only(top: 18, left: 0, right: 0, bottom: 10),
               padding: const EdgeInsets.symmetric(vertical: 18, horizontal: 20),
               decoration: BoxDecoration(
                 color: AppColors.tealGelap,
@@ -73,8 +83,7 @@ class _MapPageState extends State<MapPage> {
                         fontFamily: 'Poppins',
                         fontWeight: FontWeight.bold,
                         fontSize: 20,
-                        color: AppColors.yellow,
-                      ),
+                        color: const Color.fromARGB(255, 255, 255, 255)                     ),
                     ),
                   ),
                   Positioned(
@@ -90,7 +99,7 @@ class _MapPageState extends State<MapPage> {
                           color: AppColors.cyan,
                           shape: BoxShape.circle,
                         ),
-                        child: const Icon(Icons.add, color: Colors.white, size: 22),
+                        child: const Icon(Icons.add, color: Colors.white, size: 20),
                       ),
                     ),
                   ),
@@ -192,34 +201,126 @@ class _MapPageState extends State<MapPage> {
                   borderRadius: BorderRadius.circular(10),
                   boxShadow: [BoxShadow(color: Colors.black12, blurRadius: 4, offset: Offset(0,2))],
                 ),
-                padding: const EdgeInsets.symmetric(vertical: 2, horizontal: 10),
+                padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
                 child: Row(
                   children: [
                     const Icon(Icons.map, color: Colors.black54, size: 20),
                     const SizedBox(width: 8),
-                    const Text('Tipe Peta:', style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold, fontFamily: 'Poppins', fontSize: 14)),
-                    const SizedBox(width: 12),
-                    Theme(
-                      data: Theme.of(context).copyWith(
-                        canvasColor: Colors.white,
-                        iconTheme: const IconThemeData(color: Colors.black),
+                    const Text(
+                      'Tipe Peta',
+                      style: TextStyle(
+                        color: Colors.black87,
+                        fontWeight: FontWeight.w500,
+                        fontFamily: 'Poppins',
+                        fontSize: 13,
                       ),
-                      child: DropdownButton<MapType>(
-                        value: _currentMapType,
-                        style: const TextStyle(color: Colors.black, fontWeight: FontWeight.bold, fontFamily: 'Poppins', fontSize: 14),
-                        icon: const Icon(Icons.arrow_drop_down, color: Colors.black, size: 20),
-                        dropdownColor: Colors.white,
-                        items: const [
-                          DropdownMenuItem(child: Text('Normal', style: TextStyle(color: Colors.black, fontFamily: 'Poppins', fontSize: 14)), value: MapType.normal),
-                          DropdownMenuItem(child: Text('Satelit', style: TextStyle(color: Colors.black, fontFamily: 'Poppins', fontSize: 14)), value: MapType.satellite),
-                          DropdownMenuItem(child: Text('Terrain', style: TextStyle(color: Colors.black, fontFamily: 'Poppins', fontSize: 14)), value: MapType.terrain),
-                          DropdownMenuItem(child: Text('Hybrid', style: TextStyle(color: Colors.black, fontFamily: 'Poppins', fontSize: 14)), value: MapType.hybrid),
-                        ],
-                        onChanged: (type) {
-                          setState(() {
-                            _currentMapType = type!;
-                          });
-                        },
+                    ),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: Container(
+                        decoration: BoxDecoration(
+                          border: Border.all(color: const Color.fromARGB(255, 41, 41, 41), width: 1),
+                          borderRadius: BorderRadius.circular(8),
+                          color: Colors.white.withOpacity(0.1),
+                        ),
+                        child: LayoutBuilder(
+                          builder: (context, constraints) {
+                            return PopupMenuButton<MapType>(
+                              initialValue: _currentMapType,
+                              offset: const Offset(0, 56),
+                              elevation: 8,
+                              constraints: BoxConstraints(
+                                minWidth: constraints.maxWidth, // Set lebar minimum sama dengan container
+                                maxWidth: constraints.maxWidth, // Set lebar maksimum sama dengan container
+                              ),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              color: Colors.white,
+                              child: Padding(
+                                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                                child: Row(
+                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                  children: [
+                                    Text(
+                                      _getMapTypeLabel(_currentMapType),
+                                      style: const TextStyle(
+                                        color: Colors.black87,
+                                        fontWeight: FontWeight.w500,
+                                        fontFamily: 'Poppins',
+                                        fontSize: 14,
+                                      ),
+                                    ),
+                                    const Icon(
+                                      Icons.keyboard_arrow_down,
+                                      color: Colors.black54,
+                                      size: 24,
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              itemBuilder: (context) => [
+                                PopupMenuItem<MapType>(
+                                  value: MapType.normal,
+                                  child: SizedBox(
+                                    width: double.infinity,
+                                    child: Text(
+                                      'Normal',
+                                      style: TextStyle(
+                                        fontFamily: 'Poppins',
+                                        fontSize: 14,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                                PopupMenuItem<MapType>(
+                                  value: MapType.satellite,
+                                  child: SizedBox(
+                                    width: double.infinity,
+                                    child: Text(
+                                      'Satelit',
+                                      style: TextStyle(
+                                        fontFamily: 'Poppins',
+                                        fontSize: 14,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                                PopupMenuItem<MapType>(
+                                  value: MapType.terrain,
+                                  child: SizedBox(
+                                    width: double.infinity,
+                                    child: Text(
+                                      'Terrain',
+                                      style: TextStyle(
+                                        fontFamily: 'Poppins',
+                                        fontSize: 14,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                                PopupMenuItem<MapType>(
+                                  value: MapType.hybrid,
+                                  child: SizedBox(
+                                    width: double.infinity,
+                                    child: Text(
+                                      'Hybrid',
+                                      style: TextStyle(
+                                        fontFamily: 'Poppins',
+                                        fontSize: 14,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ],
+                              onSelected: (MapType type) {
+                                setState(() {
+                                  _currentMapType = type;
+                                });
+                              },
+                            );
+                          }
+                        ),
                       ),
                     ),
                   ],
