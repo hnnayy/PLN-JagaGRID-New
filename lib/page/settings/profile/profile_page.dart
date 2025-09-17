@@ -228,7 +228,7 @@ class _ProfilePageState extends State<ProfilePage> {
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         ),
         child: const Text(
-          'Save Changes',
+          'Simpan Perubahan',
           style: TextStyle(
             fontSize: 16,
             fontWeight: FontWeight.w600,

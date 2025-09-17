@@ -228,11 +228,25 @@ class _FormAddUserPageState extends State<FormAddUserPage> {
       setState(() => _isLoading = true);
 
       try {
+        // Cek username sudah ada atau belum
+        final username = usernameController.text.trim().startsWith('@') 
+          ? usernameController.text.trim() 
+          : '@${usernameController.text.trim()}';
+
+        final existingUser = await FirebaseFirestore.instance
+          .collection("users")
+          .where("username", isEqualTo: username)
+          .get();
+
+        if (existingUser.docs.isNotEmpty) {
+          setState(() => _isLoading = false);
+          _showErrorAlert("Username sudah terdaftar dalam sistem");
+          return;
+        }
+
         final newUser = {
           "name": fullNameController.text.trim(),
-          "username": usernameController.text.trim().startsWith('@') 
-            ? usernameController.text.trim() 
-            : '@${usernameController.text.trim()}',
+          "username": username,
           "unit": selectedUnit!,
           "level": selectedLevel,
           "password": passwordController.text.trim(),
@@ -254,12 +268,7 @@ class _FormAddUserPageState extends State<FormAddUserPage> {
         }
       } catch (e) {
         setState(() => _isLoading = false);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text("Gagal menyimpan user: $e"), 
-            backgroundColor: Colors.red
-          )
-        );
+        _showErrorAlert("Gagal menyimpan user: ${e.toString()}");
       }
     }
   }
@@ -337,6 +346,92 @@ class _FormAddUserPageState extends State<FormAddUserPage> {
                     Navigator.of(context).pop(); // Close dialog
                     _resetForm(); // Reset form
                   },
+                  child: const Text(
+                    "OK", 
+                    style: TextStyle(
+                      fontWeight: FontWeight.w600, 
+                      fontSize: 16
+                    )
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _showErrorAlert(String errorMessage) {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => Dialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        child: Container(
+          padding: const EdgeInsets.all(32),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(16), 
+            color: Colors.white
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // Error Icon
+              Container(
+                width: 80, 
+                height: 80,
+                decoration: const BoxDecoration(
+                  color: Colors.red, 
+                  shape: BoxShape.circle
+                ),
+                child: const Icon(
+                  Icons.close, 
+                  size: 45, 
+                  color: Colors.white
+                ),
+              ),
+              
+              const SizedBox(height: 24),
+              
+              // Title
+              const Text(
+                "Gagal!",
+                style: TextStyle(
+                  fontSize: 24, 
+                  fontWeight: FontWeight.bold, 
+                  color: Color(0xFF2E5D6F)
+                )
+              ),
+              
+              const SizedBox(height: 12),
+              
+              // Description
+              Text(
+                errorMessage,
+                style: TextStyle(
+                  fontSize: 16, 
+                  color: Colors.grey.shade600
+                ), 
+                textAlign: TextAlign.center
+              ),
+              
+              const SizedBox(height: 32),
+              
+              // OK Button
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF2E5D6F), 
+                    foregroundColor: Colors.white, 
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12)
+                    ), 
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    elevation: 0,
+                  ),
+                  onPressed: () => Navigator.of(context).pop(),
                   child: const Text(
                     "OK", 
                     style: TextStyle(
