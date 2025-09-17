@@ -216,6 +216,7 @@ class _AddDataPageState extends State<AddDataPage> {
   String? _selectedZonaProteksi;
   String? _selectedSection;
   String? _selectedVendor;
+  String? _selectedUlp;
 
   bool _isLoading = false;
 
@@ -229,6 +230,19 @@ class _AddDataPageState extends State<AddDataPage> {
     2: 'Sedang',
     3: 'Tinggi',
   };
+
+  final List<String> _ulpOptions = [
+    "UNIT INDUK UP3 PAREPARE",
+    "ULP MATTIROTASI",
+    "ULP BARRU",
+    "ULP RAPPANG",
+    "ULP PANGSID",
+    "ULP TANRUTEDONG",
+    "ULP SOPPENG",
+    "ULP PAJALESANG",
+    "ULP MAKASSAR",
+    "ULP BONE",
+  ];
 
   List<String> _penyulangOptions = [];
   List<String> _zonaProteksiOptions = [];
@@ -276,6 +290,7 @@ class _AddDataPageState extends State<AddDataPage> {
     final prefs = await SharedPreferences.getInstance();
     final unit = prefs.getString('session_unit') ?? '';
     setState(() {
+      _selectedUlp = _ulpOptions.contains(unit) ? unit : null;
       _ulpController.text = unit;
     });
   }
@@ -409,11 +424,16 @@ class _AddDataPageState extends State<AddDataPage> {
                 validator: (value) => value!.isEmpty ? 'UP3 wajib diisi' : null,
               ),
               const SizedBox(height: 20),
-              _buildField(
-                'ULP',
-                _ulpController,
-                readOnly: true,
-                validator: (value) => value!.isEmpty ? 'ULP wajib diisi' : null,
+              CustomDropdown(
+                value: _selectedUlp,
+                items: _ulpOptions,
+                labelText: 'ULP',
+                onChanged: (value) {
+                  setState(() {
+                    _selectedUlp = value;
+                    _ulpController.text = value ?? '';
+                  });
+                },
               ),
               const SizedBox(height: 20),
               !_dropdownDataLoaded
@@ -751,7 +771,8 @@ class _AddDataPageState extends State<AddDataPage> {
                                     _selectedVendor != null &&
                                     _selectedNamaPohon != null &&
                                     _selectedTujuan != null &&
-                                    _selectedPrioritas != null) {
+                                    _selectedPrioritas != null &&
+                                    _selectedUlp != null) {
                                   setState(() {
                                     _isLoading = true;
                                   });
