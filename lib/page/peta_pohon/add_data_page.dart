@@ -15,7 +15,7 @@ import '../../models/asset_model.dart';
 import '../../services/asset_service.dart';
 import 'pick_location_page.dart';
 
-// CustomDropdown Widget remains unchanged
+// CustomDropdown Widget
 class CustomDropdown extends StatefulWidget {
   final String? value;
   final List<String> items;
@@ -346,8 +346,7 @@ class _AddDataPageState extends State<AddDataPage> {
       bool hasPermission = await _requestLocationPermission();
       if (!hasPermission) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-              content: Text('Izin lokasi ditolak. Tidak dapat mengambil lokasi saat ini.')),
+          const SnackBar(content: Text('Izin lokasi ditolak. Tidak dapat mengambil lokasi saat ini.')),
         );
         return null;
       }
@@ -676,8 +675,7 @@ class _AddDataPageState extends State<AddDataPage> {
                               const SizedBox(height: 8),
                               ListTile(
                                 leading: const Icon(Icons.my_location, size: 32),
-                                title: const Text('Gunakan Lokasi Saat Ini',
-                                    style: TextStyle(fontSize: 18)),
+                                title: const Text('Gunakan Lokasi Saat Ini', style: TextStyle(fontSize: 18)),
                                 onTap: () async {
                                   Navigator.pop(context);
                                   final String? currentCoord = await _getCurrentLocation();
@@ -704,7 +702,7 @@ class _AddDataPageState extends State<AddDataPage> {
                 onChanged: (value) {
                   setState(() {
                     _selectedTujuan = _tujuanOptions.entries
-                        .firstWhere((entry) => entry.value == value, orElse: () => MapEntry(1, ''))
+                        .firstWhere((entry) => entry.value == value, orElse: () => const MapEntry(1, ''))
                         .key;
                   });
                 },
@@ -717,7 +715,7 @@ class _AddDataPageState extends State<AddDataPage> {
                 onChanged: (value) {
                   setState(() {
                     _selectedPrioritas = _prioritasOptions.entries
-                        .firstWhere((entry) => entry.value == value, orElse: () => MapEntry(1, ''))
+                        .firstWhere((entry) => entry.value == value, orElse: () => const MapEntry(1, ''))
                         .key;
                   });
                 },
@@ -777,11 +775,14 @@ class _AddDataPageState extends State<AddDataPage> {
                                     _isLoading = true;
                                   });
                                   try {
-                                    // Parse the date from d-M-y to DateTime in WITA
+                                    // Parse tanggal dari d-M-y ke DateTime dalam WITA
                                     final DateFormat formatter = DateFormat('d-M-y');
                                     final DateTime parsedDate = formatter.parse(_dateController.text);
-                                    // Create DateTime in WITA (UTC+8)
-                                    final DateTime scheduleDate = DateTime(parsedDate.year, parsedDate.month, parsedDate.day);
+                                    final DateTime scheduleDate = DateTime(
+                                      parsedDate.year,
+                                      parsedDate.month,
+                                      parsedDate.day,
+                                    );
 
                                     final double initialHeight = double.parse(_initialHeightController.text);
 
@@ -812,18 +813,27 @@ class _AddDataPageState extends State<AddDataPage> {
                                       notificationDate: scheduleDate.subtract(const Duration(days: 3)),
                                     );
 
+                                    // Simpan data pohon ke database
                                     await Provider.of<DataPohonProvider>(context, listen: false)
                                         .addPohon(pohon, _fotoPohon);
+
                                     final notifMsg =
                                         '${_selectedNamaPohon ?? ''} dengan ID ${_idController.text} baru ditambahkan dengan tanggal penjadwalan ${_dateController.text}.';
+                                    final notification = AppNotification(
+                                      title: 'Pohon Baru Ditambahkan',
+                                      message: notifMsg,
+                                      date: DateTime.now(),
+                                    );
+
+                                    // Tambah notifikasi (termasuk scheduling)
                                     await Provider.of<NotificationProvider>(context, listen: false)
                                         .addNotification(
-                                      AppNotification(
-                                        title: 'Pohon Baru Ditambahkan',
-                                        message: notifMsg,
-                                        date: DateTime.now(),
-                                      ),
+                                      notification,
+                                      scheduleDate: scheduleDate,
+                                      pohonId: _idController.text,
+                                      namaPohon: _selectedNamaPohon ?? '',
                                     );
+
                                     if (!mounted) return;
                                     await _requestNotificationPermission();
                                     await showDialog(
