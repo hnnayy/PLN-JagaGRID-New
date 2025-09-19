@@ -1,17 +1,24 @@
 import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_app_check/firebase_app_check.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:firebase_app_check/firebase_app_check.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'models/data_pohon.dart';
 import 'firebase_options.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:overlay_support/overlay_support.dart';
 import 'providers/data_pohon_provider.dart';
 import 'providers/eksekusi_provider.dart';
 import 'providers/notification_provider.dart';
+import 'providers/growth_prediction_provider.dart';
 import 'page/splash_screen.dart';
 import 'page/peta_pohon/map_page.dart';
 import 'page/peta_pohon/add_data_page.dart';
 import 'page/report/treemapping_report.dart';
+import 'page/report/treemapping_detail.dart';
+
+// Global navigator key untuk navigasi dari notification
+final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -37,6 +44,76 @@ void main() async {
   }
 
   runApp(const OverlaySupport(child: MyApp()));
+
+  // Fungsi rekursif untuk setup navigation callback dengan retry
+  void _setupNavigationCallback(int attempt) {
+    if (attempt >= 5) { // Max 5 attempts
+      debugPrint('❌ Gagal setup navigation callback setelah 5 percobaan');
+      return;
+    }
+
+    final context = navigatorKey.currentContext;
+    if (context != null && context.mounted && context.findRenderObject() != null) {
+      try {
+        final notificationProvider = Provider.of<NotificationProvider>(context, listen: false);
+        notificationProvider.setNotificationTapCallback((String? documentId) async {
+          if (documentId != null && documentId.isNotEmpty) {
+            try {
+              // Ambil data pohon dari Firestore menggunakan document ID
+              final docSnapshot = await FirebaseFirestore.instance
+                  .collection('data_pohon')
+                  .doc(documentId)
+                  .get();
+
+              if (docSnapshot.exists && navigatorKey.currentState != null && navigatorKey.currentContext != null) {
+                final pohon = DataPohon.fromMap({
+                  ...docSnapshot.data()!,
+                  'id': docSnapshot.id,
+                });
+
+                // Pastikan context masih valid sebelum navigasi
+                if (navigatorKey.currentContext != null && navigatorKey.currentContext!.mounted) {
+                  navigatorKey.currentState!.push(
+                    MaterialPageRoute(
+                      builder: (context) => TreeMappingDetailPage(pohon: pohon),
+                    ),
+                  );
+                  debugPrint('✅ Navigasi ke detail pohon berhasil: $documentId');
+                } else {
+                  debugPrint('⚠️ Context tidak valid untuk navigasi: $documentId');
+                }
+              } else {
+                debugPrint('❌ Document tidak ditemukan atau navigator tidak tersedia: $documentId');
+              }
+            } catch (e) {
+              debugPrint('❌ Error fetching pohon for notification: $e');
+            }
+          } else {
+            debugPrint('❌ Document ID kosong atau null');
+          }
+        });
+        debugPrint('🔧 Navigation callback berhasil di-setup pada attempt ${attempt + 1}');
+      } catch (e) {
+        debugPrint('❌ Error setting up navigation callback pada attempt ${attempt + 1}: $e');
+        // Retry dengan delay yang lebih lama
+        Future.delayed(Duration(milliseconds: 1000 * (attempt + 1)), () {
+          _setupNavigationCallback(attempt + 1);
+        });
+      }
+    } else {
+      debugPrint('⏳ Menunggu context stabil... attempt ${attempt + 1}');
+      // Retry dengan delay
+      Future.delayed(const Duration(milliseconds: 500), () {
+        _setupNavigationCallback(attempt + 1);
+      });
+    }
+  }
+
+  // Setup navigation callback untuk local notifications setelah app berjalan
+  WidgetsBinding.instance.addPostFrameCallback((_) {
+    // Multiple attempts dengan delay yang berbeda untuk memastikan context stabil
+    _setupNavigationCallback(0);
+  });
 }
 
 class MyApp extends StatelessWidget {
@@ -49,8 +126,10 @@ class MyApp extends StatelessWidget {
         ChangeNotifierProvider(create: (_) => DataPohonProvider()),
         ChangeNotifierProvider(create: (_) => EksekusiProvider()),
         ChangeNotifierProvider(create: (_) => NotificationProvider()),
+        ChangeNotifierProvider(create: (_) => GrowthPredictionProvider()),
       ],
       child: MaterialApp(
+        navigatorKey: navigatorKey,
         debugShowCheckedModeBanner: false,
         home: const SplashScreen(),
         routes: {

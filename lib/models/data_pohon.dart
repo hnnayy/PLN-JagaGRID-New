@@ -11,8 +11,6 @@ class DataPohon {
   final String section; // Tambah dari form
   final String kmsAset; // Tambah dari form
   final String vendor; // Tambah dari form
-  final int parentId; // Refer unit_parent.id
-  final int unitId; // Refer unit.id
   final int asetJtmId; // Refer aset_jtm.id
   final DateTime scheduleDate;
   final int prioritas; // 1=Rendah, 2=Sedang, 3=Tinggi
@@ -51,8 +49,6 @@ class DataPohon {
     required this.section,
     required this.kmsAset,
     required this.vendor,
-    required this.parentId,
-    required this.unitId,
     required this.asetJtmId,
     required this.scheduleDate,
     required this.prioritas,
@@ -88,8 +84,6 @@ class DataPohon {
       'section': section,
       'kms_aset': kmsAset,
       'vendor': vendor,
-      'parent_id': parentId,
-      'unit_id': unitId,
       'aset_jtm_id': asetJtmId,
       'schedule_date': scheduleDateString, // Store as string in M-d-y format
       'prioritas': prioritas,
@@ -161,11 +155,9 @@ class DataPohon {
       section: map['section'] ?? '',
       kmsAset: map['kms_aset'] ?? '',
       vendor: map['vendor'] ?? '',
-      parentId: map['parent_id'] ?? 0,
-      unitId: map['unit_id'] ?? 0,
       asetJtmId: map['aset_jtm_id'] ?? 0,
       scheduleDate: scheduleDate,
-      prioritas: map['prioritas'] ?? 1,
+      prioritas: map['prioritas'] ?? 0,
       namaPohon: map['nama_pohon'] ?? '',
       fotoPohon: map['foto_pohon'] ?? '',
       koordinat: map['koordinat'] ?? '',

@@ -16,10 +16,11 @@ class DataPohonProvider with ChangeNotifier {
     });
   }
 
-  Future<void> addPohon(DataPohon pohon, File? fotoFile) async {
+  Future<String> addPohon(DataPohon pohon, File? fotoFile) async {
     try {
-      await _service.addDataPohon(pohon, fotoFile);
+      final docId = await _service.addDataPohon(pohon, fotoFile);
       notifyListeners();
+      return docId; // Return document ID
     } catch (e) {
       print('Error adding pohon: $e');
       rethrow;

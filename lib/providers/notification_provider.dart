@@ -10,11 +10,13 @@ class AppNotification {
   final String title;
   final String message;
   final DateTime date;
+  final String? idPohon; // Tambahkan idPohon
 
   AppNotification({
     required this.title,
     required this.message,
     required this.date,
+    this.idPohon, // Opsional, karena tidak semua notifikasi terkait pohon
   });
 }
 
@@ -27,8 +29,16 @@ class NotificationProvider with ChangeNotifier {
   final FlutterLocalNotificationsPlugin _flutterLocalNotificationsPlugin =
       FlutterLocalNotificationsPlugin(); // Plugin untuk notifikasi lokal
 
+  // Callback untuk menangani navigasi ketika notifikasi diklik
+  Function(String? idPohon)? _onNotificationTapped;
+
   // Getter untuk daftar notifikasi (read-only)
   List<AppNotification> get notifications => List.unmodifiable(_notifications);
+
+  // Method untuk set callback navigasi
+  void setNotificationTapCallback(Function(String? idPohon) callback) {
+    _onNotificationTapped = callback;
+  }
 
   // Konstruktor: Inisialisasi notifikasi saat provider dibuat
   NotificationProvider() {
@@ -52,14 +62,30 @@ class NotificationProvider with ChangeNotifier {
       onDidReceiveNotificationResponse: (NotificationResponse response) async {
         // Tangani respons notifikasi (misalnya, saat user tap notifikasi)
         if (response.payload != null) {
-          // Payload format: "scheduled|<title>|<message>" untuk notifikasi terjadwal
+          // Payload format: "scheduled|<title>|<message>|<idPohon>" untuk notifikasi terjadwal
+          // atau "instant|<title>|<message>|<idPohon>" untuk notifikasi instan
           final parts = response.payload!.split('|');
-          if (parts.length == 3 && parts[0] == 'scheduled') {
+          if (parts.length == 4) {
+            final notificationType = parts[0];
             final title = parts[1];
             final message = parts[2];
-            // Kirim pesan Telegram saat notifikasi terjadwal dipicu
-            await sendTelegramMessage('$title\n$message');
-            debugPrint('Notifikasi terjadwal dipicu dan Telegram dikirim: $message');
+            final idPohon = parts[3]; // Ambil idPohon dari payload
+
+            // Panggil callback navigasi jika tersedia dan idPohon tidak kosong
+            if (_onNotificationTapped != null && idPohon.isNotEmpty && idPohon != 'null') {
+              debugPrint('🔗 Memanggil callback navigasi dengan documentId: $idPohon');
+              _onNotificationTapped!(idPohon);
+            } else {
+              debugPrint('⚠️ Callback navigasi tidak tersedia atau ID kosong: $idPohon');
+            }
+
+            // Kirim pesan Telegram untuk notifikasi terjadwal
+            if (notificationType == 'scheduled') {
+              await sendTelegramMessage('$title\n$message');
+              debugPrint('Notifikasi terjadwal dipicu dan Telegram dikirim: $message, idPohon: $idPohon');
+            } else if (notificationType == 'instant') {
+              debugPrint('Notifikasi instan diklik: $message, idPohon: $idPohon');
+            }
           }
         }
       },
@@ -89,7 +115,23 @@ class NotificationProvider with ChangeNotifier {
     _telegramChatIds = snapshot.docs
         .map((doc) => doc.data()['chat_id_telegram']?.toString() ?? '')
         .where((id) => id.isNotEmpty) // Filter ID kosong
+        .where((id) => _isValidChatId(id)) // Filter ID yang valid (numeric)
         .toList();
+    debugPrint('📱 Valid chat IDs loaded: ${_telegramChatIds.length} IDs');
+  }
+
+  // Validasi apakah chat ID valid (harus numeric)
+  bool _isValidChatId(String chatId) {
+    // Chat ID Telegram harus berupa angka dan panjangnya masuk akal
+    final numericRegex = RegExp(r'^\d+$');
+    final isNumeric = numericRegex.hasMatch(chatId);
+    final isValidLength = chatId.length >= 8 && chatId.length <= 15; // Chat ID biasanya 9-10 digit
+
+    if (!isNumeric || !isValidLength) {
+      debugPrint('⚠️ Invalid chat ID filtered out: "$chatId"');
+      return false;
+    }
+    return true;
   }
 
   // Fungsi kirim pesan ke Telegram (ke semua chat ID)
@@ -98,14 +140,28 @@ class NotificationProvider with ChangeNotifier {
     if (_telegramChatIds.isEmpty) {
       await fetchTelegramChatIds();
     }
+
+    if (_telegramChatIds.isEmpty) {
+      debugPrint('⚠️ Tidak ada chat ID Telegram yang valid tersedia');
+      return;
+    }
+
+    debugPrint('📤 Mengirim pesan Telegram ke ${_telegramChatIds.length} chat ID(s)');
+    debugPrint('💬 Pesan: "$message"');
+
     // Kirim ke setiap chat ID
     for (String chatId in _telegramChatIds) {
       final url = 'https://api.telegram.org/bot$_telegramBotToken/sendMessage?chat_id=$chatId&text=${Uri.encodeComponent(message)}';
       try {
-        await http.get(Uri.parse(url));
-        debugPrint('Pesan Telegram terkirim ke chat ID: $chatId');
+        final response = await http.get(Uri.parse(url));
+        if (response.statusCode == 200) {
+          debugPrint('✅ Pesan Telegram terkirim ke chat ID: $chatId');
+        } else {
+          debugPrint('❌ Gagal kirim Telegram ke $chatId (Status: ${response.statusCode})');
+          debugPrint('📄 Response: ${response.body}');
+        }
       } catch (e) {
-        debugPrint('Gagal kirim Telegram ke $chatId: $e');
+        debugPrint('❌ Error kirim Telegram ke $chatId: $e');
       }
     }
   }
@@ -116,6 +172,7 @@ class NotificationProvider with ChangeNotifier {
     DateTime? scheduleDate, // Tanggal jadwal (opsional)
     String? pohonId, // ID pohon (untuk pesan terjadwal)
     String? namaPohon, // Nama pohon (untuk pesan terjadwal)
+    String? documentIdPohon, // Document ID pohon Firestore
   }) async {
     // Tambah ke daftar lokal dan beri tahu listener
     _notifications.insert(0, notification);
@@ -126,6 +183,8 @@ class NotificationProvider with ChangeNotifier {
       'title': notification.title,
       'message': notification.message,
       'date': notification.date.toIso8601String(),
+      'id_pohon': notification.idPohon, // legacy, boleh dihapus nanti
+      'id_data_pohon': documentIdPohon, // ini yang dipakai untuk navigasi detail
     });
 
     // Kirim pesan Telegram INSTAN
@@ -155,6 +214,7 @@ class NotificationProvider with ChangeNotifier {
       notification.title,
       notification.message,
       platformChannelSpecifics,
+      payload: 'instant|${notification.title}|${notification.message}|${documentIdPohon ?? ""}', // Gunakan documentIdPohon untuk navigasi
     );
 
     // JIKA ADA TANGGAL JADWAL, BUAT NOTIFIKASI TERJADWAL
@@ -206,20 +266,59 @@ class NotificationProvider with ChangeNotifier {
         const NotificationDetails scheduledPlatformDetails =
             NotificationDetails(android: scheduledAndroidDetails);
 
-        // Jadwalkan notifikasi dengan payload khusus untuk trigger Telegram
+        // Jadwalkan notifikasi dengan inexact alarms (lebih reliable)
         await _flutterLocalNotificationsPlugin.zonedSchedule(
           (notification.date.millisecondsSinceEpoch % 100000) + 1, // ID unik untuk terjadwal
           scheduledTitle,
           scheduledMessage,
           finalScheduledTime, // Gunakan waktu yang sudah disesuaikan
           scheduledPlatformDetails,
-          androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
-          payload: 'scheduled|$scheduledTitle|$scheduledMessage', // Payload untuk deteksi
+          androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle, // Ganti ke inexact
+          payload: 'scheduled|$scheduledTitle|$scheduledMessage|$documentIdPohon', // Gunakan documentIdPohon untuk navigasi
         );
-        debugPrint('Notifikasi terjadwal dibuat untuk: $finalScheduledTime dengan pesan: $scheduledMessage');
+        debugPrint('✅ Notifikasi terjadwal berhasil dibuat untuk: $finalScheduledTime');
+        debugPrint('📅 Detail: ID=${(notification.date.millisecondsSinceEpoch % 100000) + 1}, Title="$scheduledTitle"');
       } catch (e) {
-        // Catch error scheduling agar fungsi tidak throw ke luar
-        debugPrint('Error scheduling notifikasi terjadwal: $e');
+        // Enhanced error handling dengan lebih detail
+        debugPrint('❌ Error scheduling notifikasi terjadwal: $e');
+        debugPrint('📊 Error details: Time=$finalScheduledTime, Title="$scheduledTitle"');
+
+        // Jika exact alarms gagal, coba dengan inexact (fallback)
+        if (e.toString().contains('exact_alarms_not_permitted')) {
+          debugPrint('🔄 Mencoba fallback dengan inexact alarm...');
+          try {
+            const AndroidNotificationDetails fallbackAndroidDetails =
+                AndroidNotificationDetails(
+              'pohon_channel',
+              'Pohon Notification',
+              channelDescription: 'Notifikasi penjadwalan pohon (fallback)',
+              importance: Importance.max,
+              priority: Priority.high,
+              ticker: 'ticker',
+              showWhen: true,
+              enableLights: true,
+              enableVibration: true,
+              playSound: true,
+              fullScreenIntent: true,
+            );
+
+            const NotificationDetails fallbackPlatformDetails =
+                NotificationDetails(android: fallbackAndroidDetails);
+
+            await _flutterLocalNotificationsPlugin.zonedSchedule(
+              (notification.date.millisecondsSinceEpoch % 100000) + 1,
+              scheduledTitle,
+              scheduledMessage,
+              finalScheduledTime,
+              fallbackPlatformDetails,
+              androidScheduleMode: AndroidScheduleMode.inexact,
+              payload: 'scheduled|$scheduledTitle|$scheduledMessage|$documentIdPohon',
+            );
+            debugPrint('✅ Fallback inexact alarm berhasil');
+          } catch (fallbackError) {
+            debugPrint('❌ Fallback inexact alarm juga gagal: $fallbackError');
+          }
+        }
       }
     }
   }

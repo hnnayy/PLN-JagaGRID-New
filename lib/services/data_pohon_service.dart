@@ -11,7 +11,7 @@ class DataPohonService {
   static const String _imageKitUploadUrl = 'https://upload.imagekit.io/api/v1/files/upload';
   final String _privateKey = dotenv.env['IMAGEKIT_PRIVATE_KEY'] ?? '';
 
-  Future<void> addDataPohon(DataPohon pohon, File? fotoFile) async {
+  Future<String> addDataPohon(DataPohon pohon, File? fotoFile) async {
     try {
       String? fotoUrl;
       if (fotoFile != null) {
@@ -58,6 +58,7 @@ class DataPohonService {
       final docRef = await _db.collection('data_pohon').add(dataToSave).timeout(const Duration(seconds: 30));
       await docRef.update({'id': docRef.id});
       print('Data berhasil disimpan dengan ID: ${docRef.id} dan fotoUrl: ${fotoUrl ?? "null"}');
+      return docRef.id; // Return document ID
     } catch (e) {
       print('Error menyimpan data: $e');
       rethrow;

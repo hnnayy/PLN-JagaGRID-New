@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../providers/notification_provider.dart';
+import '../../models/data_pohon.dart';
+import '../report/treemapping_detail.dart'; // Import TreeMappingDetailPage
 
 class NotificationPage extends StatelessWidget {
   const NotificationPage({super.key});
@@ -13,6 +15,26 @@ class NotificationPage extends StatelessWidget {
       'session_level': prefs.getInt('session_level') ?? 2,
       'session_unit': prefs.getString('session_unit') ?? '',
     };
+  }
+
+  // Fungsi untuk mengambil data pohon dari Firestore berdasarkan document ID
+  Future<DataPohon?> _fetchPohon(String documentId) async {
+    try {
+      final docSnapshot = await FirebaseFirestore.instance
+          .collection('data_pohon')
+          .doc(documentId)
+          .get();
+      if (docSnapshot.exists) {
+        return DataPohon.fromMap({
+          ...docSnapshot.data()!,
+          'id': docSnapshot.id,
+        });
+      }
+      return null;
+    } catch (e) {
+      debugPrint('Error fetching pohon: $e');
+      return null;
+    }
   }
 
   @override
@@ -28,7 +50,7 @@ class NotificationPage extends StatelessWidget {
           style: TextStyle(
             fontWeight: FontWeight.bold,
             fontSize: 18,
-            color: Color(0xFFFFD700),
+            color: Color.fromARGB(255, 255, 255, 255),
           ),
         ),
         leading: const SizedBox(),
@@ -92,8 +114,9 @@ class NotificationPage extends StatelessWidget {
                       title: data['title'] ?? '',
                       message: data['message'] ?? '',
                       date: DateTime.tryParse(data['date'] ?? '') ?? DateTime.now(),
+                      idPohon: data['id_data_pohon'] as String?, // Gunakan id_data_pohon untuk navigasi
                     );
-                    return _buildNotificationItem(notif);
+                    return _buildNotificationItem(context, notif);
                   },
                 );
               },
@@ -104,78 +127,100 @@ class NotificationPage extends StatelessWidget {
     );
   }
 
-  Widget _buildNotificationItem(AppNotification notif) {
-    return Container(
-      margin: const EdgeInsets.symmetric(vertical: 8),
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
+  Widget _buildNotificationItem(BuildContext context, AppNotification notif) {
+    return GestureDetector(
+      onTap: notif.idPohon != null
+          ? () async {
+              // Ambil data pohon berdasarkan idPohon
+              final pohon = await _fetchPohon(notif.idPohon!);
+              if (pohon != null) {
+                // Navigasi ke TreeMappingDetailPage dengan data pohon
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => TreeMappingDetailPage(pohon: pohon),
+                  ),
+                );
+              } else {
+                // Tampilkan pesan jika pohon tidak ditemukan
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Data pohon tidak ditemukan')),
+                );
+              }
+            }
+          : null, // Tidak ada aksi jika idPohon null
+      child: Container(
+        margin: const EdgeInsets.symmetric(vertical: 8),
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(12),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.05),
+              blurRadius: 8,
+              offset: const Offset(0, 2),
+            ),
+          ],
+          border: Border.all(
+            color: Colors.grey.shade100,
+            width: 1,
           ),
-        ],
-        border: Border.all(
-          color: Colors.grey.shade100,
-          width: 1,
         ),
-      ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Container(
-            padding: const EdgeInsets.all(12),
-            decoration: const BoxDecoration(
-              color: Color(0xFFFFD700),
-              shape: BoxShape.circle,
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: const BoxDecoration(
+                color: Color(0xFFFFD700),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(
+                Icons.warning_amber_rounded,
+                color: Colors.black,
+                size: 20,
+              ),
             ),
-            child: const Icon(
-              Icons.warning_amber_rounded,
-              color: Colors.black,
-              size: 20,
-            ),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  notif.title,
-                  style: const TextStyle(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 14,
-                    color: Colors.black,
-                  ),
-                ),
-                const SizedBox(height: 6),
-                Text(
-                  notif.message,
-                  style: const TextStyle(
-                    fontSize: 12,
-                    color: Colors.black54,
-                    height: 1.4,
-                  ),
-                ),
-                const SizedBox(height: 8),
-                Align(
-                  alignment: Alignment.bottomRight,
-                  child: Text(
-                    _formatDate(notif.date),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    notif.title,
                     style: const TextStyle(
-                      fontSize: 11,
-                      color: Colors.blue,
-                      fontWeight: FontWeight.w500,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 14,
+                      color: Colors.black,
                     ),
                   ),
-                ),
-              ],
+                  const SizedBox(height: 6),
+                  Text(
+                    notif.message,
+                    style: const TextStyle(
+                      fontSize: 12,
+                      color: Colors.black54,
+                      height: 1.4,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Align(
+                    alignment: Alignment.bottomRight,
+                    child: Text(
+                      _formatDate(notif.date),
+                      style: const TextStyle(
+                        fontSize: 11,
+                        color: Colors.blue,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
             ),
-          )
-        ],
+          ],
+        ),
       ),
     );
   }

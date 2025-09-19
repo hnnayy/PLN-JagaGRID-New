@@ -5,6 +5,7 @@ import '../providers/data_pohon_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'report/treemapping_report.dart'; // Import halaman report
 import '../../models/data_pohon.dart'; // Add this import for DataPohon
+import 'repetition_management_page.dart'; // Import halaman repetisi
 
 class HomePage extends StatelessWidget {
   const HomePage({Key? key}) : super(key: key);
@@ -334,12 +335,12 @@ class HomePage extends StatelessWidget {
   ) {
     final stats = [
       {
-        'label': 'Total Pohon',
-        'value': totalPohon,
-        'icon': Icons.eco_outlined,
+        'label': 'Sistem Repetisi',
+        'value': 0, // Placeholder value
+        'icon': Icons.repeat,
         'color1': const Color(0xFF2193b0),
         'color2': const Color(0xFF6dd5ed),
-        'filter': 'total_pohon',
+        'filter': 'repetition_system',
       },
       {
         'label': 'Prioritas Tinggi',
@@ -397,7 +398,7 @@ class HomePage extends StatelessWidget {
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
       gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: 2,
+        crossAxisCount: screenWidth >= 400 ? 3 : 2,
         crossAxisSpacing: screenWidth * (isSmallScreen ? 0.015 : 0.02),
         mainAxisSpacing: screenHeight * (isSmallScreen ? 0.01 : 0.012),
         childAspectRatio: aspectRatio,
@@ -416,12 +417,21 @@ class HomePage extends StatelessWidget {
           isSmallScreen: isSmallScreen,
           isMediumScreen: isMediumScreen,
           onTap: () {
-            Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (context) => TreeMappingReportPage(filterType: stat['filter'] as String),
-              ),
-            );
+            if (stat['filter'] == 'repetition_system') {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => const RepetitionManagementPage(),
+                ),
+              );
+            } else {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => TreeMappingReportPage(filterType: stat['filter'] as String),
+                ),
+              );
+            }
           },
         );
       },

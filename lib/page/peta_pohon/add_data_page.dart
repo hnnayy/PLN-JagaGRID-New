@@ -216,7 +216,6 @@ class _AddDataPageState extends State<AddDataPage> {
   String? _selectedZonaProteksi;
   String? _selectedSection;
   String? _selectedVendor;
-  String? _selectedUlp;
 
   bool _isLoading = false;
 
@@ -230,19 +229,6 @@ class _AddDataPageState extends State<AddDataPage> {
     2: 'Sedang',
     3: 'Tinggi',
   };
-
-  final List<String> _ulpOptions = [
-    "UNIT INDUK UP3 PAREPARE",
-    "ULP MATTIROTASI",
-    "ULP BARRU",
-    "ULP RAPPANG",
-    "ULP PANGSID",
-    "ULP TANRUTEDONG",
-    "ULP SOPPENG",
-    "ULP PAJALESANG",
-    "ULP MAKASSAR",
-    "ULP BONE",
-  ];
 
   List<String> _penyulangOptions = [];
   List<String> _zonaProteksiOptions = [];
@@ -290,7 +276,6 @@ class _AddDataPageState extends State<AddDataPage> {
     final prefs = await SharedPreferences.getInstance();
     final unit = prefs.getString('session_unit') ?? '';
     setState(() {
-      _selectedUlp = _ulpOptions.contains(unit) ? unit : null;
       _ulpController.text = unit;
     });
   }
@@ -423,16 +408,11 @@ class _AddDataPageState extends State<AddDataPage> {
                 validator: (value) => value!.isEmpty ? 'UP3 wajib diisi' : null,
               ),
               const SizedBox(height: 20),
-              CustomDropdown(
-                value: _selectedUlp,
-                items: _ulpOptions,
-                labelText: 'ULP',
-                onChanged: (value) {
-                  setState(() {
-                    _selectedUlp = value;
-                    _ulpController.text = value ?? '';
-                  });
-                },
+              _buildField(
+                'ULP',
+                _ulpController,
+                readOnly: true,
+                validator: (value) => value!.isEmpty ? 'ULP wajib diisi' : null,
               ),
               const SizedBox(height: 20),
               !_dropdownDataLoaded
@@ -770,7 +750,7 @@ class _AddDataPageState extends State<AddDataPage> {
                                     _selectedNamaPohon != null &&
                                     _selectedTujuan != null &&
                                     _selectedPrioritas != null &&
-                                    _selectedUlp != null) {
+                                    _ulpController.text.isNotEmpty) {
                                   setState(() {
                                     _isLoading = true;
                                   });
@@ -796,8 +776,6 @@ class _AddDataPageState extends State<AddDataPage> {
                                       section: _sectionController.text,
                                       kmsAset: _kmsAsetController.text,
                                       vendor: _vendorController.text,
-                                      parentId: int.tryParse(_up3Controller.text) ?? 0,
-                                      unitId: int.tryParse(_ulpController.text) ?? 0,
                                       asetJtmId: int.tryParse(_kmsAsetController.text) ?? 0,
                                       scheduleDate: scheduleDate,
                                       prioritas: _selectedPrioritas ?? 1,
@@ -814,7 +792,7 @@ class _AddDataPageState extends State<AddDataPage> {
                                     );
 
                                     // Simpan data pohon ke database
-                                    await Provider.of<DataPohonProvider>(context, listen: false)
+                                    final documentId = await Provider.of<DataPohonProvider>(context, listen: false)
                                         .addPohon(pohon, _fotoPohon);
 
                                     final notifMsg =
@@ -823,6 +801,7 @@ class _AddDataPageState extends State<AddDataPage> {
                                       title: 'Pohon Baru Ditambahkan',
                                       message: notifMsg,
                                       date: DateTime.now(),
+                                      idPohon: _idController.text, // ID pohon untuk display
                                     );
 
                                     // Tambah notifikasi (termasuk scheduling)
@@ -832,6 +811,7 @@ class _AddDataPageState extends State<AddDataPage> {
                                       scheduleDate: scheduleDate,
                                       pohonId: _idController.text,
                                       namaPohon: _selectedNamaPohon ?? '',
+                                      documentIdPohon: documentId, // Document ID untuk navigasi
                                     );
 
                                     if (!mounted) return;
