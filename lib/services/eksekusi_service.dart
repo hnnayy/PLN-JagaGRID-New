@@ -5,6 +5,9 @@ import 'package:http/http.dart' as http;
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:intl/intl.dart';
 import '../models/eksekusi.dart';
+import '../models/data_pohon.dart';
+import 'growth_prediction_service.dart';
+import '../providers/notification_provider.dart';
 
 class EksekusiService {
   final FirebaseFirestore _db = FirebaseFirestore.instance;
@@ -94,6 +97,79 @@ class EksekusiService {
           .timeout(const Duration(seconds: 30));
       await docRef.update({'id': docRef.id});
       print('Eksekusi saved successfully with ID: ${docRef.id}, dataPohonId: ${eksekusi.dataPohonId}, statusEksekusi: ${eksekusi.statusEksekusi}, tanggalEksekusi: ${updatedEksekusi.tanggalEksekusi}, fotoUrl: $fotoUrl');
+
+  // OPTIONAL: Auto-create next growth prediction after a successful execution save
+      try {
+        // Fetch DataPohon for growth parameters
+        final pohonDoc = await _db.collection('data_pohon').doc(eksekusi.dataPohonId).get();
+        if (pohonDoc.exists) {
+          final pohon = DataPohon.fromMap({
+            ...pohonDoc.data()!,
+            'id': pohonDoc.id,
+          });
+
+          // Count number of executions for this tree (including the one just added)
+          final execSnapshot = await _db
+              .collection('eksekusi')
+              .where('data_pohon_id', isEqualTo: eksekusi.dataPohonId)
+              .get();
+          final repetitionCycle = execSnapshot.docs.length; // cycle = number of executions
+
+          final growthService = GrowthPredictionService();
+          final createdPrediction = await growthService.createPredictionAfterExecution(
+            dataPohonId: eksekusi.dataPohonId,
+            lastExecution: updatedEksekusi,
+            pohonData: pohon,
+            repetitionCycle: repetitionCycle,
+          );
+
+          // Kirim notifikasi Telegram + in-app: "pohon dengan id {} telah dieksekusi pada tanggal {} wita dengan prediksi penjadwalan selanjutnya adalah tanggal {}"
+          try {
+            final message = 'Pohon dengan ID ${pohon.idPohon} telah dieksekusi pada tanggal ${updatedEksekusi.tanggalEksekusi} '
+                'dengan prediksi penjadwalan selanjutnya pada ${DateFormat('dd/MM/yyyy').format(createdPrediction.predictedNextExecution)}';
+
+            // Buat AppNotification dan masukkan ke page notif + Telegram
+            final notificationProvider = NotificationProvider();
+            await notificationProvider.addNotification(
+              AppNotification(
+                title: 'Eksekusi Pohon Berhasil',
+                message: message,
+                date: DateTime.now(),
+                idPohon: pohon.idPohon,
+              ),
+              documentIdPohon: pohon.id, // untuk navigasi ke detail via notif
+            );
+
+            // Jadwalkan pengingat 3 hari sebelum tanggal prediksi berikutnya
+            final reminderDate = createdPrediction.predictedNextExecution.subtract(const Duration(days: 3));
+            final tujuanText = pohon.tujuanPenjadwalan == 1 ? 'Tebang Pangkas' : 'Tebang Habis';
+            final reminderMessage = 'Pohon dengan ID ${pohon.idPohon} harus dieksekusi pada tanggal '
+                '${DateFormat('dd/MM/yyyy').format(createdPrediction.predictedNextExecution)} '
+                'dengan tujuan penjadwalan adalah $tujuanText';
+
+            await notificationProvider.addNotification(
+              AppNotification(
+                title: 'Pengingat Eksekusi (H-3)',
+                message: reminderMessage,
+                date: DateTime.now(),
+                idPohon: pohon.idPohon,
+              ),
+              scheduleDate: reminderDate,
+              pohonId: pohon.idPohon,
+              namaPohon: pohon.namaPohon,
+              documentIdPohon: pohon.id,
+              scheduledTitleOverride: 'Pengingat Eksekusi (H-3)',
+              scheduledMessageOverride: reminderMessage,
+            );
+          } catch (e) {
+            print('⚠️ Gagal mengirim notifikasi Telegram/in-app setelah eksekusi: $e');
+          }
+        } else {
+          print('⚠️ DataPohon not found for id ${eksekusi.dataPohonId}, skipping prediction creation');
+        }
+      } catch (e) {
+        print('⚠️ Failed to auto-create growth prediction after execution: $e');
+      }
     } catch (e) {
       print('Error saving Eksekusi to Firestore: $e');
       rethrow;

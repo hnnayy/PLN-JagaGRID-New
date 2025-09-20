@@ -7,13 +7,12 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:intl/intl.dart';
-import '../notification/notification_page.dart';
 import '../../providers/notification_provider.dart';
 import '../../providers/data_pohon_provider.dart';
 import '../../models/data_pohon.dart';
-import '../../models/asset_model.dart';
 import '../../services/asset_service.dart';
 import 'pick_location_page.dart';
+import '../../providers/tree_growth_provider.dart';
 
 // CustomDropdown Widget
 class CustomDropdown extends StatefulWidget {
@@ -243,6 +242,10 @@ class _AddDataPageState extends State<AddDataPage> {
     _loadSessionUnit();
     _loadDropdownData();
     _initLocalNotification();
+    // Load master tree growth list
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      context.read<TreeGrowthProvider>().load();
+    });
   }
 
   Future<void> _initLocalNotification() async {
@@ -366,6 +369,8 @@ class _AddDataPageState extends State<AddDataPage> {
   @override
   Widget build(BuildContext context) {
     final dateFormat = DateFormat('d-M-y'); // Format d-M-y for UI
+    final treeGrowthProvider = Provider.of<TreeGrowthProvider>(context);
+  final treeNames = treeGrowthProvider.items.map((e) => e.name).toList();
     return Scaffold(
       backgroundColor: const Color(0xFF2E5D6F),
       appBar: AppBar(
@@ -513,7 +518,7 @@ class _AddDataPageState extends State<AddDataPage> {
               const SizedBox(height: 20),
               CustomDropdown(
                 value: _selectedNamaPohon,
-                items: DataPohon.growthRates.keys.toList(),
+                items: treeNames,
                 labelText: 'Nama Pohon',
                 onChanged: (value) {
                   setState(() {
@@ -523,7 +528,7 @@ class _AddDataPageState extends State<AddDataPage> {
               ),
               const SizedBox(height: 20),
               _buildField(
-                'Tinggi Awal (meter)',
+                'Tinggi Awal (dalam cm)',
                 _initialHeightController,
                 keyboardType: TextInputType.number,
                 validator: (value) {
@@ -766,6 +771,19 @@ class _AddDataPageState extends State<AddDataPage> {
 
                                     final double initialHeight = double.parse(_initialHeightController.text);
 
+                                    // Ambil user ID dari session (SharedPreferences diset saat login)
+                                    final prefs = await SharedPreferences.getInstance();
+                                    final creatorId = prefs.getString('session_id') ?? '';
+
+                                    double selectedGrowth = 0;
+                                    if (treeGrowthProvider.items.isNotEmpty && _selectedNamaPohon != null) {
+                                      final match = treeGrowthProvider.items.firstWhere(
+                                        (e) => e.name == _selectedNamaPohon,
+                                        orElse: () => treeGrowthProvider.items.first,
+                                      );
+                                      selectedGrowth = match.growthRate;
+                                    }
+
                                     final pohon = DataPohon(
                                       id: '',
                                       idPohon: _idController.text,
@@ -784,9 +802,9 @@ class _AddDataPageState extends State<AddDataPage> {
                                       koordinat: _coordinatesController.text,
                                       tujuanPenjadwalan: _selectedTujuan ?? 1,
                                       catatan: _noteController.text,
-                                      createdBy: 1,
+                                      createdBy: creatorId,
                                       createdDate: DateTime.now(),
-                                      growthRate: DataPohon.growthRates[_selectedNamaPohon!] ?? 0,
+                    growthRate: selectedGrowth,
                                       initialHeight: initialHeight,
                                       notificationDate: scheduleDate.subtract(const Duration(days: 3)),
                                     );

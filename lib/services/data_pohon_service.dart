@@ -50,7 +50,7 @@ class DataPohonService {
 
       final dataToSave = pohon.toMap()
         ..update('foto_pohon', (_) => fotoUrl, ifAbsent: () => fotoUrl)
-        ..update('growth_rate', (_) => DataPohon.growthRates[pohon.namaPohon]!, ifAbsent: () => 0.0)
+        ..update('growth_rate', (_) => pohon.growthRate, ifAbsent: () => 0.0)
         ..update('initial_height', (_) => pohon.initialHeight, ifAbsent: () => 0.0)
         ..update('notification_date', (_) => Timestamp.fromDate(notificationDate.subtract(const Duration(hours: 8))), ifAbsent: () => Timestamp.fromDate(notificationDate.subtract(const Duration(hours: 8))))
         ..update('status', (_) => 1); // Set status aktif saat menambah data

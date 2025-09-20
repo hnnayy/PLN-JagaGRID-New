@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import '../models/growth_prediction.dart';
-import '../providers/growth_prediction_provider.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import '../../models/growth_prediction.dart';
+import '../../providers/growth_prediction_provider.dart';
+import '../../constants/colors.dart';
 
 class RepetitionAnalyticsPage extends StatefulWidget {
   const RepetitionAnalyticsPage({super.key});
@@ -11,6 +13,9 @@ class RepetitionAnalyticsPage extends StatefulWidget {
 }
 
 class _RepetitionAnalyticsPageState extends State<RepetitionAnalyticsPage> {
+  // Cache untuk mapping dataPohonId (doc id) -> idPohon (human-friendly)
+  final Map<String, String> _idPohonCache = {};
+
   @override
   void initState() {
     super.initState();
@@ -19,12 +24,64 @@ class _RepetitionAnalyticsPageState extends State<RepetitionAnalyticsPage> {
     });
   }
 
+  // Ambil idPohon dari koleksi data_pohon dan cache hasilnya
+  Future<String> _getIdPohon(String dataPohonId) async {
+    final cached = _idPohonCache[dataPohonId];
+    if (cached != null && cached.isNotEmpty) return cached;
+
+    try {
+      final doc = await FirebaseFirestore.instance.collection('data_pohon').doc(dataPohonId).get();
+      String idPohon = '';
+      if (doc.exists) {
+        final data = doc.data();
+        if (data != null) {
+          idPohon = (data['id_pohon'] ?? data['idPohon'] ?? '').toString();
+        }
+      }
+      if (idPohon.isEmpty) idPohon = dataPohonId; // fallback
+      _idPohonCache[dataPohonId] = idPohon;
+      return idPohon;
+    } catch (e) {
+      // Jika gagal, gunakan fallback
+      return dataPohonId;
+    }
+  }
+
+  // Widget label untuk menampilkan #id pohon dengan FutureBuilder dan cache
+  Widget _idPohonLabel(String dataPohonId, {TextStyle? style, double width = 60}) {
+    return SizedBox(
+      width: width,
+      child: FutureBuilder<String>(
+        future: _getIdPohon(dataPohonId),
+        builder: (context, snapshot) {
+          final label = snapshot.hasData ? '#${snapshot.data}' : '...';
+          return Text(
+            label,
+            style: style ?? const TextStyle(fontSize: 12),
+            overflow: TextOverflow.ellipsis,
+          );
+        },
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: AppColors.putihKebiruan,
       appBar: AppBar(
         title: const Text('Analisis Repetisi'),
-        backgroundColor: Colors.green,
+        backgroundColor: AppColors.tealGelap,
+        elevation: 0,
+        flexibleSpace: Container(
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              colors: [AppColors.tealGelap, AppColors.cyan],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+          ),
+        ),
         actions: [
           IconButton(
             icon: const Icon(Icons.refresh),
@@ -59,11 +116,6 @@ class _RepetitionAnalyticsPageState extends State<RepetitionAnalyticsPage> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Overview Cards
-                _buildOverviewSection(predictions),
-
-                const SizedBox(height: 24),
-
                 // Growth Rate Analysis
                 _buildGrowthRateSection(predictions),
 
@@ -86,60 +138,6 @@ class _RepetitionAnalyticsPageState extends State<RepetitionAnalyticsPage> {
           );
         },
       ),
-    );
-  }
-
-  Widget _buildOverviewSection(List<GrowthPrediction> predictions) {
-    final totalPredictions = predictions.length;
-    final activePredictions = predictions.where((p) => p.status == 1).length;
-    final duePredictions = predictions.where((p) => p.isDueForExecution()).length;
-    final highPriority = predictions.where((p) => p.getPriority() >= 2).length;
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const Text(
-          'Ringkasan Sistem',
-          style: TextStyle(
-            fontSize: 20,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-        const SizedBox(height: 16),
-        GridView.count(
-          crossAxisCount: 2,
-          shrinkWrap: true,
-          physics: const NeverScrollableScrollPhysics(),
-          crossAxisSpacing: 12,
-          mainAxisSpacing: 12,
-          children: [
-            _buildMetricCard(
-              'Total Prediksi',
-              totalPredictions.toString(),
-              Icons.eco,
-              Colors.blue,
-            ),
-            _buildMetricCard(
-              'Prediksi Aktif',
-              activePredictions.toString(),
-              Icons.play_arrow,
-              Colors.green,
-            ),
-            _buildMetricCard(
-              'Due Date',
-              duePredictions.toString(),
-              Icons.warning,
-              Colors.orange,
-            ),
-            _buildMetricCard(
-              'Prioritas Tinggi',
-              highPriority.toString(),
-              Icons.priority_high,
-              Colors.red,
-            ),
-          ],
-        ),
-      ],
     );
   }
 
@@ -228,12 +226,10 @@ class _RepetitionAnalyticsPageState extends State<RepetitionAnalyticsPage> {
             padding: const EdgeInsets.symmetric(vertical: 4),
             child: Row(
               children: [
-                SizedBox(
-                  width: 60,
-                  child: Text(
-                    'P${prediction.dataPohonId}',
-                    style: const TextStyle(fontSize: 12),
-                  ),
+                _idPohonLabel(
+                  prediction.dataPohonId,
+                  style: const TextStyle(fontSize: 12),
+                  width: 80,
                 ),
                 const SizedBox(width: 8),
                 Expanded(
@@ -347,12 +343,10 @@ class _RepetitionAnalyticsPageState extends State<RepetitionAnalyticsPage> {
             padding: const EdgeInsets.symmetric(vertical: 2),
             child: Row(
               children: [
-                SizedBox(
-                  width: 60,
-                  child: Text(
-                    'P${prediction.dataPohonId}',
-                    style: const TextStyle(fontSize: 12),
-                  ),
+                _idPohonLabel(
+                  prediction.dataPohonId,
+                  style: const TextStyle(fontSize: 12),
+                  width: 80,
                 ),
                 const SizedBox(width: 8),
                 Expanded(
@@ -477,7 +471,7 @@ class _RepetitionAnalyticsPageState extends State<RepetitionAnalyticsPage> {
                   child: LinearProgressIndicator(
                     value: entry.value / sortedCycles.map((e) => e.value).reduce((a, b) => a > b ? a : b),
                     backgroundColor: Colors.grey.shade200,
-                    valueColor: AlwaysStoppedAnimation<Color>(Colors.blue),
+                    valueColor: const AlwaysStoppedAnimation<Color>(Colors.blue),
                   ),
                 ),
                 const SizedBox(width: 8),
@@ -596,39 +590,6 @@ class _RepetitionAnalyticsPageState extends State<RepetitionAnalyticsPage> {
           fontSize: 14,
         ),
         textAlign: TextAlign.center,
-      ),
-    );
-  }
-
-  Widget _buildMetricCard(String title, String value, IconData icon, Color color) {
-    return Card(
-      elevation: 2,
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(icon, size: 32, color: color),
-            const SizedBox(height: 8),
-            Text(
-              value,
-              style: TextStyle(
-                fontSize: 24,
-                fontWeight: FontWeight.bold,
-                color: color,
-              ),
-            ),
-            const SizedBox(height: 4),
-            Text(
-              title,
-              style: TextStyle(
-                fontSize: 12,
-                color: color,
-              ),
-              textAlign: TextAlign.center,
-            ),
-          ],
-        ),
       ),
     );
   }

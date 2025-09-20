@@ -5,7 +5,7 @@ import '../providers/data_pohon_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'report/treemapping_report.dart'; // Import halaman report
 import '../../models/data_pohon.dart'; // Add this import for DataPohon
-import 'repetition_management_page.dart'; // Import halaman repetisi
+import 'repetition_prediction/repetition_management_page.dart'; // Import halaman repetisi
 
 class HomePage extends StatelessWidget {
   const HomePage({Key? key}) : super(key: key);
@@ -37,7 +37,7 @@ class HomePage extends StatelessWidget {
     final screenHeight = screenSize.height;
     final isSmallScreen = screenWidth < 360;
     final isMediumScreen = screenWidth >= 360 && screenWidth < 400;
-    final isLargeScreen = screenWidth >= 400;
+  // Removed unused isLargeScreen variable after layout adjustments
 
     return Scaffold(
       backgroundColor: AppColors.putihKebiruan,
@@ -169,20 +169,20 @@ class HomePage extends StatelessWidget {
                           ),
                           SizedBox(height: screenHeight * (isSmallScreen ? 0.015 : 0.02)),
 
-                          // STATISTIK CARD - Responsif
+                          // TOP CARD diganti menjadi satu tile lebar: Sistem Repetisi
                           GestureDetector(
                             onTap: () {
                               Navigator.push(
                                 context,
                                 MaterialPageRoute(
-                                  builder: (context) => TreeMappingReportPage(filterType: 'total_pohon'),
+                                  builder: (context) => const RepetitionManagementPage(),
                                 ),
                               );
                             },
                             child: Container(
                               padding: EdgeInsets.symmetric(
-                                horizontal: screenWidth * (isSmallScreen ? 0.05 : 0.07),
-                                vertical: screenHeight * (isSmallScreen ? 0.015 : 0.018),
+                                horizontal: screenWidth * (isSmallScreen ? 0.06 : 0.08),
+                                vertical: screenHeight * (isSmallScreen ? 0.02 : 0.024),
                               ),
                               margin: EdgeInsets.symmetric(
                                 horizontal: screenWidth * (isSmallScreen ? 0.05 : 0.07),
@@ -198,37 +198,46 @@ class HomePage extends StatelessWidget {
                                   )
                                 ],
                               ),
-                              child: IntrinsicHeight(
-                                child: Row(
-                                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                                  children: [
-                                    Expanded(
-                                      child: _statInfoTile(
-                                        'Total Pohon',
-                                        totalPohon,
-                                        AppColors.tealGelap,
-                                        Icons.eco_outlined,
-                                        screenWidth,
-                                        isSmallScreen,
-                                      ),
+                              child: Row(
+                                children: [
+                                  Container(
+                                    padding: EdgeInsets.all(screenWidth * (isSmallScreen ? 0.018 : 0.022)),
+                                    decoration: BoxDecoration(
+                                      color: AppColors.tealGelap.withOpacity(0.12),
+                                      borderRadius: BorderRadius.circular(isSmallScreen ? 8 : 10),
                                     ),
-                                    Container(
-                                      width: 1,
-                                      color: AppColors.grey.withOpacity(0.2),
-                                      margin: EdgeInsets.symmetric(horizontal: screenWidth * 0.02),
+                                    child: Icon(
+                                      Icons.repeat,
+                                      color: AppColors.tealGelap,
+                                      size: screenWidth * (isSmallScreen ? 0.06 : 0.065),
                                     ),
-                                    Expanded(
-                                      child: _statInfoTile(
-                                        'Prioritas',
-                                        prioritasTinggi + prioritasSedang + prioritasRendah,
-                                        AppColors.yellow,
-                                        Icons.star,
-                                        screenWidth,
-                                        isSmallScreen,
-                                      ),
+                                  ),
+                                  SizedBox(width: screenWidth * 0.04),
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          'Sistem Repetisi',
+                                          style: TextStyle(
+                                            fontSize: screenWidth * (isSmallScreen ? 0.05 : 0.055),
+                                            fontWeight: FontWeight.bold,
+                                            color: AppColors.tealGelap,
+                                          ),
+                                        ),
+                                        SizedBox(height: 4),
+                                        Text(
+                                          'Kelola prediksi & rencana eksekusi',
+                                          style: TextStyle(
+                                            fontSize: screenWidth * (isSmallScreen ? 0.03 : 0.032),
+                                            color: AppColors.grey,
+                                          ),
+                                        ),
+                                      ],
                                     ),
-                                  ],
-                                ),
+                                  ),
+                                  Icon(Icons.arrow_forward_ios, size: screenWidth * 0.045, color: AppColors.grey),
+                                ],
                               ),
                             ),
                           ),
@@ -278,47 +287,7 @@ class HomePage extends StatelessWidget {
     );
   }
 
-  Widget _statInfoTile(String label, int value, Color color, IconData icon, double screenWidth, bool isSmallScreen) {
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Container(
-          padding: EdgeInsets.all(screenWidth * (isSmallScreen ? 0.015 : 0.018)),
-          decoration: BoxDecoration(
-            color: color.withOpacity(0.12),
-            borderRadius: BorderRadius.circular(isSmallScreen ? 8 : 10),
-          ),
-          child: Icon(
-            icon,
-            color: color,
-            size: screenWidth * (isSmallScreen ? 0.05 : 0.06),
-          ),
-        ),
-        SizedBox(height: isSmallScreen ? 4 : 6),
-        FittedBox(
-          child: Text(
-            '$value',
-            style: TextStyle(
-              fontSize: screenWidth * (isSmallScreen ? 0.045 : 0.05),
-              fontWeight: FontWeight.bold,
-              color: color,
-            ),
-          ),
-        ),
-        FittedBox(
-          child: Text(
-            label,
-            style: TextStyle(
-              fontSize: screenWidth * (isSmallScreen ? 0.025 : 0.03),
-              color: AppColors.grey,
-              fontFamily: 'Poppins',
-            ),
-            textAlign: TextAlign.center,
-          ),
-        ),
-      ],
-    );
-  }
+  // _statInfoTile removed as top card switched to a single 'Sistem Repetisi' tile
 
   Widget _buildStatsGridAktual(
     BuildContext context,
@@ -334,14 +303,6 @@ class HomePage extends StatelessWidget {
     bool isMediumScreen,
   ) {
     final stats = [
-      {
-        'label': 'Sistem Repetisi',
-        'value': 0, // Placeholder value
-        'icon': Icons.repeat,
-        'color1': const Color(0xFF2193b0),
-        'color2': const Color(0xFF6dd5ed),
-        'filter': 'repetition_system',
-      },
       {
         'label': 'Prioritas Tinggi',
         'value': prioritasTinggi,
@@ -381,6 +342,14 @@ class HomePage extends StatelessWidget {
         'color1': const Color(0xFF2193b0),
         'color2': const Color(0xFF6dd5ed),
         'filter': 'low_priority',
+      },
+      {
+        'label': 'Total Pohon',
+        'value': totalPohon,
+        'icon': Icons.eco_outlined,
+        'color1': const Color(0xFF2193b0),
+        'color2': const Color(0xFF6dd5ed),
+        'filter': 'total_pohon',
       },
     ];
 

@@ -7,7 +7,7 @@ class Eksekusi {
   final int statusEksekusi;
   final String tanggalEksekusi; // Stored as DD/MM/YYYY HH:MM WITA
   final String? fotoSetelah;
-  final int createdBy;
+  final String createdBy;
   final Timestamp createdDate;
   final int status;
   final double tinggiPohon;
@@ -19,7 +19,7 @@ class Eksekusi {
     required this.statusEksekusi,
     required this.tanggalEksekusi,
     this.fotoSetelah,
-    required this.createdBy,
+  required this.createdBy,
     required this.createdDate,
     required this.status,
     required this.tinggiPohon,
@@ -67,7 +67,7 @@ class Eksekusi {
       statusEksekusi: statusEksekusi,
       tanggalEksekusi: tanggalEksekusi,
       fotoSetelah: map['foto_setelah'] as String?,
-      createdBy: map['createdby'] as int? ?? 0,
+  createdBy: (map['createdby']?.toString() ?? ''),
       createdDate: map['createddate'] as Timestamp? ?? Timestamp.now(),
       status: map['status'] as int? ?? 1,
       tinggiPohon: (map['tinggi_pohon'] as num? ?? 0.0).toDouble(),

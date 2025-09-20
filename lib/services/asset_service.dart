@@ -126,4 +126,69 @@ class AssetService {
       return 0;
     }
   }
+
+  /// 🔹 Ambil assets berdasarkan penyulang (untuk memperkecil hasil, sisanya disaring di memori)
+  Future<List<AssetModel>> getAssetsByPenyulang(String penyulang) async {
+    try {
+      final snapshot = await _assetCollection
+          .where('penyulang', isEqualTo: penyulang)
+          .get();
+      return snapshot.docs
+          .map((doc) => AssetModel.fromFirestore(
+                doc.data() as Map<String, dynamic>,
+                doc.id,
+              ))
+          .toList();
+    } catch (e) {
+      print('Error getting assets by penyulang: $e');
+      rethrow;
+    }
+  }
+
+  /// 🔹 Cari asset yang paling cocok berdasarkan kombinasi beberapa field
+  /// Strategi: query berdasarkan penyulang dulu (agar tidak terlalu besar), lalu filter di memori
+  Future<AssetModel?> findBestMatchingAsset({
+    required String penyulang,
+    String? section,
+    String? zonaProteksi,
+    String? up3,
+    String? ulp,
+  }) async {
+    try {
+      // Ambil kandidat berdasarkan penyulang terlebih dahulu
+      final candidates = await getAssetsByPenyulang(penyulang);
+      if (candidates.isEmpty) return null;
+
+      // Skor kecocokan berdasarkan jumlah field yang cocok
+      AssetModel? best;
+      int bestScore = -1;
+
+      for (final a in candidates) {
+        int score = 0;
+        if (section != null && section.isNotEmpty && a.section.trim().toLowerCase() == section.trim().toLowerCase()) {
+          score += 2; // section lebih spesifik, beri bobot lebih
+        }
+        if (zonaProteksi != null && zonaProteksi.isNotEmpty &&
+            a.zonaProteksi.trim().toLowerCase() == zonaProteksi.trim().toLowerCase()) {
+          score += 2; // zona juga cukup spesifik
+        }
+        if (up3 != null && up3.isNotEmpty && a.up3.trim().toLowerCase() == up3.trim().toLowerCase()) {
+          score += 1;
+        }
+        if (ulp != null && ulp.isNotEmpty && a.ulp.trim().toLowerCase() == ulp.trim().toLowerCase()) {
+          score += 1;
+        }
+
+        if (score > bestScore) {
+          bestScore = score;
+          best = a;
+        }
+      }
+
+      return best;
+    } catch (e) {
+      print('Error finding best matching asset: $e');
+      return null;
+    }
+  }
 }

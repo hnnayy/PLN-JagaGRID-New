@@ -39,6 +39,7 @@ class GrowthPredictionService {
         growthRate: pohonData.growthRate,
         repetitionCycle: repetitionCycle,
         safeDistance: 3.0, // 3 meter untuk PLN
+        executionType: lastExecution.statusEksekusi, // pass through actual execution type
       );
 
       // Simpan ke Firestore
@@ -177,6 +178,37 @@ class GrowthPredictionService {
   }
 
   // Method untuk menghitung statistik repetisi
+  // Update status prediksi
+  Future<void> updatePredictionStatus(String predictionId, int status) async {
+    try {
+      await _db.collection(_collectionName).doc(predictionId).update({
+        'status': status,
+      });
+      print('✅ Prediction status updated: $predictionId -> $status');
+    } catch (e) {
+      print('❌ Error updating prediction status: $e');
+      throw e;
+    }
+  }
+
+  // Update execution type dan notes untuk prediksi yang sudah ada
+  Future<void> updatePredictionExecutionDetails(
+    String predictionId,
+    int executionType,
+    String executionNotes
+  ) async {
+    try {
+      await _db.collection(_collectionName).doc(predictionId).update({
+        'execution_type': executionType,
+        'last_execution_notes': executionNotes,
+      });
+      print('✅ Prediction execution details updated: $predictionId');
+    } catch (e) {
+      print('❌ Error updating prediction execution details: $e');
+      throw e;
+    }
+  }
+
   Future<Map<String, dynamic>> getRepetitionStatistics() async {
     try {
       final snapshot = await _db.collection(_collectionName).get();

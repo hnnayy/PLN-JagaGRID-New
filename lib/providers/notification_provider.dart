@@ -173,56 +173,62 @@ class NotificationProvider with ChangeNotifier {
     String? pohonId, // ID pohon (untuk pesan terjadwal)
     String? namaPohon, // Nama pohon (untuk pesan terjadwal)
     String? documentIdPohon, // Document ID pohon Firestore
+    String? scheduledTitleOverride, // Judul custom untuk notifikasi terjadwal
+    String? scheduledMessageOverride, // Pesan custom untuk notifikasi terjadwal
   }) async {
-    // Tambah ke daftar lokal dan beri tahu listener
-    _notifications.insert(0, notification);
-    notifyListeners();
+    // Jika bukan terjadwal, langsung masukkan ke page notif + Firestore
+    if (scheduleDate == null) {
+      _notifications.insert(0, notification);
+      notifyListeners();
 
-    // Simpan ke Firestore
-    await FirebaseFirestore.instance.collection('notification').add({
-      'title': notification.title,
-      'message': notification.message,
-      'date': notification.date.toIso8601String(),
-      'id_pohon': notification.idPohon, // legacy, boleh dihapus nanti
-      'id_data_pohon': documentIdPohon, // ini yang dipakai untuk navigasi detail
-    });
+      await FirebaseFirestore.instance.collection('notification').add({
+        'title': notification.title,
+        'message': notification.message,
+        'date': notification.date.toIso8601String(),
+        'id_pohon': notification.idPohon,
+        'id_data_pohon': documentIdPohon,
+      });
+    }
 
-    // Kirim pesan Telegram INSTAN
-    await sendTelegramMessage('${notification.title}\n${notification.message}');
+    // Hanya kirim Telegram & tampilkan notifikasi lokal instan jika TIDAK terjadwal
+    if (scheduleDate == null) {
+      // Kirim pesan Telegram INSTAN
+      await sendTelegramMessage('${notification.title}\n${notification.message}');
 
-    // Tampilkan notifikasi lokal INSTAN (heads-up)
-    const AndroidNotificationDetails androidPlatformChannelSpecifics =
-        AndroidNotificationDetails(
-      'pohon_channel',
-      'Pohon Notification',
-      channelDescription: 'Notifikasi penambahan pohon',
-      importance: Importance.max,
-      priority: Priority.high,
-      ticker: 'ticker',
-      showWhen: true,
-      enableLights: true,
-      enableVibration: true,
-      playSound: true,
-      fullScreenIntent: true, // Muncul heads-up
-    );
+      // Tampilkan notifikasi lokal INSTAN (heads-up)
+      const AndroidNotificationDetails androidPlatformChannelSpecifics =
+          AndroidNotificationDetails(
+        'pohon_channel',
+        'Pohon Notification',
+        channelDescription: 'Notifikasi penambahan pohon',
+        importance: Importance.max,
+        priority: Priority.high,
+        ticker: 'ticker',
+        showWhen: true,
+        enableLights: true,
+        enableVibration: true,
+        playSound: true,
+        fullScreenIntent: true, // Muncul heads-up
+      );
 
-    const NotificationDetails platformChannelSpecifics =
-        NotificationDetails(android: androidPlatformChannelSpecifics);
+      const NotificationDetails platformChannelSpecifics =
+          NotificationDetails(android: androidPlatformChannelSpecifics);
 
-    await _flutterLocalNotificationsPlugin.show(
-      notification.date.millisecondsSinceEpoch % 100000, // ID unik untuk instan
-      notification.title,
-      notification.message,
-      platformChannelSpecifics,
-      payload: 'instant|${notification.title}|${notification.message}|${documentIdPohon ?? ""}', // Gunakan documentIdPohon untuk navigasi
-    );
+      await _flutterLocalNotificationsPlugin.show(
+        notification.date.millisecondsSinceEpoch % 100000, // ID unik untuk instan
+        notification.title,
+        notification.message,
+        platformChannelSpecifics,
+        payload: 'instant|${notification.title}|${notification.message}|${documentIdPohon ?? ""}', // Gunakan documentIdPohon untuk navigasi
+      );
+    }
 
     // JIKA ADA TANGGAL JADWAL, BUAT NOTIFIKASI TERJADWAL
     if (scheduleDate != null && pohonId != null && namaPohon != null) {
-      // Pesan untuk notifikasi terjadwal sesuai permintaan
-      final scheduledMessage =
+      // Gunakan pesan custom jika diberikan, jika tidak gunakan default lama
+      final scheduledMessage = scheduledMessageOverride ??
           'Hari H Penebangan Letsgoow untuk Pohon $namaPohon (ID: $pohonId)';
-      final scheduledTitle = 'Hari H Penebangan';
+      final scheduledTitle = scheduledTitleOverride ?? 'Hari H Penebangan';
 
       // Konversi ke timezone WITA (Asia/Makassar, UTC+8)
       final tz.TZDateTime baseScheduledTime = tz.TZDateTime.from(
@@ -321,5 +327,19 @@ class NotificationProvider with ChangeNotifier {
         }
       }
     }
+  }
+
+  // Tambahkan notifikasi hanya ke page notif + Firestore (tanpa local heads-up dan tanpa Telegram)
+  Future<void> addInAppOnly(AppNotification notification, {String? documentIdPohon}) async {
+    _notifications.insert(0, notification);
+    notifyListeners();
+
+    await FirebaseFirestore.instance.collection('notification').add({
+      'title': notification.title,
+      'message': notification.message,
+      'date': notification.date.toIso8601String(),
+      'id_pohon': notification.idPohon,
+      'id_data_pohon': documentIdPohon,
+    });
   }
 }

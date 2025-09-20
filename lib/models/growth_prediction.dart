@@ -4,7 +4,7 @@ class GrowthPrediction {
   final String id;
   final String dataPohonId;
   final DateTime lastExecutionDate;
-  final double lastHeight;
+  final double lastHeight; // Tinggi setelah eksekusi terakhir
   final double growthRate; // cm per tahun
   final double safeDistance; // 3 meter untuk jaringan PLN
   final DateTime predictedNextExecution;
@@ -12,7 +12,9 @@ class GrowthPrediction {
   final double confidenceLevel; // 0.0 - 1.0
   final int repetitionCycle;
   final DateTime createdDate;
-  final int status; // 1=active, 2=executed, 3=cancelled
+  final int status; // 1=active, 2=completed (pohon sudah tidak ada), 3=cancelled
+  final int executionType; // 1=tebang pangkas, 2=tebang habis
+  final String lastExecutionNotes; // Catatan eksekusi terakhir
 
   GrowthPrediction({
     required this.id,
@@ -27,6 +29,8 @@ class GrowthPrediction {
     required this.repetitionCycle,
     required this.createdDate,
     this.status = 1,
+    this.executionType = 1, // Default: tebang pangkas
+    this.lastExecutionNotes = '',
   });
 
   Map<String, dynamic> toMap() {
@@ -43,6 +47,8 @@ class GrowthPrediction {
       'repetition_cycle': repetitionCycle,
       'created_date': Timestamp.fromDate(createdDate),
       'status': status,
+      'execution_type': executionType,
+      'last_execution_notes': lastExecutionNotes,
     };
   }
 
@@ -57,9 +63,11 @@ class GrowthPrediction {
       predictedNextExecution: (map['predicted_next_execution'] as Timestamp?)?.toDate() ?? DateTime.now(),
       predictionReason: map['prediction_reason'] ?? '',
       confidenceLevel: (map['confidence_level'] as num?)?.toDouble() ?? 0.0,
-      repetitionCycle: map['repetition_cycle'] ?? 1,
+  repetitionCycle: map['repetition_cycle'] ?? 0,
       createdDate: (map['created_date'] as Timestamp?)?.toDate() ?? DateTime.now(),
       status: map['status'] ?? 1,
+      executionType: map['execution_type'] ?? 1,
+      lastExecutionNotes: map['last_execution_notes'] ?? '',
     );
   }
 
@@ -71,47 +79,75 @@ class GrowthPrediction {
     required double growthRate,
     required int repetitionCycle,
     double safeDistance = 3.0, // 3 meter untuk PLN
+    int executionType = 1, // 1=pangkas, 2=habis
+    String lastExecutionNotes = '',
   }) {
+    // Logika berbeda berdasarkan tipe eksekusi
+    double effectiveHeight = lastHeight;
+    double effectiveGrowthRate = growthRate;
+
+    if (executionType == 2) { // Tebang Habis
+      // Jika tebang habis, tinggi = 0, tapi pohon akan tumbuh lagi dari akar
+      effectiveHeight = 0.0;
+      // Growth rate untuk pohon baru lebih tinggi karena regenerasi
+      effectiveGrowthRate = growthRate * 1.5; // 50% lebih cepat untuk regenerasi
+    } else { // Tebang Pangkas
+      // Tinggi cabang yang tersisa setelah pangkas
+      effectiveHeight = lastHeight;
+      effectiveGrowthRate = growthRate; // Normal growth rate untuk cabang
+    }
+
     // Hitung waktu yang dibutuhkan untuk mencapai batas aman
     // Tinggi maksimal aman = safeDistance (3 meter = 300 cm)
     final maxSafeHeight = safeDistance * 100; // convert to cm
-    final remainingGrowth = maxSafeHeight - lastHeight;
+    final remainingGrowth = maxSafeHeight - effectiveHeight;
+
+    // Pastikan remaining growth tidak negatif
+    final actualRemainingGrowth = remainingGrowth > 0 ? remainingGrowth : 50.0; // Minimal 50cm
 
     // Hitung waktu dalam tahun
-    final yearsToNextExecution = remainingGrowth / growthRate;
+    final yearsToNextExecution = actualRemainingGrowth / effectiveGrowthRate;
 
     // Hitung tanggal prediksi
     final predictedDate = lastExecutionDate.add(
       Duration(days: (yearsToNextExecution * 365).round())
     );
 
-    // Hitung confidence level berdasarkan siklus repetisi
-    final confidenceLevel = _calculateConfidenceLevel(repetitionCycle, yearsToNextExecution);
+    // Hitung confidence level berdasarkan siklus repetisi dan tipe eksekusi
+    final confidenceLevel = _calculateConfidenceLevel(repetitionCycle, yearsToNextExecution, executionType);
 
     // Buat alasan prediksi
-    final reason = _generatePredictionReason(lastHeight, growthRate, yearsToNextExecution, safeDistance);
+    final reason = _generatePredictionReason(
+      effectiveHeight,
+      effectiveGrowthRate,
+      yearsToNextExecution,
+      safeDistance,
+      executionType
+    );
 
     return GrowthPrediction(
       id: '',
       dataPohonId: dataPohonId,
       lastExecutionDate: lastExecutionDate,
-      lastHeight: lastHeight,
-      growthRate: growthRate,
+      lastHeight: effectiveHeight,
+      growthRate: effectiveGrowthRate,
       safeDistance: safeDistance,
       predictedNextExecution: predictedDate,
       predictionReason: reason,
       confidenceLevel: confidenceLevel,
       repetitionCycle: repetitionCycle,
       createdDate: DateTime.now(),
+      executionType: executionType,
+      lastExecutionNotes: lastExecutionNotes,
     );
   }
 
-  static double _calculateConfidenceLevel(int repetitionCycle, double yearsToExecution) {
-    // Confidence level berdasarkan siklus dan waktu prediksi
+  static double _calculateConfidenceLevel(int repetitionCycle, double yearsToExecution, int executionType) {
+    // Confidence level berdasarkan siklus, waktu prediksi, dan tipe eksekusi
     double baseConfidence = 0.8; // Base confidence 80%
 
-    // Kurangi confidence untuk siklus pertama (kurang data historis)
-    if (repetitionCycle == 1) {
+    // Kurangi confidence untuk siklus 0/1 (kurang data historis)
+    if (repetitionCycle <= 1) {
       baseConfidence -= 0.2;
     }
 
@@ -125,6 +161,15 @@ class GrowthPrediction {
       baseConfidence += 0.1;
     }
 
+    // Confidence berbeda untuk tebang habis vs pangkas
+    if (executionType == 2) { // Tebang Habis
+      // Lebih sulit diprediksi karena regenerasi pohon baru
+      baseConfidence -= 0.1;
+    } else { // Tebang Pangkas
+      // Lebih predictable karena pertumbuhan cabang yang tersisa
+      baseConfidence += 0.05;
+    }
+
     return baseConfidence.clamp(0.0, 1.0);
   }
 
@@ -132,15 +177,27 @@ class GrowthPrediction {
     double lastHeight,
     double growthRate,
     double yearsToExecution,
-    double safeDistance
+    double safeDistance,
+    int executionType
   ) {
     final maxSafeHeight = safeDistance * 100; // convert to cm
     final predictedHeight = lastHeight + (growthRate * yearsToExecution);
 
+    String executionTypeText = executionType == 1 ? 'pangkas' : 'habis';
+    String heightDescription = '';
+
+    if (executionType == 2) { // Tebang Habis
+      heightDescription = 'Pohon telah ditebang habis (tinggi = 0cm). ';
+      heightDescription += 'Prediksi pertumbuhan pohon regenerasi ';
+    } else { // Tebang Pangkas
+      heightDescription = 'Cabang tersisa setelah pangkas ${lastHeight.round()}cm. ';
+    }
+
     return 'Pohon dengan tinggi ${lastHeight.round()}cm dan growth rate ${growthRate.round()}cm/tahun '
+           '${heightDescription}'
            'akan mencapai tinggi ${predictedHeight.round()}cm dalam ${yearsToExecution.toStringAsFixed(1)} tahun. '
            'Batas aman PLN adalah ${maxSafeHeight.round()}cm (${safeDistance}m). '
-           'Prediksi penebangan berikutnya: ${yearsToExecution < 1 ? "kurang dari 1 tahun" : "${yearsToExecution.round()} tahun"} lagi.';
+           'Prediksi penebangan $executionTypeText berikutnya: ${yearsToExecution < 1 ? "kurang dari 1 tahun" : "${yearsToExecution.round()} tahun"} lagi.';
   }
 
   // Method untuk mengecek apakah sudah waktunya eksekusi
@@ -151,9 +208,18 @@ class GrowthPrediction {
   // Method untuk mendapatkan status dalam bentuk string
   String getStatusString() {
     switch (status) {
-      case 1: return 'Aktif';
-      case 2: return 'Sudah Dieksekusi';
+      case 1: return 'Aktif - Menunggu Eksekusi';
+      case 2: return 'Selesai - Pohon Sudah Ditebang Habis';
       case 3: return 'Dibatalkan';
+      default: return 'Unknown';
+    }
+  }
+
+  // Method untuk mendapatkan tipe eksekusi dalam bentuk string
+  String getExecutionTypeString() {
+    switch (executionType) {
+      case 1: return 'Tebang Pangkas';
+      case 2: return 'Tebang Habis';
       default: return 'Unknown';
     }
   }
@@ -181,6 +247,8 @@ class GrowthPrediction {
     int? repetitionCycle,
     DateTime? createdDate,
     int? status,
+    int? executionType,
+    String? lastExecutionNotes,
   }) {
     return GrowthPrediction(
       id: id ?? this.id,
@@ -195,6 +263,8 @@ class GrowthPrediction {
       repetitionCycle: repetitionCycle ?? this.repetitionCycle,
       createdDate: createdDate ?? this.createdDate,
       status: status ?? this.status,
+      executionType: executionType ?? this.executionType,
+      lastExecutionNotes: lastExecutionNotes ?? this.lastExecutionNotes,
     );
   }
 }

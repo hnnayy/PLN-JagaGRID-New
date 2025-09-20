@@ -11,11 +11,14 @@ import 'providers/data_pohon_provider.dart';
 import 'providers/eksekusi_provider.dart';
 import 'providers/notification_provider.dart';
 import 'providers/growth_prediction_provider.dart';
+import 'providers/tree_growth_provider.dart';
 import 'page/splash_screen.dart';
 import 'page/peta_pohon/map_page.dart';
 import 'page/peta_pohon/add_data_page.dart';
 import 'page/report/treemapping_report.dart';
 import 'page/report/treemapping_detail.dart';
+import 'page/tree_growth/tree_growth_list_page.dart';
+import 'services/reminder_service.dart';
 
 // Global navigator key untuk navigasi dari notification
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
@@ -113,6 +116,13 @@ void main() async {
   WidgetsBinding.instance.addPostFrameCallback((_) {
     // Multiple attempts dengan delay yang berbeda untuk memastikan context stabil
     _setupNavigationCallback(0);
+
+    // Jalankan pengingat H-3 sekali per hari saat app start
+    final ctx = navigatorKey.currentContext;
+    if (ctx != null) {
+      final notif = Provider.of<NotificationProvider>(ctx, listen: false);
+      ReminderService.runThreeDayTelegramRemindersIfNeeded(notif);
+    }
   });
 }
 
@@ -127,6 +137,7 @@ class MyApp extends StatelessWidget {
         ChangeNotifierProvider(create: (_) => EksekusiProvider()),
         ChangeNotifierProvider(create: (_) => NotificationProvider()),
         ChangeNotifierProvider(create: (_) => GrowthPredictionProvider()),
+        ChangeNotifierProvider(create: (_) => TreeGrowthProvider()),
       ],
       child: MaterialApp(
         navigatorKey: navigatorKey,
@@ -136,6 +147,7 @@ class MyApp extends StatelessWidget {
           '/map': (context) => MapPage(),
           '/addData': (context) => AddDataPage(),
           '/report': (context) => TreeMappingReportPage(),
+          '/treeGrowth': (context) => const TreeGrowthListPage(),
         },
       ),
     );

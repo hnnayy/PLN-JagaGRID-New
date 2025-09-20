@@ -6,6 +6,7 @@ import 'package:flutter_application_2/page/settings/profile/profile_page.dart';
 import 'package:flutter_application_2/page/settings/profile/user_list_page.dart';
 import '../../page/login/login.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../../page/tree_growth/tree_growth_list_page.dart';
 
 /// -------------------------
 /// Settings Item Content
@@ -29,6 +30,10 @@ class SettingsContent {
         const SettingsItem(
           title: 'Daftar Assets JTM',
           iconPath: 'assets/icons/powerline.png',
+        ),
+        const SettingsItem(
+          title: 'Master Pertumbuhan pohon',
+          iconPath: 'assets/icons/pohon-hijau.png',
         ),
         const SettingsItem(
           title: 'Logout',
@@ -74,6 +79,12 @@ class SettingsContent {
           );
           break;
         case 3:
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (_) => const TreeGrowthListPage()),
+          );
+          break;
+        case 4:
           _showLogoutDialog(context);
           break;
       }

@@ -86,6 +86,7 @@ class _NavigationMenuState extends State<NavigationMenu> {
           ],
         ),
       ),
+      floatingActionButton: null,
     );
   }
 Widget _buildNavIcon(String assetPath, int index, {bool isSelected = false}) {

@@ -19,25 +19,14 @@ class DataPohon {
   final String koordinat;
   final int tujuanPenjadwalan; // 1=Tebang Pangkas, 2=Tebang Habis
   final String catatan;
-  final int createdBy;
+  final String createdBy;
   final DateTime createdDate;
   final double growthRate; // cm/tahun, dari lookup table
   final double initialHeight; // meter, dari input manual
   final DateTime notificationDate; // 3 hari sebelum scheduleDate
   final int status; // 1 = aktif, 0 = delete
 
-  static const Map<String, double> growthRates = {
-    'Mangrove': 75.0,
-    'Jabon Merah': 150.0,
-    'Kesambi': 40.0,
-    'Akasia': 150.0,
-    'Bambu': 100.0,
-    'Kelapa Sawit': 75.0,
-    'Jati': 40.0,
-    'Lontar': 60.0,
-    'Pule': 90.0,
-    'Mahoni': 75.0,
-  };
+  // Growth rates sekarang dikelola dari Master Pertumbuhan pohon (Firestore: tree_growth)
 
   DataPohon({
     required this.id,
@@ -92,7 +81,7 @@ class DataPohon {
       'koordinat': koordinat,
       'tujuan_penjadwalan': tujuanPenjadwalan,
       'catatan': catatan,
-      'createdby': createdBy,
+  'createdby': createdBy,
       'createddate': Timestamp.fromDate(createdDateUtc),
       'growth_rate': growthRate,
       'initial_height': initialHeight,
@@ -163,7 +152,7 @@ class DataPohon {
       koordinat: map['koordinat'] ?? '',
       tujuanPenjadwalan: map['tujuan_penjadwalan'] ?? 1,
       catatan: map['catatan'] ?? '',
-      createdBy: map['createdby'] ?? 0,
+  createdBy: (map['createdby']?.toString() ?? ''),
       createdDate: createdDate,
       growthRate: (map['growth_rate'] as num?)?.toDouble() ?? 0.0,
       initialHeight: (map['initial_height'] as num?)?.toDouble() ?? 0.0,

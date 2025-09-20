@@ -1,9 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:provider/provider.dart';
 import '../../models/data_pohon.dart';
 import '../../models/eksekusi.dart';
-import '../../providers/eksekusi_provider.dart';
 import '../../constants/colors.dart';
 
 class RiwayatEksekusiPage extends StatelessWidget {
@@ -23,12 +21,16 @@ class RiwayatEksekusiPage extends StatelessWidget {
           icon: const Icon(Icons.arrow_back, color: Colors.white),
           onPressed: () => Navigator.of(context).pop(),
         ),
-        title: Text(
-          'Riwayat Eksekusi - Pohon ID #${pohon.idPohon}',
-          style: TextStyle(
-            color: AppColors.yellow,
-            fontSize: screenWidth * 0.05,
-            fontWeight: FontWeight.bold,
+        title: FittedBox(
+          fit: BoxFit.scaleDown,
+          alignment: Alignment.centerLeft,
+          child: Text(
+            'Riwayat Eksekusi - Pohon ID #${pohon.idPohon}',
+            style: TextStyle(
+              color: AppColors.white,
+              fontSize: screenWidth * 0.05,
+              fontWeight: FontWeight.bold,
+            ),
           ),
         ),
       ),
@@ -41,7 +43,9 @@ class RiwayatEksekusiPage extends StatelessWidget {
               .snapshots()
               .map((snapshot) => snapshot.docs
                   .map((doc) => Eksekusi.fromMap({...doc.data(), 'id': doc.id}))
-                  .toList()),
+                  .toList()
+                  // Sort client-side to avoid requiring a composite index
+                  ..sort((a, b) => b.createdDate.compareTo(a.createdDate))),
           builder: (context, snapshot) {
             if (snapshot.connectionState == ConnectionState.waiting) {
               return const Center(child: CircularProgressIndicator());
@@ -54,10 +58,49 @@ class RiwayatEksekusiPage extends StatelessWidget {
               return const Center(child: Text('Tidak ada riwayat eksekusi'));
             }
 
-            return ListView.builder(
-              itemCount: eksekusiList.length,
-              itemBuilder: (context, index) {
-                final eksekusi = eksekusiList[index];
+            // Sinkronisasi ringkasan (jumlah & eksekusi terakhir) supaya sama dengan management page
+            final total = eksekusiList.length;
+            // Karena sudah orderBy createddate desc, index 0 adalah terbaru
+            final latestDate = _formatDate(eksekusiList.first.tanggalEksekusi);
+
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Card(
+                  color: AppColors.white,
+                  elevation: 2,
+                  child: Padding(
+                    padding: const EdgeInsets.all(12.0),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Text('Jumlah Eksekusi', style: TextStyle(color: Colors.grey, fontSize: 12)),
+                              Text('$total', style: const TextStyle(fontWeight: FontWeight.bold)),
+                            ],
+                          ),
+                        ),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.end,
+                            children: [
+                              const Text('Eksekusi Terakhir', style: TextStyle(color: Colors.grey, fontSize: 12)),
+                              Text(latestDate, style: const TextStyle(fontWeight: FontWeight.bold)),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Expanded(
+                  child: ListView.builder(
+                    itemCount: eksekusiList.length,
+                    itemBuilder: (context, index) {
+                      final eksekusi = eksekusiList[index];
                 Color statusColor;
                 String aksiText;
                 switch (eksekusi.statusEksekusi) {
@@ -74,88 +117,91 @@ class RiwayatEksekusiPage extends StatelessWidget {
                     aksiText = 'Tidak Diketahui';
                 }
 
-                return Card(
-                  margin: const EdgeInsets.symmetric(vertical: 8.0),
-                  child: ExpansionTile(
-                    title: Text(
-                      'Tanggal Eksekusi: ${_formatDate(eksekusi.tanggalEksekusi)}',
-                      style: TextStyle(
-                        fontSize: screenWidth * 0.04,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    children: [
-                      Padding(
-                        padding: const EdgeInsets.all(16.0),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
+                      return Card(
+                        margin: const EdgeInsets.symmetric(vertical: 8.0),
+                        child: ExpansionTile(
+                          title: Text(
+                            'Tanggal Eksekusi: ${_formatDate(eksekusi.tanggalEksekusi)}',
+                            style: TextStyle(
+                              fontSize: screenWidth * 0.04,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
                           children: [
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: [
-                                const Text('Aksi:'),
-                                Text(
-                                  aksiText,
-                                  style: TextStyle(fontSize: screenWidth * 0.035),
-                                ),
-                              ],
-                            ),
-                            const SizedBox(height: 8),
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: [
-                                const Text('Tinggi Pohon:'),
-                                Text(
-                                  '${eksekusi.tinggiPohon} m',
-                                  style: TextStyle(fontSize: screenWidth * 0.035),
-                                ),
-                              ],
-                            ),
-                            const SizedBox(height: 8),
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: [
-                                const Text('Diameter:'),
-                                Text(
-                                  '${eksekusi.diameterPohon} cm',
-                                  style: TextStyle(fontSize: screenWidth * 0.035),
-                                ),
-                              ],
-                            ),
-                            const SizedBox(height: 8),
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: [
-                                const Text('Status:'),
-                                Text(
-                                  eksekusi.status == 1 ? 'Selesai' : 'Berjalan',
-                                  style: TextStyle(
-                                    fontSize: screenWidth * 0.035,
-                                    color: statusColor,
+                            Padding(
+                              padding: const EdgeInsets.all(16.0),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Row(
+                                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                    children: [
+                                      const Text('Aksi:'),
+                                      Text(
+                                        aksiText,
+                                        style: TextStyle(fontSize: screenWidth * 0.035),
+                                      ),
+                                    ],
                                   ),
-                                ),
-                              ],
-                            ),
-                            const SizedBox(height: 8),
-                            if (eksekusi.fotoSetelah != null) ...[
-                              const Text('Foto Setelah Eksekusi:'),
-                              const SizedBox(height: 8),
-                              Image.network(
-                                eksekusi.fotoSetelah!,
-                                fit: BoxFit.cover,
-                                height: screenHeight * 0.2,
-                                width: screenWidth * 0.8,
-                                errorBuilder: (context, error, stackTrace) =>
-                                    const Text('Gambar tidak tersedia'),
+                                  const SizedBox(height: 8),
+                                  Row(
+                                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                    children: [
+                                      const Text('Tinggi Pohon:'),
+                                      Text(
+                                        '${eksekusi.tinggiPohon} cm',
+                                        style: TextStyle(fontSize: screenWidth * 0.035),
+                                      ),
+                                    ],
+                                  ),
+                                  const SizedBox(height: 8),
+                                  Row(
+                                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                    children: [
+                                      const Text('Diameter:'),
+                                      Text(
+                                        '${eksekusi.diameterPohon} cm',
+                                        style: TextStyle(fontSize: screenWidth * 0.035),
+                                      ),
+                                    ],
+                                  ),
+                                  const SizedBox(height: 8),
+                                  Row(
+                                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                    children: [
+                                      const Text('Status:'),
+                                      Text(
+                                        eksekusi.status == 1 ? 'Selesai' : 'Berjalan',
+                                        style: TextStyle(
+                                          fontSize: screenWidth * 0.035,
+                                          color: statusColor,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                  const SizedBox(height: 8),
+                                  if (eksekusi.fotoSetelah != null) ...[
+                                    const Text('Foto Setelah Eksekusi:'),
+                                    const SizedBox(height: 8),
+                                    Image.network(
+                                      eksekusi.fotoSetelah!,
+                                      fit: BoxFit.cover,
+                                      height: screenHeight * 0.2,
+                                      width: screenWidth * 0.8,
+                                      errorBuilder: (context, error, stackTrace) =>
+                                          const Text('Gambar tidak tersedia'),
+                                    ),
+                                  ],
+                                ],
                               ),
-                            ],
+                            ),
                           ],
                         ),
-                      ),
-                    ],
+                      );
+                    },
                   ),
-                );
-              },
+                ),
+              ],
             );
           },
         ),
