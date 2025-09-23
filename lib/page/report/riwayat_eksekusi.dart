@@ -3,6 +3,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../models/data_pohon.dart';
 import '../../models/eksekusi.dart';
 import '../../constants/colors.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class RiwayatEksekusiPage extends StatelessWidget {
   final DataPohon pohon;
@@ -34,7 +35,16 @@ class RiwayatEksekusiPage extends StatelessWidget {
           ),
         ),
       ),
-      body: Padding(
+      body: FutureBuilder<bool>(
+        future: _isAllowed(),
+        builder: (context, perm) {
+          if (perm.connectionState == ConnectionState.waiting) {
+            return const Center(child: CircularProgressIndicator());
+          }
+          if (perm.hasError || perm.data != true) {
+            return const Center(child: Text('Akses ditolak untuk pohon ini'));
+          }
+          return Padding(
         padding: const EdgeInsets.all(16.0),
         child: StreamBuilder<List<Eksekusi>>(
           stream: FirebaseFirestore.instance
@@ -205,8 +215,24 @@ class RiwayatEksekusiPage extends StatelessWidget {
             );
           },
         ),
+      );
+        },
       ),
     );
+  }
+
+  Future<bool> _isAllowed() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final level = prefs.getInt('session_level') ?? 2;
+      final sessionUnit = prefs.getString('session_unit') ?? '';
+      if (level == 2) {
+        return pohon.up3 == sessionUnit || pohon.ulp == sessionUnit;
+      }
+      return true;
+    } catch (_) {
+      return true;
+    }
   }
 
   String _formatDate(String tanggalEksekusi) {

@@ -30,6 +30,8 @@ class _EksekusiPageState extends State<EksekusiPage> {
   final ImagePicker _picker = ImagePicker();
   bool _isLoading = false;
   DateTime? _latestPlannedDate;
+  bool _accessChecked = false;
+  bool _isAllowed = true;
 
   @override
   void initState() {
@@ -43,6 +45,7 @@ class _EksekusiPageState extends State<EksekusiPage> {
     _heightController.text = widget.pohon.initialHeight.toStringAsFixed(1);
     // Prefill with latest predicted schedule date (fallback to tree's original scheduleDate)
     _prefillExecutionDate();
+    _checkAccess();
   }
 
   @override
@@ -51,6 +54,36 @@ class _EksekusiPageState extends State<EksekusiPage> {
     _diameterController.dispose();
     _dateController.dispose();
     super.dispose();
+  }
+
+  Future<void> _checkAccess() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final level = prefs.getInt('session_level') ?? 2;
+      final sessionUnit = prefs.getString('session_unit') ?? '';
+      bool allowed = true;
+      if (level == 2) {
+        allowed = (widget.pohon.up3 == sessionUnit || widget.pohon.ulp == sessionUnit);
+      }
+      setState(() {
+        _isAllowed = allowed;
+        _accessChecked = true;
+      });
+      if (!allowed && mounted) {
+        // Tampilkan info dan kembali
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Akses ditolak: pohon bukan dalam unit Anda')),
+          );
+          Navigator.of(context).maybePop();
+        });
+      }
+    } catch (_) {
+      setState(() {
+        _isAllowed = true; // fallback aman
+        _accessChecked = true;
+      });
+    }
   }
 
   Future<void> _prefillExecutionDate() async {
@@ -222,6 +255,16 @@ class _EksekusiPageState extends State<EksekusiPage> {
 
   @override
   Widget build(BuildContext context) {
+    if (!_accessChecked) {
+      return const Scaffold(
+        body: Center(child: CircularProgressIndicator()),
+      );
+    }
+    if (!_isAllowed) {
+      return const Scaffold(
+        body: Center(child: Text('Akses ditolak untuk pohon ini')),
+      );
+    }
     final screenWidth = MediaQuery.of(context).size.width;
     final screenHeight = MediaQuery.of(context).size.height;
 

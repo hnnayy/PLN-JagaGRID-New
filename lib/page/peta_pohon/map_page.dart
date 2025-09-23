@@ -2,6 +2,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:provider/provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../../providers/data_pohon_provider.dart';
 import '../../models/data_pohon.dart';
 import '../../constants/colors.dart';
@@ -20,10 +21,30 @@ class _MapPageState extends State<MapPage> {
   final LatLng _initialPosition = const LatLng(-4.0167, 120.1833); // Pare, Sulawesi
 
   MapType _currentMapType = MapType.satellite;
+  bool _prefsLoaded = false;
+  int _sessionLevel = 2; // default
+  String _sessionUnit = '';
 
   @override
   void initState() {
     super.initState();
+    _loadSession();
+  }
+
+  Future<void> _loadSession() async {
+    final prefs = await SharedPreferences.getInstance();
+    setState(() {
+      _sessionLevel = prefs.getInt('session_level') ?? 2;
+      _sessionUnit = prefs.getString('session_unit') ?? '';
+      _prefsLoaded = true;
+    });
+  }
+
+  bool _allowed(DataPohon p) {
+    if (_sessionLevel == 2) {
+      return p.up3 == _sessionUnit || p.ulp == _sessionUnit;
+    }
+    return true;
   }
 
   void _onMapCreated(GoogleMapController controller) {
@@ -137,7 +158,8 @@ class _MapPageState extends State<MapPage> {
                               final provider = Provider.of<DataPohonProvider>(context, listen: false);
                               setState(() {
                                 final q = query.toLowerCase();
-                                _searchResults = provider.pohonList.where((pohon) {
+                                final baseList = provider.pohonList.where(_allowed).toList();
+                                _searchResults = baseList.where((pohon) {
                                   final nama = pohon.namaPohon.toLowerCase();
                                   final id = pohon.idPohon.toLowerCase();
                                   final prioritasStr = pohon.prioritas.toString();
@@ -301,8 +323,13 @@ class _MapPageState extends State<MapPage> {
                       ),
                       child: Consumer<DataPohonProvider>(
                         builder: (ctx, provider, _) {
+                          if (!_prefsLoaded) {
+                            return const Center(child: CircularProgressIndicator());
+                          }
+
+                          final filteredList = provider.pohonList.where(_allowed).toList();
                           Set<Marker> markers = {};
-                          for (var pohon in provider.pohonList) {
+                          for (var pohon in filteredList) {
                             print('DEBUG pohon: id=${pohon.id}, koordinat=${pohon.koordinat}, nama=${pohon.namaPohon}');
                             if (pohon.koordinat.isEmpty || !pohon.koordinat.contains(',')) {
                               print('SKIP pohon id=${pohon.id} karena koordinat kosong/salah format');
@@ -343,7 +370,7 @@ class _MapPageState extends State<MapPage> {
                               icon: icon,
                             ));
                           }
-                          print('DEBUG total marker: ${markers.length}');
+                          print('DEBUG total marker (filtered): ${markers.length}');
 
                           return GoogleMap(
                             onMapCreated: _onMapCreated,

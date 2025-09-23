@@ -3,6 +3,8 @@ import 'package:google_maps_flutter/google_maps_flutter.dart';
 import '../../constants/colors.dart';
 import 'package:provider/provider.dart';
 import '../../providers/data_pohon_provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import '../../models/data_pohon.dart';
 
 class PickLocationPage extends StatefulWidget {
   @override
@@ -11,11 +13,33 @@ class PickLocationPage extends StatefulWidget {
 
 class _PickLocationPageState extends State<PickLocationPage> {
   MapType _currentMapType = MapType.satellite;
-  GoogleMapController? _mapController;
   LatLng? _selectedPosition;
+  bool _prefsLoaded = false;
+  int _sessionLevel = 2;
+  String _sessionUnit = '';
 
-  void _onMapCreated(GoogleMapController controller) {
-    _mapController = controller;
+  void _onMapCreated(GoogleMapController _) {}
+
+  @override
+  void initState() {
+    super.initState();
+    _loadSession();
+  }
+
+  Future<void> _loadSession() async {
+    final prefs = await SharedPreferences.getInstance();
+    setState(() {
+      _sessionLevel = prefs.getInt('session_level') ?? 2;
+      _sessionUnit = prefs.getString('session_unit') ?? '';
+      _prefsLoaded = true;
+    });
+  }
+
+  bool _allowed(DataPohon p) {
+    if (_sessionLevel == 2) {
+      return p.up3 == _sessionUnit || p.ulp == _sessionUnit;
+    }
+    return true;
   }
 
   @override
@@ -23,8 +47,9 @@ class _PickLocationPageState extends State<PickLocationPage> {
     // Ambil pohon terakhir dari provider
     LatLng defaultPosition = const LatLng(-4.0167, 120.1833); // Pare default
     final pohonList = Provider.of<DataPohonProvider>(context, listen: false).pohonList;
-    if (pohonList.isNotEmpty) {
-      final last = pohonList.last;
+    final baseList = _prefsLoaded ? pohonList.where(_allowed).toList() : pohonList;
+    if (baseList.isNotEmpty) {
+      final last = baseList.last;
       final coords = last.koordinat.split(',');
       if (coords.length == 2) {
         double? lat = double.tryParse(coords[0]);

@@ -40,11 +40,15 @@ class SettingsContent {
         ),
       ];
     } else {
-      // Level 2: hanya profile dan logout
+      // Level 2: tampilkan Profile, Master Pertumbuhan pohon, dan Logout
       return [
         const SettingsItem(
           title: 'Profile',
           iconPath: 'assets/icons/profile.png',
+        ),
+        const SettingsItem(
+          title: 'Master Pertumbuhan pohon',
+          iconPath: 'assets/icons/pohon-hijau.png',
         ),
         const SettingsItem(
           title: 'Logout',
@@ -88,7 +92,7 @@ class SettingsContent {
           break;
       }
     } else {
-      // Level 2: hanya profile dan logout
+      // Level 2: Profile, Master Pertumbuhan pohon, Logout
       switch (index) {
         case 0:
           Navigator.push(
@@ -96,7 +100,13 @@ class SettingsContent {
             MaterialPageRoute(builder: (_) => const ProfilePage()),
           );
           break;
-        case 1:
+        case 1: // Master Pertumbuhan pohon
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (_) => const TreeGrowthListPage()),
+          );
+          break;
+        case 2:
           _showLogoutDialog(context);
           break;
       }

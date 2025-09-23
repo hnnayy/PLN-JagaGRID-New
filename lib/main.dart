@@ -1,5 +1,6 @@
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_app_check/firebase_app_check.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -45,6 +46,19 @@ void main() async {
     print('✅ Firebase initialized successfully + App Check active');
   } catch (e) {
     print('❌ Error initializing Firebase/AppCheck: $e');
+  }
+
+  // Ensure we have a Firebase Auth user before any Firestore access
+  try {
+    final auth = FirebaseAuth.instance;
+    if (auth.currentUser == null) {
+      await auth.signInAnonymously();
+      print('🔐 Signed in anonymously for Firestore access');
+    } else {
+      print('🔐 Auth session already available (${auth.currentUser!.uid})');
+    }
+  } catch (e) {
+    print('❌ Failed to sign in anonymously: $e');
   }
 
   runApp(const OverlaySupport(child: MyApp()));

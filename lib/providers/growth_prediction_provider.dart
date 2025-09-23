@@ -6,6 +6,7 @@ import '../models/data_pohon.dart';
 import '../models/eksekusi.dart';
 import '../services/growth_prediction_service.dart';
 import '../providers/notification_provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class GrowthPredictionProvider with ChangeNotifier {
   final GrowthPredictionService _growthService = GrowthPredictionService();
@@ -39,14 +40,31 @@ class GrowthPredictionProvider with ChangeNotifier {
           .where('status', isEqualTo: 1)
           .get();
 
-      final synthetic = <GrowthPrediction>[];
+      // Build DataPohon list and map for access filtering
+      final activeTrees = <DataPohon>[];
+      final treeMap = <String, DataPohon>{};
       for (final doc in pohonSnap.docs) {
-        final id = doc.id;
+        final dp = DataPohon.fromMap({...doc.data(), 'id': doc.id});
+        activeTrees.add(dp);
+        treeMap[doc.id] = dp;
+      }
+
+      // Load access from session (same rule as treemapping report)
+      final prefs = await SharedPreferences.getInstance();
+      final level = prefs.getInt('session_level') ?? 2;
+      final sessionUnit = prefs.getString('session_unit') ?? '';
+      bool allowed(DataPohon p) {
+        if (level == 2) {
+          return p.up3 == sessionUnit || p.ulp == sessionUnit;
+        }
+        return true; // level 1 (admin) or others: show all
+      }
+
+      final synthetic = <GrowthPrediction>[];
+      for (final data in activeTrees) {
+        final id = data.id;
         if (existingIds.contains(id)) continue;
-        final data = DataPohon.fromMap({
-          ...doc.data(),
-          'id': id,
-        });
+        if (!allowed(data)) continue; // respect access
         // Create a lightweight synthetic prediction using the initial scheduleDate
         synthetic.add(
           GrowthPrediction(
@@ -68,7 +86,14 @@ class GrowthPredictionProvider with ChangeNotifier {
         );
       }
 
-      final merged = [...predictions, ...synthetic]
+      // Apply access filter to real predictions as well
+      final filteredReal = predictions.where((p) {
+        final t = treeMap[p.dataPohonId];
+        if (t == null) return false; // only consider active trees
+        return allowed(t);
+      }).toList();
+
+      final merged = [...filteredReal, ...synthetic]
         ..sort((a, b) => a.predictedNextExecution.compareTo(b.predictedNextExecution));
 
       _activePredictions = merged;
