@@ -70,9 +70,17 @@ class _RepetitionAnalyticsPageState extends State<RepetitionAnalyticsPage> {
     return Scaffold(
       backgroundColor: AppColors.putihKebiruan,
       appBar: AppBar(
-        title: const Text('Analisis Repetisi'),
+        title: const FittedBox(
+          fit: BoxFit.scaleDown,
+          alignment: Alignment.centerLeft,
+          child: Text(
+            'Analisis Repetisi',
+            style: TextStyle(color: Colors.white),
+          ),
+        ),
         backgroundColor: AppColors.tealGelap,
         elevation: 0,
+        iconTheme: const IconThemeData(color: Colors.white),
         flexibleSpace: Container(
           decoration: BoxDecoration(
             gradient: LinearGradient(
@@ -84,7 +92,7 @@ class _RepetitionAnalyticsPageState extends State<RepetitionAnalyticsPage> {
         ),
         actions: [
           IconButton(
-            icon: const Icon(Icons.refresh),
+            icon: const Icon(Icons.refresh, color: Colors.white),
             onPressed: () {
               context.read<GrowthPredictionProvider>().loadActivePredictions();
             },

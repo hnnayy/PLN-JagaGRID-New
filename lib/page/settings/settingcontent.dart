@@ -1,4 +1,3 @@
-// File: lib/page/settings/settingcontent.dart
 import 'package:flutter/material.dart';
 import 'layoutsetting.dart';
 import 'assets_jtm/assets_jtm.dart'; // ✅ Import halaman Assets JTM menu utama
@@ -117,7 +116,19 @@ class SettingsContent {
               child: const Text('Batal'),
             ),
             TextButton(
-              onPressed: () {
+              onPressed: () async {
+                final prefs = await SharedPreferences.getInstance();
+                await prefs.remove('session_id');
+                await prefs.remove('session_username');
+                await prefs.remove('session_name');
+                await prefs.remove('session_unit');
+                await prefs.remove('session_level');
+                await prefs.remove('session_added');
+                await prefs.remove('session_username_telegram');
+                await prefs.remove('session_chat_id_telegram');
+                await prefs.remove('session_status');
+                await prefs.remove('session_timestamp');
+                await prefs.remove('hasCompletedOnboarding');
                 Navigator.of(context).pop();
                 Navigator.of(context).pushAndRemoveUntil(
                   MaterialPageRoute(builder: (_) => const LoginPage()),

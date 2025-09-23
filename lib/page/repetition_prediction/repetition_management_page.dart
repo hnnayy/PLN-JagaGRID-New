@@ -44,6 +44,7 @@ class _RepetitionManagementPageState extends State<RepetitionManagementPage> {
         ),
         backgroundColor: AppColors.tealGelap,
         elevation: 0,
+        iconTheme: const IconThemeData(color: Colors.white), // Mengatur warna ikon back arrow menjadi putih
         flexibleSpace: Container(
           decoration: BoxDecoration(
             gradient: LinearGradient(
@@ -55,7 +56,7 @@ class _RepetitionManagementPageState extends State<RepetitionManagementPage> {
         ),
         actions: [
           IconButton(
-            icon: const Icon(Icons.analytics),
+            icon: const Icon(Icons.analytics, color: Colors.white), // Mengatur warna ikon analytics menjadi putih
             onPressed: () {
               Navigator.push(
                 context,
@@ -67,7 +68,7 @@ class _RepetitionManagementPageState extends State<RepetitionManagementPage> {
             tooltip: 'Lihat Analisis',
           ),
           IconButton(
-            icon: const Icon(Icons.search),
+            icon: const Icon(Icons.search, color: Colors.white), // Mengatur warna ikon search menjadi putih
             tooltip: 'Cari prediksi',
             onPressed: () {
               final list = context.read<GrowthPredictionProvider>().activePredictions;

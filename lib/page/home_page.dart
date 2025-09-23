@@ -243,7 +243,7 @@ class HomePage extends StatelessWidget {
                           ),
                           SizedBox(height: screenHeight * (isSmallScreen ? 0.015 : 0.02)),
 
-                          // GRID STATISTIK - Responsif
+                          // STAGGERED GRID STATISTIK - 2 Kolom Menurun
                           Container(
                             width: double.infinity,
                             constraints: BoxConstraints(
@@ -259,7 +259,7 @@ class HomePage extends StatelessWidget {
                                 right: screenWidth * (isSmallScreen ? 0.03 : 0.04),
                                 bottom: screenHeight * (isSmallScreen ? 0.02 : 0.04),
                               ),
-                              child: _buildStatsGridAktual(
+                              child: _buildStatsGrid(
                                 context,
                                 screenWidth,
                                 screenHeight,
@@ -287,9 +287,7 @@ class HomePage extends StatelessWidget {
     );
   }
 
-  // _statInfoTile removed as top card switched to a single 'Sistem Repetisi' tile
-
-  Widget _buildStatsGridAktual(
+  Widget _buildStatsGrid(
     BuildContext context,
     double screenWidth,
     double screenHeight,
@@ -367,7 +365,7 @@ class HomePage extends StatelessWidget {
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
       gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: screenWidth >= 400 ? 3 : 2,
+        crossAxisCount: 2,
         crossAxisSpacing: screenWidth * (isSmallScreen ? 0.015 : 0.02),
         mainAxisSpacing: screenHeight * (isSmallScreen ? 0.01 : 0.012),
         childAspectRatio: aspectRatio,
@@ -386,21 +384,12 @@ class HomePage extends StatelessWidget {
           isSmallScreen: isSmallScreen,
           isMediumScreen: isMediumScreen,
           onTap: () {
-            if (stat['filter'] == 'repetition_system') {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => const RepetitionManagementPage(),
-                ),
-              );
-            } else {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => TreeMappingReportPage(filterType: stat['filter'] as String),
-                ),
-              );
-            }
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => TreeMappingReportPage(filterType: stat['filter'] as String),
+              ),
+            );
           },
         );
       },
