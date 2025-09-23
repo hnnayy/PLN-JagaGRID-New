@@ -8,6 +8,7 @@ class CustomDropdown extends StatefulWidget {
   final String labelText;
   final Function(String?) onChanged;
   final String? Function(String?)? validator;
+  final String? errorText;
 
   const CustomDropdown({
     super.key, 
@@ -16,6 +17,7 @@ class CustomDropdown extends StatefulWidget {
     required this.labelText, 
     required this.onChanged,
     this.validator,
+    this.errorText,
   });
 
   @override
@@ -134,8 +136,9 @@ class _CustomDropdownState extends State<CustomDropdown> with SingleTickerProvid
               width: double.infinity,
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
-                color: const Color(0xFFF0F9FF), 
-                borderRadius: BorderRadius.circular(8)
+                color: widget.errorText != null ? Colors.red.shade50 : const Color(0xFFF0F9FF),
+                borderRadius: BorderRadius.circular(8),
+                border: widget.errorText != null ? Border.all(color: Colors.red.shade300) : null,
               ),
               child: Row(
                 children: [
@@ -158,6 +161,17 @@ class _CustomDropdownState extends State<CustomDropdown> with SingleTickerProvid
             ),
           ),
         ),
+        if (widget.errorText != null) ...[
+          const SizedBox(height: 8),
+          Text(
+            widget.errorText!,
+            style: const TextStyle(
+              color: Colors.red,
+              fontSize: 14,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+        ],
       ],
     );
   }
@@ -191,337 +205,177 @@ class _AddAssetsPageState extends State<AddAssetsPage> {
 
   bool _isLoading = false;
 
+  // Error messages for inline validation
+  String? _wilayahError;
+  String? _subWilayahError;
+  String? _sectionError;
+  String? _up3Error;
+  String? _ulpError;
+  String? _penyulangError;
+  String? _zonaProteksiError;
+  String? _panjangKmsError;
+  String? _roleError;
+  String? _vendorVbError;
+  String? _statusError;
+
   String getCurrentDate() {
     final now = DateTime.now();
     final months = ['Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'];
     return '${now.day} ${months[now.month - 1]} ${now.year}';
   }
 
-  void _showValidationAlert() {
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (context) => Dialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        child: Container(
-          padding: const EdgeInsets.all(32),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Container(
-                width: 80,
-                height: 80,
-                decoration: const BoxDecoration(
-                  color: Colors.red,
-                  shape: BoxShape.circle,
-                ),
-                child: const Icon(
-                  Icons.close,
-                  color: Colors.white,
-                  size: 48,
-                ),
-              ),
-              const SizedBox(height: 24),
-              const Text(
-                "Gagal!",
-                style: TextStyle(
-                  fontSize: 28,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.black87,
-                ),
-              ),
-              const SizedBox(height: 12),
-              const Text(
-                "Data yang dimasukkan tidak valid.\nSilakan periksa kembali form.",
-                style: TextStyle(
-                  fontSize: 16,
-                  color: Colors.grey,
-                ),
-                textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: 32),
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton(
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF2E5D6F),
-                    foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(vertical: 16),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                  ),
-                  onPressed: () => Navigator.of(context).pop(),
-                  child: const Text(
-                    "OK",
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
+  void _clearAllErrors() {
+    setState(() {
+      _wilayahError = null;
+      _subWilayahError = null;
+      _sectionError = null;
+      _up3Error = null;
+      _ulpError = null;
+      _penyulangError = null;
+      _zonaProteksiError = null;
+      _panjangKmsError = null;
+      _roleError = null;
+      _vendorVbError = null;
+      _statusError = null;
+    });
   }
 
-  void _showSimpleValidationAlert(List<String> errors) {
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (context) => Dialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        child: Container(
-          padding: const EdgeInsets.all(32),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Container(
-                width: 80,
-                height: 80,
-                decoration: const BoxDecoration(
-                  color: Colors.red,
-                  shape: BoxShape.circle,
-                ),
-                child: const Icon(
-                  Icons.close,
-                  color: Colors.white,
-                  size: 48,
-                ),
-              ),
-              const SizedBox(height: 24),
-              const Text(
-                "Gagal!",
-                style: TextStyle(
-                  fontSize: 28,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.black87,
-                ),
-              ),
-              const SizedBox(height: 12),
-              const Text(
-                "Mohon isi data dengan benar dan lengkap",
-                style: TextStyle(
-                  fontSize: 16,
-                  color: Colors.grey,
-                ),
-                textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: 32),
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton(
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF2E5D6F),
-                    foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(vertical: 16),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                  ),
-                  onPressed: () => Navigator.of(context).pop(),
-                  child: const Text(
-                    "OK",
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
+  bool _validateAllFields() {
+    _clearAllErrors();
+    bool isValid = true;
 
-  List<String> _getValidationErrors() {
-    List<String> errors = [];
-    
+    // Validate Wilayah
     if (_wilayahController.text.trim().isEmpty || _wilayahController.text.trim() == '1') {
-      errors.add('Wilayah harus diisi dengan nama yang valid');
+      setState(() => _wilayahError = _wilayahController.text.trim().isEmpty 
+          ? 'Wilayah tidak boleh kosong' 
+          : 'Masukkan nama wilayah yang valid');
+      isValid = false;
+    } else if (_wilayahController.text.trim().length < 2) {
+      setState(() => _wilayahError = 'Nama wilayah terlalu pendek');
+      isValid = false;
     }
+
+    // Validate Sub Wilayah
     if (_subWilayahController.text.trim().isEmpty || _subWilayahController.text.trim() == '1') {
-      errors.add('Sub Wilayah harus diisi dengan nama yang valid');
+      setState(() => _subWilayahError = _subWilayahController.text.trim().isEmpty 
+          ? 'Sub wilayah tidak boleh kosong' 
+          : 'Masukkan nama sub wilayah yang valid');
+      isValid = false;
+    } else if (_subWilayahController.text.trim().length < 2) {
+      setState(() => _subWilayahError = 'Nama sub wilayah terlalu pendek');
+      isValid = false;
     }
+
+    // Validate Section
     if (_sectionController.text.trim().isEmpty || _sectionController.text.trim() == '1') {
-      errors.add('Section harus diisi dengan nama yang valid');
+      setState(() => _sectionError = _sectionController.text.trim().isEmpty 
+          ? 'Section tidak boleh kosong' 
+          : 'Masukkan nama section yang valid');
+      isValid = false;
+    } else if (_sectionController.text.trim().length < 2) {
+      setState(() => _sectionError = 'Nama section terlalu pendek');
+      isValid = false;
     }
+
+    // Validate UP3
     if (_up3Controller.text.trim().isEmpty || _up3Controller.text.trim() == '1') {
-      errors.add('UP3 harus diisi dengan nama yang valid');
+      setState(() => _up3Error = _up3Controller.text.trim().isEmpty 
+          ? 'UP3 tidak boleh kosong' 
+          : 'Masukkan nama UP3 yang valid');
+      isValid = false;
+    } else if (_up3Controller.text.trim().length < 2) {
+      setState(() => _up3Error = 'Nama UP3 terlalu pendek');
+      isValid = false;
     }
+
+    // Validate ULP
     if (_ulpController.text.trim().isEmpty || _ulpController.text.trim() == '1') {
-      errors.add('ULP harus diisi dengan nama yang valid');
+      setState(() => _ulpError = _ulpController.text.trim().isEmpty 
+          ? 'ULP tidak boleh kosong' 
+          : 'Masukkan nama ULP yang valid');
+      isValid = false;
+    } else if (_ulpController.text.trim().length < 2) {
+      setState(() => _ulpError = 'Nama ULP terlalu pendek');
+      isValid = false;
     }
+
+    // Validate Penyulang
     if (_penyulangController.text.trim().isEmpty || _penyulangController.text.trim() == '1') {
-      errors.add('Penyulang harus diisi dengan nama yang valid');
+      setState(() => _penyulangError = _penyulangController.text.trim().isEmpty 
+          ? 'Penyulang tidak boleh kosong' 
+          : 'Masukkan nama penyulang yang valid');
+      isValid = false;
+    } else if (_penyulangController.text.trim().length < 2) {
+      setState(() => _penyulangError = 'Nama penyulang terlalu pendek');
+      isValid = false;
     }
+
+    // Validate Zona Proteksi
     if (_zonaProteksiController.text.trim().isEmpty || _zonaProteksiController.text.trim() == '1') {
-      errors.add('Zona Proteksi harus diisi dengan nama yang valid');
+      setState(() => _zonaProteksiError = _zonaProteksiController.text.trim().isEmpty 
+          ? 'Zona proteksi tidak boleh kosong' 
+          : 'Masukkan nama zona proteksi yang valid');
+      isValid = false;
+    } else if (_zonaProteksiController.text.trim().length < 2) {
+      setState(() => _zonaProteksiError = 'Nama zona proteksi terlalu pendek');
+      isValid = false;
     }
-    if (_roleController.text.trim().isEmpty || _roleController.text.trim() == '1') {
-      errors.add('Role harus diisi dengan nama yang valid');
-    }
-    if (_vendorVbController.text.trim().isEmpty || _vendorVbController.text.trim() == '1') {
-      errors.add('Vendor VB harus diisi dengan nama yang valid');
-    }
-    if (_selectedStatus == null) {
-      errors.add('Status harus dipilih');
-    }
-    
-    // Validasi panjang KMS
+
+    // Validate Panjang KMS
     String panjangText = _panjangKmsController.text.trim();
     if (panjangText.isEmpty || panjangText == '1') {
-      errors.add('Panjang KMS harus diisi dengan angka yang valid');
+      setState(() => _panjangKmsError = panjangText.isEmpty 
+          ? 'Panjang tidak boleh kosong' 
+          : 'Masukkan panjang yang sebenarnya (contoh: 12.5)');
+      isValid = false;
     } else {
-      double? panjang = double.tryParse(panjangText.replaceAll(',', '.'));
+      String cleanValue = panjangText.replaceAll(',', '.');
+      double? panjang = double.tryParse(cleanValue);
       if (panjang == null) {
-        errors.add('Panjang KMS harus berupa angka (contoh: 12.5)');
+        setState(() => _panjangKmsError = 'Masukkan angka yang valid (contoh: 12.5)');
+        isValid = false;
       } else if (panjang <= 0) {
-        errors.add('Panjang KMS harus lebih dari 0');
+        setState(() => _panjangKmsError = 'Panjang harus lebih dari 0');
+        isValid = false;
+      } else if (panjang > 999999) {
+        setState(() => _panjangKmsError = 'Panjang terlalu besar');
+        isValid = false;
       }
     }
-    
-    return errors;
-  }
 
-  void _showDetailedValidationAlert(List<String> errors) {
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (context) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: Row(
-          children: [
-            Container(
-              padding: const EdgeInsets.all(8),
-              decoration: const BoxDecoration(
-                color: Colors.red,
-                shape: BoxShape.circle,
-              ),
-              child: const Icon(
-                Icons.error_outline_rounded,
-                color: Colors.white,
-                size: 24,
-              ),
-            ),
-            const SizedBox(width: 12),
-            const Expanded(
-              child: Text(
-                "Data Belum Lengkap",
-                style: TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.red,
-                ),
-              ),
-            ),
-          ],
-        ),
-        content: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Text(
-                "Mohon perbaiki data berikut:",
-                style: TextStyle(fontSize: 16, color: Colors.black87, fontWeight: FontWeight.w500),
-              ),
-              const SizedBox(height: 16),
-              Container(
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: Colors.red.shade50,
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: Colors.red.shade200),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: errors.map((error) => Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 4),
-                    child: Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Text(
-                          "• ",
-                          style: TextStyle(
-                            color: Colors.red,
-                            fontWeight: FontWeight.bold,
-                            fontSize: 16,
-                          ),
-                        ),
-                        Expanded(
-                          child: Text(
-                            error,
-                            style: const TextStyle(fontSize: 14, color: Colors.black87),
-                          ),
-                        ),
-                      ],
-                    ),
-                  )).toList(),
-                ),
-              ),
-              const SizedBox(height: 16),
-              Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: Colors.blue.shade50,
-                  borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: Colors.blue.shade200),
-                ),
-                child: Row(
-                  children: [
-                    Icon(Icons.info_outline, color: Colors.blue.shade700, size: 20),
-                    const SizedBox(width: 8),
-                    const Expanded(
-                      child: Text(
-                        "Jangan hanya memasukkan angka '1'. Isi dengan data yang sebenarnya.",
-                        style: TextStyle(fontSize: 13, color: Colors.blue),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        ),
-        actions: [
-          TextButton(
-            style: TextButton.styleFrom(
-              backgroundColor: Colors.red,
-              foregroundColor: Colors.white,
-              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-            ),
-            onPressed: () => Navigator.of(context).pop(),
-            child: const Text(
-              "OK, Perbaiki Data",
-              style: TextStyle(
-                fontWeight: FontWeight.w600,
-                fontSize: 16,
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
+    // Validate Role
+    if (_roleController.text.trim().isEmpty || _roleController.text.trim() == '1') {
+      setState(() => _roleError = _roleController.text.trim().isEmpty 
+          ? 'Role tidak boleh kosong' 
+          : 'Masukkan nama role yang valid');
+      isValid = false;
+    } else if (_roleController.text.trim().length < 2) {
+      setState(() => _roleError = 'Nama role terlalu pendek');
+      isValid = false;
+    }
+
+    // Validate Status
+    if (_selectedStatus == null) {
+      setState(() => _statusError = 'Status harus dipilih');
+      isValid = false;
+    }
+
+    // Validate Vendor VB
+    if (_vendorVbController.text.trim().isEmpty || _vendorVbController.text.trim() == '1') {
+      setState(() => _vendorVbError = _vendorVbController.text.trim().isEmpty 
+          ? 'Vendor VB tidak boleh kosong' 
+          : 'Masukkan nama vendor VB yang valid');
+      isValid = false;
+    } else if (_vendorVbController.text.trim().length < 2) {
+      setState(() => _vendorVbError = 'Nama vendor VB terlalu pendek');
+      isValid = false;
+    }
+
+    return isValid;
   }
 
   Future<void> _tambahAsset() async {
-    // Cek validasi custom terlebih dahulu
-    List<String> validationErrors = _getValidationErrors();
-    if (validationErrors.isNotEmpty) {
-      _showSimpleValidationAlert(validationErrors);
-      return;
-    }
-
-    // Validasi form standar
-    if (!_formKey.currentState!.validate()) {
-      _showValidationAlert();
+    if (!_validateAllFields()) {
       return;
     }
 
@@ -666,12 +520,13 @@ class _AddAssetsPageState extends State<AddAssetsPage> {
       _roleController.clear();
       _vendorVbController.clear();
     });
+    _clearAllErrors();
   }
 
   Widget _buildField(String label, TextEditingController controller, {
     TextInputType keyboardType = TextInputType.text,
-    String? Function(String?)? validator,
     String? suffixText,
+    String? errorText,
   }) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -700,8 +555,18 @@ class _AddAssetsPageState extends State<AddAssetsPage> {
             hintText: label == 'Panjang (KMS)' ? 'Contoh: 12.5' : 'Masukkan $label',
             hintStyle: TextStyle(color: Colors.grey.shade400, fontSize: 14),
           ),
-          validator: validator,
         ),
+        if (errorText != null) ...[
+          const SizedBox(height: 8),
+          Text(
+            errorText,
+            style: const TextStyle(
+              color: Colors.red,
+              fontSize: 14,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+        ],
       ],
     );
   }
@@ -764,150 +629,54 @@ class _AddAssetsPageState extends State<AddAssetsPage> {
           child: ListView(
             padding: const EdgeInsets.all(24),
             children: [
-              _buildField(
-                "Wilayah",
-                _wilayahController,
-                validator: (value) {
-                  if (value?.isEmpty ?? true) return "Wilayah tidak boleh kosong";
-                  if (value!.trim() == '1') return "Masukkan nama wilayah yang valid";
-                  if (value.trim().length < 2) return "Nama wilayah terlalu pendek";
-                  return null;
-                },
-              ),
+              _buildField("Wilayah", _wilayahController, errorText: _wilayahError),
+              const SizedBox(height: 20),
+              
+              _buildField("Sub Wilayah", _subWilayahController, errorText: _subWilayahError),
+              const SizedBox(height: 20),
+              
+              _buildField("Section", _sectionController, errorText: _sectionError),
+              const SizedBox(height: 20),
+              
+              _buildField("UP3", _up3Controller, errorText: _up3Error),
+              const SizedBox(height: 20),
+              
+              _buildField("ULP", _ulpController, errorText: _ulpError),
+              const SizedBox(height: 20),
+              
+              _buildField("Penyulang", _penyulangController, errorText: _penyulangError),
+              const SizedBox(height: 20),
+              
+              _buildField("Zona Proteksi", _zonaProteksiController, errorText: _zonaProteksiError),
               const SizedBox(height: 20),
               
               _buildField(
-                "Sub Wilayah",
-                _subWilayahController,
-                validator: (value) {
-                  if (value?.isEmpty ?? true) return "Sub wilayah tidak boleh kosong";
-                  if (value!.trim() == '1') return "Masukkan nama sub wilayah yang valid";
-                  if (value.trim().length < 2) return "Nama sub wilayah terlalu pendek";
-                  return null;
-                },
-              ),
-              const SizedBox(height: 20),
-              
-              _buildField(
-                "Section",
-                _sectionController,
-                validator: (value) {
-                  if (value?.isEmpty ?? true) return "Section tidak boleh kosong";
-                  if (value!.trim() == '1') return "Masukkan nama section yang valid";
-                  if (value.trim().length < 2) return "Nama section terlalu pendek";
-                  return null;
-                },
-              ),
-              const SizedBox(height: 20),
-              
-              _buildField(
-                "UP3",
-                _up3Controller,
-                validator: (value) {
-                  if (value?.isEmpty ?? true) return "UP3 tidak boleh kosong";
-                  if (value!.trim() == '1') return "Masukkan nama UP3 yang valid";
-                  if (value.trim().length < 2) return "Nama UP3 terlalu pendek";
-                  return null;
-                },
-              ),
-              const SizedBox(height: 20),
-              
-              _buildField(
-                "ULP",
-                _ulpController,
-                validator: (value) {
-                  if (value?.isEmpty ?? true) return "ULP tidak boleh kosong";
-                  if (value!.trim() == '1') return "Masukkan nama ULP yang valid";
-                  if (value.trim().length < 2) return "Nama ULP terlalu pendek";
-                  return null;
-                },
-              ),
-              const SizedBox(height: 20),
-              
-              _buildField(
-                "Penyulang",
-                _penyulangController,
-                validator: (value) {
-                  if (value?.isEmpty ?? true) return "Penyulang tidak boleh kosong";
-                  if (value!.trim() == '1') return "Masukkan nama penyulang yang valid";
-                  if (value.trim().length < 2) return "Nama penyulang terlalu pendek";
-                  return null;
-                },
-              ),
-              const SizedBox(height: 20),
-              
-              _buildField(
-                "Zona Proteksi",
-                _zonaProteksiController,
-                validator: (value) {
-                  if (value?.isEmpty ?? true) return "Zona proteksi tidak boleh kosong";
-                  if (value!.trim() == '1') return "Masukkan nama zona proteksi yang valid";
-                  if (value.trim().length < 2) return "Nama zona proteksi terlalu pendek";
-                  return null;
-                },
-              ),
-              const SizedBox(height: 20),
-              
-              _buildField(
-                "Panjang (KMS)",
-                _panjangKmsController,
+                "Panjang (KMS)", 
+                _panjangKmsController, 
                 keyboardType: const TextInputType.numberWithOptions(decimal: true),
                 suffixText: "km",
-                validator: (value) {
-                  if (value == null || value.trim().isEmpty) {
-                    return 'Panjang tidak boleh kosong';
-                  }
-                  if (value.trim() == '1') {
-                    return 'Masukkan panjang yang sebenarnya (contoh: 12.5)';
-                  }
-                  
-                  String cleanValue = value.trim().replaceAll(',', '.');
-                  double? panjang = double.tryParse(cleanValue);
-                  
-                  if (panjang == null) {
-                    return 'Masukkan angka yang valid (contoh: 12.5)';
-                  }
-                  if (panjang <= 0) {
-                    return 'Panjang harus lebih dari 0';
-                  }
-                  if (panjang > 999999) {
-                    return 'Panjang terlalu besar';
-                  }
-                  return null;
-                },
+                errorText: _panjangKmsError,
               ),
               const SizedBox(height: 20),
               
-              _buildField(
-                "Role",
-                _roleController,
-                validator: (value) {
-                  if (value?.isEmpty ?? true) return "Role tidak boleh kosong";
-                  if (value!.trim() == '1') return "Masukkan nama role yang valid";
-                  if (value.trim().length < 2) return "Nama role terlalu pendek";
-                  return null;
-                },
-              ),
+              _buildField("Role", _roleController, errorText: _roleError),
               const SizedBox(height: 20),
 
               CustomDropdown(
                 value: _selectedStatus,
                 items: _statusOptions,
                 labelText: "Status",
-                onChanged: (value) => setState(() => _selectedStatus = value),
+                onChanged: (value) {
+                  setState(() {
+                    _selectedStatus = value;
+                    _statusError = null; // Clear error when user selects
+                  });
+                },
+                errorText: _statusError,
               ),
               const SizedBox(height: 20),
               
-              _buildField(
-                "Vendor VB",
-                _vendorVbController,
-                validator: (value) {
-                  if (value?.isEmpty ?? true) return "Vendor VB tidak boleh kosong";
-                  if (value!.trim() == '1') return "Masukkan nama vendor VB yang valid";
-                  if (value.trim().length < 2) return "Nama vendor VB terlalu pendek";
-                  return null;
-                },
-              ),
+              _buildField("Vendor VB", _vendorVbController, errorText: _vendorVbError),
               const SizedBox(height: 32),
 
               SizedBox(

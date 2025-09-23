@@ -313,7 +313,7 @@ class TreeMappingReportPage extends StatelessWidget {
         ),
         actions: [
           IconButton(
-            icon: const Icon(Icons.file_download, color: AppColors.yellow),
+            icon: const Icon(Icons.file_download, color: Color.fromARGB(255, 255, 255, 255)),
             tooltip: 'Ekspor ke Excel',
             onPressed: () async {
               final pohonList = await _dataPohonService.getAllDataPohon().first;
