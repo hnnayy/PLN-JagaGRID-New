@@ -28,6 +28,32 @@ class _LoginPageState extends State<LoginPage> {
   static const Color inputFill = Color(0xFFF1F5F9); // Light blue gray
 
   @override
+  void initState() {
+    super.initState();
+    _checkLoginAndOnboardingStatus();
+  }
+
+  Future<void> _checkLoginAndOnboardingStatus() async {
+    final prefs = await SharedPreferences.getInstance();
+    final sessionId = prefs.getString('session_id');
+    final sessionTimestamp = prefs.getInt('session_timestamp') ?? 0;
+    final hasCompletedOnboarding = prefs.getBool('hasCompletedOnboarding') ?? false;
+    final currentTime = DateTime.now().millisecondsSinceEpoch;
+
+    // Sesi valid jika ada session_id, timestamp kurang dari 24 jam, dan onboarding sudah selesai
+    if (sessionId != null && sessionId.isNotEmpty && 
+        (currentTime - sessionTimestamp) < 24 * 60 * 60 * 1000 && 
+        hasCompletedOnboarding) {
+      if (mounted) {
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (context) => const NavigationMenu()),
+        );
+      }
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
     return Scaffold(
       body: Container(
@@ -300,7 +326,7 @@ class _LoginPageState extends State<LoginPage> {
 
       if (query.docs.isNotEmpty) {
         // Login success, navigate to home (NavigationMenu)
-        // Simpan semua data ke SharedPreferences
+        // Simpan semua data ke SharedPreferences termasuk timestamp dan status onboarding
         final userData = query.docs.first.data() as Map<String, dynamic>;
         final prefs = await SharedPreferences.getInstance();
         await prefs.setString('session_username', userData['username'] ?? '');
@@ -312,6 +338,8 @@ class _LoginPageState extends State<LoginPage> {
         await prefs.setString('session_chat_id_telegram', userData['chat_id_telegram'] ?? '');
         await prefs.setInt('session_status', userData['status'] ?? 1);
         await prefs.setString('session_id', query.docs.first.id);
+        await prefs.setInt('session_timestamp', DateTime.now().millisecondsSinceEpoch);
+        await prefs.setBool('hasCompletedOnboarding', true); // Tetap tandai onboarding selesai
 
         if (mounted) {
           Navigator.pushReplacement(

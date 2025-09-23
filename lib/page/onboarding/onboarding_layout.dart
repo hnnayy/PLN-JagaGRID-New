@@ -1,5 +1,5 @@
-// onboarding_layout.dart (Main file dengan model) - RESPONSIVE VERSION
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../../constants/colors.dart';
 import '../../navigation_menu.dart';
 import '../login/login.dart';
@@ -39,6 +39,31 @@ class _OnboardingPageState extends State<OnboardingPage> {
     Onboarding2.data,
     Onboarding3.data,
   ];
+
+  @override
+  void initState() {
+    super.initState();
+    _checkLoginAndOnboardingStatus();
+  }
+
+  Future<void> _checkLoginAndOnboardingStatus() async {
+    final prefs = await SharedPreferences.getInstance();
+    final sessionId = prefs.getString('session_id');
+    final sessionTimestamp = prefs.getInt('session_timestamp') ?? 0;
+    final hasCompletedOnboarding = prefs.getBool('hasCompletedOnboarding') ?? false;
+    final currentTime = DateTime.now().millisecondsSinceEpoch;
+
+    if (sessionId != null && sessionId.isNotEmpty && 
+        (currentTime - sessionTimestamp) < 24 * 60 * 60 * 1000 && 
+        hasCompletedOnboarding) {
+      if (mounted) {
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (context) => const NavigationMenu()),
+        );
+      }
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -93,10 +118,16 @@ class _OnboardingPageState extends State<OnboardingPage> {
         curve: Curves.easeInOut,
       );
     } else {
-      Navigator.of(context).pushReplacement(
-        MaterialPageRoute(builder: (context) => const LoginPage()),
-      );
+      _completeOnboarding();
     }
+  }
+
+  Future<void> _completeOnboarding() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool('hasCompletedOnboarding', true);
+    Navigator.of(context).pushReplacement(
+      MaterialPageRoute(builder: (context) => const LoginPage()),
+    );
   }
 }
 

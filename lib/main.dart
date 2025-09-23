@@ -18,6 +18,7 @@ import 'page/peta_pohon/add_data_page.dart';
 import 'page/report/treemapping_report.dart';
 import 'page/report/treemapping_detail.dart';
 import 'page/tree_growth/tree_growth_list_page.dart';
+import 'page/login/login.dart'; // Import LoginPage
 import 'services/reminder_service.dart';
 
 // Global navigator key untuk navigasi dari notification
@@ -142,12 +143,13 @@ class MyApp extends StatelessWidget {
       child: MaterialApp(
         navigatorKey: navigatorKey,
         debugShowCheckedModeBanner: false,
-        home: const SplashScreen(),
+        home: const SplashScreen(), // SplashScreen sebagai titik masuk awal
         routes: {
           '/map': (context) => MapPage(),
           '/addData': (context) => AddDataPage(),
           '/report': (context) => TreeMappingReportPage(),
           '/treeGrowth': (context) => const TreeGrowthListPage(),
+          '/login': (context) => const LoginPage(), // Tambahkan rute untuk LoginPage
         },
       ),
     );
