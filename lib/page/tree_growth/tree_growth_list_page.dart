@@ -20,6 +20,489 @@ class _TreeGrowthListPageState extends State<TreeGrowthListPage> {
     });
   }
 
+  // Alert Dialog untuk delete success
+  void _showDeleteSuccessDialog(String itemName) {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (BuildContext context) {
+        return Dialog(
+          backgroundColor: Colors.transparent,
+          child: Container(
+            width: MediaQuery.of(context).size.width * 0.85,
+            padding: const EdgeInsets.all(24),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(20),
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  width: 80,
+                  height: 80,
+                  decoration: const BoxDecoration(
+                    color: Color(0xFF14A2B9),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(
+                    Icons.check,
+                    color: Colors.white,
+                    size: 40,
+                  ),
+                ),
+                const SizedBox(height: 24),
+                const Text(
+                  'Berhasil!',
+                  style: TextStyle(
+                    fontSize: 24,
+                    fontWeight: FontWeight.bold,
+                    color: Color(0xFF14A2B9),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                const Text(
+                  'Data berhasil dihapus dari sistem',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontSize: 16,
+                    color: Colors.grey,
+                    height: 1.4,
+                  ),
+                ),
+                const SizedBox(height: 20),
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFE8F8F5),
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: const Color(0xFF14A2B9).withOpacity(0.3)),
+                  ),
+                  child: Column(
+                    children: [
+                      Row(
+                        children: [
+                          const Icon(Icons.eco, color: Color(0xFF14A2B9), size: 16),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              itemName,
+                              style: const TextStyle(
+                                fontSize: 14,
+                                fontWeight: FontWeight.w600,
+                                color: Color(0xFF14A2B9),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 8),
+                      Row(
+                        children: [
+                          Text(
+                            'Status:',
+                            style: TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w500,
+                              color: Colors.grey.shade600,
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          const Text(
+                            'Berhasil Dihapus',
+                            style: TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
+                              color: Color(0xFF14A2B9),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 4),
+                      Row(
+                        children: [
+                          Text(
+                            'Waktu:',
+                            style: TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w500,
+                              color: Colors.grey.shade600,
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Text(
+                            _formatDate(DateTime.now()),
+                            style: const TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
+                              color: Color(0xFF14A2B9),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 32),
+                SizedBox(
+                  width: double.infinity,
+                  height: 45,
+                  child: ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF14A2B9),
+                      foregroundColor: Colors.white,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(25)),
+                    ),
+                    onPressed: () => Navigator.of(context).pop(),
+                    child: const Text(
+                      'OK',
+                      style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  // Alert Dialog untuk error
+  void _showFailureDialog(String title, String message, String errorDetail, {String? itemName}) {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (BuildContext context) {
+        return Dialog(
+          backgroundColor: Colors.transparent,
+          child: Container(
+            width: MediaQuery.of(context).size.width * 0.85,
+            padding: const EdgeInsets.all(24),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(20),
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  width: 80,
+                  height: 80,
+                  decoration: BoxDecoration(
+                    color: Colors.red.shade600,
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(
+                    Icons.close,
+                    color: Colors.white,
+                    size: 40,
+                  ),
+                ),
+                const SizedBox(height: 24),
+                Text(
+                  title,
+                  style: TextStyle(
+                    fontSize: 24,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.red.shade600,
+                  ),
+                ),
+                const SizedBox(height: 12),
+                Text(
+                  message,
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontSize: 16,
+                    color: Colors.grey.shade600,
+                    height: 1.4,
+                  ),
+                ),
+                const SizedBox(height: 16),
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: Colors.red.shade50,
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: Colors.red.shade200),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Detail Error:',
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.red.shade700,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        errorDetail,
+                        style: TextStyle(
+                          fontSize: 14,
+                          color: Colors.red.shade700,
+                        ),
+                      ),
+                      if (itemName != null) ...[
+                        const SizedBox(height: 8),
+                        Row(
+                          children: [
+                            Icon(Icons.eco, color: Colors.red.shade600, size: 16),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Text(
+                                'Item: $itemName',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w600,
+                                  color: Colors.red.shade700,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 32),
+                Row(
+                  children: [
+                    Expanded(
+                      child: SizedBox(
+                        height: 45,
+                        child: OutlinedButton(
+                          style: OutlinedButton.styleFrom(
+                            backgroundColor: Colors.white,
+                            foregroundColor: Colors.grey.shade600,
+                            side: BorderSide(color: Colors.grey.shade400, width: 1),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(25)),
+                          ),
+                          onPressed: () => Navigator.of(context).pop(),
+                          child: const Text(
+                            'Tutup',
+                            style: TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: SizedBox(
+                        height: 45,
+                        child: ElevatedButton(
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.red.shade600,
+                            foregroundColor: Colors.white,
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(25)),
+                          ),
+                          onPressed: () {
+                            Navigator.of(context).pop();
+                            context.read<TreeGrowthProvider>().load();
+                          },
+                          child: const Text(
+                            'Coba Lagi',
+                            style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  // Delete Confirmation Dialog
+  void _showDeleteConfirmDialog(TreeGrowth item) {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (BuildContext context) {
+        return Dialog(
+          backgroundColor: Colors.transparent,
+          child: Container(
+            width: MediaQuery.of(context).size.width * 0.85,
+            padding: const EdgeInsets.all(24),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(20),
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  width: 80,
+                  height: 80,
+                  decoration: BoxDecoration(
+                    color: Colors.orange.shade600,
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(
+                    Icons.warning_rounded,
+                    color: Colors.white,
+                    size: 40,
+                  ),
+                ),
+                const SizedBox(height: 24),
+                Text(
+                  'Konfirmasi Hapus',
+                  style: TextStyle(
+                    fontSize: 24,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.orange.shade700,
+                  ),
+                ),
+                const SizedBox(height: 12),
+                const Text(
+                  'Apakah Anda yakin ingin menghapus data ini?',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontSize: 16,
+                    color: Colors.grey,
+                    height: 1.4,
+                  ),
+                ),
+                const SizedBox(height: 20),
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: Colors.orange.shade50,
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: Colors.orange.shade200),
+                  ),
+                  child: Column(
+                    children: [
+                      Row(
+                        children: [
+                          Icon(Icons.eco, color: Colors.orange.shade600, size: 16),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              item.name,
+                              style: TextStyle(
+                                fontSize: 14,
+                                fontWeight: FontWeight.w600,
+                                color: Colors.orange.shade700,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 4),
+                      Row(
+                        children: [
+                          Text(
+                            'Pertumbuhan: ${item.growthRate.round()} cm/tahun',
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: Colors.orange.shade600,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 24),
+                const Text(
+                  'Data yang sudah dihapus tidak dapat dikembalikan!',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: Colors.red,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+                const SizedBox(height: 24),
+                Row(
+                  children: [
+                    Expanded(
+                      child: SizedBox(
+                        height: 45,
+                        child: OutlinedButton(
+                          style: OutlinedButton.styleFrom(
+                            backgroundColor: Colors.white,
+                            foregroundColor: Colors.grey.shade600,
+                            side: BorderSide(color: Colors.grey.shade400, width: 1),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(25)),
+                          ),
+                          onPressed: () => Navigator.of(context).pop(false),
+                          child: const Text(
+                            'Batal',
+                            style: TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: SizedBox(
+                        height: 45,
+                        child: ElevatedButton(
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.red.shade600,
+                            foregroundColor: Colors.white,
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(25)),
+                          ),
+                          onPressed: () => Navigator.of(context).pop(true),
+                          child: const Text(
+                            'Hapus',
+                            style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    ).then((confirmed) async {
+      if (confirmed == true && mounted) {
+        try {
+          await context.read<TreeGrowthProvider>().remove(item.id);
+          if (mounted) {
+            _showDeleteSuccessDialog(item.name);
+          }
+        } catch (e) {
+          if (mounted) {
+            String errorMsg = e.toString().replaceAll(RegExp(r'[^\w\s\-\.\,\(\)\/\:]'), '');
+            if (errorMsg.isEmpty) {
+              errorMsg = 'Terjadi kesalahan sistem yang tidak diketahui.';
+            }
+            _showFailureDialog(
+              'Gagal!',
+              'Data gagal dihapus dari sistem',
+              errorMsg,
+              itemName: item.name,
+            );
+          }
+        }
+      }
+    });
+  }
+
+  // Format tanggal
+  String _formatDate(DateTime date) {
+    final months = [
+      'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni',
+      'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'
+    ];
+    return '${date.day} ${months[date.month - 1]} ${date.year}';
+  }
+
   @override
   Widget build(BuildContext context) {
     return Container(
@@ -42,7 +525,7 @@ class _TreeGrowthListPageState extends State<TreeGrowthListPage> {
           title: const FittedBox(
             fit: BoxFit.scaleDown,
             child: Text(
-              'Master Pertumbuhan pohon',
+              'Master Pertumbuhan Pohon',
               maxLines: 1,
               style: TextStyle(
                 color: Colors.white,
@@ -62,7 +545,23 @@ class _TreeGrowthListPageState extends State<TreeGrowthListPage> {
                   MaterialPageRoute(builder: (_) => const TreeGrowthFormPage()),
                 );
                 if (created != null && mounted) {
-                  await context.read<TreeGrowthProvider>().add(created.name, created.growthRate);
+                  try {
+                    await context.read<TreeGrowthProvider>().add(created.name, created.growthRate);
+                    // Tidak ada alert - form sudah handle
+                  } catch (e) {
+                    if (mounted) {
+                      String errorMsg = e.toString().replaceAll(RegExp(r'[^\w\s\-\.\,\(\)\/\:]'), '');
+                      if (errorMsg.isEmpty) {
+                        errorMsg = 'Terjadi kesalahan sistem yang tidak diketahui.';
+                      }
+                      _showFailureDialog(
+                        'Gagal!',
+                        'Data pohon gagal disimpan ke database',
+                        errorMsg,
+                        itemName: created.name,
+                      );
+                    }
+                  }
                 }
               },
             ),
@@ -83,15 +582,74 @@ class _TreeGrowthListPageState extends State<TreeGrowthListPage> {
                 child: Consumer<TreeGrowthProvider>(
                   builder: (context, provider, _) {
                     if (provider.isLoading) {
-                      return const Center(child: CircularProgressIndicator());
+                      return const Center(
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            CircularProgressIndicator(
+                              valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF14A2B9)),
+                            ),
+                            SizedBox(height: 16),
+                            Text(
+                              'Memuat data...',
+                              style: TextStyle(
+                                color: Color(0xFF14A2B9),
+                                fontSize: 16,
+                              ),
+                            ),
+                          ],
+                        ),
+                      );
                     }
+                    
                     if (provider.errorMessage != null) {
-                      return Center(child: Text('Error: ${provider.errorMessage}'));
+                      return Center(
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(Icons.error_outline, size: 64, color: Colors.red.shade400),
+                            const SizedBox(height: 16),
+                            Text(
+                              'Error: ${provider.errorMessage}',
+                              textAlign: TextAlign.center,
+                              style: TextStyle(color: Colors.red.shade600, fontSize: 16),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: const Color(0xFF14A2B9),
+                                foregroundColor: Colors.white,
+                              ),
+                              onPressed: () => provider.load(),
+                              child: const Text('Coba Lagi'),
+                            ),
+                          ],
+                        ),
+                      );
                     }
+                    
                     final items = provider.items;
                     if (items.isEmpty) {
-                      return const Center(child: Text('Belum ada data. Tambahkan jenis pohon.'));
+                      return const Center(
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(Icons.eco, size: 64, color: Colors.grey),
+                            SizedBox(height: 16),
+                            Text(
+                              'Belum ada data pohon.',
+                              style: TextStyle(color: Colors.grey, fontSize: 18, fontWeight: FontWeight.w600),
+                            ),
+                            SizedBox(height: 8),
+                            Text(
+                              'Tekan tombol + untuk menambahkan data.',
+                              style: TextStyle(color: Colors.grey, fontSize: 14),
+                            ),
+                          ],
+                        ),
+                      );
                     }
+                    
                     return ListView.builder(
                       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
                       itemCount: items.length,
@@ -113,7 +671,23 @@ class _TreeGrowthListPageState extends State<TreeGrowthListPage> {
                                   ),
                                 );
                                 if (updated != null && context.mounted) {
-                                  await context.read<TreeGrowthProvider>().update(updated);
+                                  try {
+                                    await context.read<TreeGrowthProvider>().update(updated);
+                                    // Tidak ada alert - form sudah handle
+                                  } catch (e) {
+                                    if (mounted) {
+                                      String errorMsg = e.toString().replaceAll(RegExp(r'[^\w\s\-\.\,\(\)\/\:]'), '');
+                                      if (errorMsg.isEmpty) {
+                                        errorMsg = 'Terjadi kesalahan sistem yang tidak diketahui.';
+                                      }
+                                      _showFailureDialog(
+                                        'Gagal!',
+                                        'Data pohon gagal disimpan ke database',
+                                        errorMsg,
+                                        itemName: item.name,
+                                      );
+                                    }
+                                  }
                                 }
                               },
                               borderRadius: BorderRadius.circular(16),
@@ -129,7 +703,7 @@ class _TreeGrowthListPageState extends State<TreeGrowthListPage> {
                                         borderRadius: BorderRadius.circular(12),
                                       ),
                                       child: const Center(
-                                        child: Icon(Icons.eco, color: Colors.white),
+                                        child: Icon(Icons.eco, color: Colors.white, size: 24),
                                       ),
                                     ),
                                     const SizedBox(width: 16),
@@ -147,10 +721,18 @@ class _TreeGrowthListPageState extends State<TreeGrowthListPage> {
                                           ),
                                           const SizedBox(height: 4),
                                           Text(
-                                            'Pertumbuhan pohon: ${item.growthRate.round()} cm/tahun',
-                                            style: const TextStyle(
-                                              fontSize: 12,
-                                              color: Color(0xFF7F8C8D),
+                                            'Pertumbuhan: ${item.growthRate.round()} cm/tahun',
+                                            style: TextStyle(
+                                              fontSize: 13,
+                                              color: Colors.grey.shade600,
+                                            ),
+                                          ),
+                                          const SizedBox(height: 2),
+                                          Text(
+                                            'Ditambahkan: ${_formatDate(item.createdAt)}',
+                                            style: TextStyle(
+                                              fontSize: 11,
+                                              color: Colors.grey.shade500,
                                             ),
                                           ),
                                         ],
@@ -160,7 +742,7 @@ class _TreeGrowthListPageState extends State<TreeGrowthListPage> {
                                       mainAxisSize: MainAxisSize.min,
                                       children: [
                                         IconButton(
-                                          icon: const Icon(Icons.edit, color: Color(0xFF0B5F6D)),
+                                          icon: const Icon(Icons.edit_outlined, color: Color(0xFF0B5F6D)),
                                           onPressed: () async {
                                             final updated = await Navigator.push<TreeGrowth?>(
                                               context,
@@ -169,28 +751,29 @@ class _TreeGrowthListPageState extends State<TreeGrowthListPage> {
                                               ),
                                             );
                                             if (updated != null && context.mounted) {
-                                              await context.read<TreeGrowthProvider>().update(updated);
+                                              try {
+                                                await context.read<TreeGrowthProvider>().update(updated);
+                                                // Tidak ada alert - form sudah handle
+                                              } catch (e) {
+                                                if (mounted) {
+                                                  String errorMsg = e.toString().replaceAll(RegExp(r'[^\w\s\-\.\,\(\)\/\:]'), '');
+                                                  if (errorMsg.isEmpty) {
+                                                    errorMsg = 'Terjadi kesalahan sistem yang tidak diketahui.';
+                                                  }
+                                                  _showFailureDialog(
+                                                    'Gagal!',
+                                                    'Data pohon gagal disimpan ke database',
+                                                    errorMsg,
+                                                    itemName: item.name,
+                                                  );
+                                                }
+                                              }
                                             }
                                           },
                                         ),
                                         IconButton(
-                                          icon: const Icon(Icons.delete, color: Colors.red),
-                                          onPressed: () async {
-                                            final confirm = await showDialog<bool>(
-                                              context: context,
-                                              builder: (ctx) => AlertDialog(
-                                                title: const Text('Hapus Data'),
-                                                content: Text('Hapus ${item.name}?'),
-                                                actions: [
-                                                  TextButton(onPressed: ()=>Navigator.pop(ctx,false), child: const Text('Batal')),
-                                                  ElevatedButton(onPressed: ()=>Navigator.pop(ctx,true), child: const Text('Hapus')),
-                                                ],
-                                              ),
-                                            );
-                                            if (confirm == true && context.mounted) {
-                                              await context.read<TreeGrowthProvider>().remove(item.id);
-                                            }
-                                          },
+                                          icon: Icon(Icons.delete_outline, color: Colors.red.shade600),
+                                          onPressed: () => _showDeleteConfirmDialog(item),
                                         ),
                                       ],
                                     ),

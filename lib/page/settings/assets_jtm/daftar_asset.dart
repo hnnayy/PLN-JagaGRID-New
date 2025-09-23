@@ -3,6 +3,12 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter_application_2/models/asset_model.dart';
 import 'package:flutter_application_2/services/asset_service.dart';
 import 'edit_asset.dart';
+import 'dart:io';
+import 'package:excel/excel.dart' as excel_pkg;
+import 'package:path_provider/path_provider.dart';
+import 'package:share_plus/share_plus.dart';
+import 'package:permission_handler/permission_handler.dart';
+import 'package:intl/intl.dart';
 
 class DaftarAssetPage extends StatefulWidget {
   const DaftarAssetPage({super.key});
@@ -69,6 +75,245 @@ class _DaftarAssetPageState extends State<DaftarAssetPage> {
     });
 
     return filtered;
+  }
+
+  // Fungsi untuk export ke Excel - VERSI TERBARU DENGAN KOLOM TANGGAL
+  Future<void> _exportToExcel(List<AssetModel> assets) async {
+    try {
+      // Show loading dialog
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (context) => const AlertDialog(
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              CircularProgressIndicator(),
+              SizedBox(height: 16),
+              Text('Membuat file Excel...'),
+            ],
+          ),
+        ),
+      );
+
+      // Request storage permission
+      var status = await Permission.storage.request();
+      if (!status.isGranted) {
+        Navigator.pop(context);
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Permission storage diperlukan untuk menyimpan file'),
+            backgroundColor: Colors.red,
+          ),
+        );
+        return;
+      }
+
+      // Create Excel workbook
+      var excel = excel_pkg.Excel.createExcel();
+      excel_pkg.Sheet sheetObject = excel['Asset JTM'];
+      excel.delete('Sheet1'); // Delete default sheet
+
+      // Add headers with styling - TERMASUK KOLOM TANGGAL EXPORT
+      List<String> headers = [
+        'No',
+        'Tanggal Export',
+        'Wilayah',
+        'Sub Wilayah', 
+        'UP3',
+        'ULP',
+        'Section',
+        'Penyulang',
+        'Zona Proteksi',
+        'Panjang (KMS)',
+        'Role',
+        'Vendor VB',
+        'Status'
+      ];
+
+      // Style for headers
+      excel_pkg.CellStyle headerStyle = excel_pkg.CellStyle(
+        backgroundColorHex: '#125E72',
+        fontFamily: excel_pkg.getFontFamily(excel_pkg.FontFamily.Calibri),
+        fontSize: 12,
+        bold: true,
+        fontColorHex: '#FFFFFF',
+        horizontalAlign: excel_pkg.HorizontalAlign.Center,
+        verticalAlign: excel_pkg.VerticalAlign.Center,
+      );
+
+      // Add headers
+      for (int i = 0; i < headers.length; i++) {
+        var cell = sheetObject.cell(excel_pkg.CellIndex.indexByColumnRow(columnIndex: i, rowIndex: 0));
+        cell.value = headers[i];
+        cell.cellStyle = headerStyle;
+      }
+
+      // Add data rows - DENGAN KOLOM TANGGAL EXPORT OTOMATIS
+      excel_pkg.CellStyle dataStyle = excel_pkg.CellStyle(
+        fontFamily: excel_pkg.getFontFamily(excel_pkg.FontFamily.Calibri),
+        fontSize: 11,
+        verticalAlign: excel_pkg.VerticalAlign.Center,
+      );
+
+      // Style untuk kolom tanggal
+      excel_pkg.CellStyle dateStyle = excel_pkg.CellStyle(
+        fontFamily: excel_pkg.getFontFamily(excel_pkg.FontFamily.Calibri),
+        fontSize: 11,
+        verticalAlign: excel_pkg.VerticalAlign.Center,
+        backgroundColorHex: '#F0F8FF', // Light blue background untuk tanggal
+      );
+
+      String currentDate = DateFormat('dd/MM/yyyy HH:mm').format(DateTime.now());
+
+      for (int i = 0; i < assets.length; i++) {
+        AssetModel asset = assets[i];
+        List<dynamic> rowData = [
+          i + 1,
+          currentDate, // Tanggal export otomatis
+          asset.wilayah,
+          asset.subWilayah,
+          asset.up3,
+          asset.ulp,
+          asset.section,
+          asset.penyulang,
+          asset.zonaProteksi,
+          asset.panjangKms,
+          asset.role,
+          asset.vendorVb,
+          asset.status,
+        ];
+
+        for (int j = 0; j < rowData.length; j++) {
+          var cell = sheetObject.cell(excel_pkg.CellIndex.indexByColumnRow(columnIndex: j, rowIndex: i + 1));
+          cell.value = rowData[j];
+          // Gunakan style khusus untuk kolom tanggal (index 1)
+          cell.cellStyle = j == 1 ? dateStyle : dataStyle;
+        }
+      }
+
+      // Generate filename with timestamp
+      String timestamp = DateFormat('yyyyMMdd_HHmmss').format(DateTime.now());
+      String filename = 'Daftar_Asset_JTM_$timestamp.xlsx';
+
+      // Get directory to save file
+      Directory? directory;
+      if (Platform.isAndroid) {
+        directory = await getExternalStorageDirectory();
+        if (directory != null) {
+          // Create Downloads folder path
+          String downloadsPath = '${directory.path}/../../../Download';
+          directory = Directory(downloadsPath);
+          if (!await directory.exists()) {
+            directory = await getExternalStorageDirectory();
+          }
+        }
+      } else {
+        directory = await getApplicationDocumentsDirectory();
+      }
+
+      if (directory == null) {
+        Navigator.pop(context);
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Tidak dapat mengakses direktori penyimpanan'),
+            backgroundColor: Colors.red,
+          ),
+        );
+        return;
+      }
+
+      // Save file
+      String filePath = '${directory.path}/$filename';
+      File file = File(filePath);
+      await file.writeAsBytes(excel.encode()!);
+
+      Navigator.pop(context); // Close loading dialog
+
+      // Show success dialog with options - VERSI LEBIH INFORMATIF
+      showDialog(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Row(
+            children: [
+              Icon(Icons.check_circle, color: Colors.green, size: 28),
+              SizedBox(width: 8),
+              Text('Export Berhasil'),
+            ],
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('File Excel berhasil dibuat:'),
+              const SizedBox(height: 8),
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: Colors.grey[100],
+                  borderRadius: BorderRadius.circular(4),
+                ),
+                child: Text(
+                  filename,
+                  style: const TextStyle(
+                    fontSize: 12,
+                    fontFamily: 'monospace',
+                  ),
+                ),
+              ),
+              const SizedBox(height: 12),
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: Colors.blue[50],
+                  borderRadius: BorderRadius.circular(4),
+                  border: Border.all(color: Colors.blue[200]!),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('📊 Total data: ${assets.length} asset'),
+                    Text('📅 Tanggal export: $currentDate'),
+                    Text('📁 Lokasi: Download folder'),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('OK'),
+            ),
+            ElevatedButton.icon(
+              onPressed: () async {
+                Navigator.pop(context);
+                // Share file
+                await Share.shareXFiles(
+                  [XFile(filePath)],
+                  text: 'Daftar Asset JTM - ${DateFormat('dd/MM/yyyy').format(DateTime.now())}',
+                );
+              },
+              icon: const Icon(Icons.share),
+              label: const Text('Share'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFF125E72),
+                foregroundColor: Colors.white,
+              ),
+            ),
+          ],
+        ),
+      );
+
+    } catch (e) {
+      Navigator.pop(context); // Close loading dialog if open
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error saat export: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
   }
 
   // Widget untuk menampilkan filter yang aktif
@@ -656,6 +901,25 @@ class _DaftarAssetPageState extends State<DaftarAssetPage> {
         backgroundColor: const Color(0xFF125E72),
         foregroundColor: Colors.white,
         elevation: 0,
+        actions: [
+          // Excel Export Button di AppBar
+          StreamBuilder<List<AssetModel>>(
+            stream: _assetService.getAssets(),
+            builder: (context, snapshot) {
+              if (!snapshot.hasData) return Container();
+              
+              final filteredAssets = _filteredAssets(snapshot.data!);
+              
+              return IconButton(
+                onPressed: filteredAssets.isNotEmpty 
+                  ? () => _exportToExcel(filteredAssets)
+                  : null,
+                icon: const Icon(Icons.file_download),
+                tooltip: 'Export ke Excel',
+              );
+            },
+          ),
+        ],
       ),
       body: Column(
         children: [
@@ -692,7 +956,7 @@ class _DaftarAssetPageState extends State<DaftarAssetPage> {
                 ),
                 const SizedBox(height: 12),
                 
-                // Filter Button
+                // Filter and Export Buttons Row - HANYA TOMBOL FILTER SAJA
                 Row(
                   children: [
                     const Icon(Icons.filter_list, color: Colors.white),
@@ -723,13 +987,13 @@ class _DaftarAssetPageState extends State<DaftarAssetPage> {
                   ],
                 ),
                 
-                // Container untuk Active Filters - DIPERLUAS KE BAWAH
+                // Container untuk Active Filters
                 Container(
                   width: double.infinity,
                   margin: const EdgeInsets.only(top: 16),
                   padding: const EdgeInsets.all(12),
                   constraints: const BoxConstraints(
-                    minHeight: 50, // Tinggi minimum container
+                    minHeight: 50,
                   ),
                   decoration: BoxDecoration(
                     color: Colors.white.withOpacity(0.1),
@@ -787,94 +1051,148 @@ class _DaftarAssetPageState extends State<DaftarAssetPage> {
                   );
                 }
 
-                return ListView.builder(
-                  padding: const EdgeInsets.all(16),
-                  itemCount: filteredAssets.length,
-                  itemBuilder: (context, index) {
-                    final asset = filteredAssets[index];
-                    return Card(
-                      margin: const EdgeInsets.only(bottom: 12),
-                      elevation: 2,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
+                return Column(
+                  children: [
+                    // Summary Info - TANPA TOMBOL EXCEL LAGI
+                    Container(
+                      margin: const EdgeInsets.all(16),
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF125E72).withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(
+                          color: const Color(0xFF125E72).withOpacity(0.3),
+                        ),
                       ),
-                      child: InkWell(
-                        onTap: () => _showAssetDetail(asset),
-                        borderRadius: BorderRadius.circular(12),
-                        child: Padding(
-                          padding: const EdgeInsets.all(16),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              // Header with Status
-                              Row(
-                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                children: [
-                                  Expanded(
-                                    child: Text(
-                                      'ULP ${asset.ulp}',
-                                      style: const TextStyle(
-                                        fontSize: 18,
-                                        fontWeight: FontWeight.bold,
-                                        color: Color(0xFF125E72),
-                                      ),
-                                    ),
-                                  ),
-                                  Container(
-                                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                                    decoration: BoxDecoration(
-                                      color: _getStatusColor(asset.status),
-                                      borderRadius: BorderRadius.circular(20),
-                                    ),
-                                    child: Text(
-                                      asset.status,
-                                      style: const TextStyle(
-                                        color: Colors.white,
-                                        fontSize: 12,
-                                        fontWeight: FontWeight.w500,
-                                      ),
-                                    ),
-                                  ),
-                                ],
+                      child: Row(
+                        children: [
+                          const Icon(
+                            Icons.info_outline,
+                            color: Color(0xFF125E72),
+                            size: 20,
+                          ),
+                          const SizedBox(width: 8),
+                          Text(
+                            'Menampilkan ${filteredAssets.length} dari ${snapshot.data!.length} total asset',
+                            style: const TextStyle(
+                              color: Color(0xFF125E72),
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                          const Spacer(),
+                          // Info tambahan tanpa tombol
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFF125E72).withOpacity(0.1),
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: Text(
+                              'JTM Assets',
+                              style: TextStyle(
+                                color: const Color(0xFF125E72),
+                                fontSize: 12,
+                                fontWeight: FontWeight.w500,
                               ),
-                              const SizedBox(height: 12),
-                              
-                              // Asset Details (Condensed)
-                              _buildDetailRow(Icons.account_balance, 'UP3', asset.up3),
-                              _buildDetailRow(Icons.business, 'Section', asset.section),
-                              _buildDetailRow(Icons.store, 'Penyulang', asset.penyulang),
-
-                              
-                              const SizedBox(height: 8),
-                              // Tap to view more indicator
-                              Container(
-                                padding: const EdgeInsets.symmetric(vertical: 8),
-                                child: Row(
-                                  mainAxisAlignment: MainAxisAlignment.center,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    
+                    // Asset List
+                    Expanded(
+                      child: ListView.builder(
+                        padding: const EdgeInsets.symmetric(horizontal: 16),
+                        itemCount: filteredAssets.length,
+                        itemBuilder: (context, index) {
+                          final asset = filteredAssets[index];
+                          return Card(
+                            margin: const EdgeInsets.only(bottom: 12),
+                            elevation: 2,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: InkWell(
+                              onTap: () => _showAssetDetail(asset),
+                              borderRadius: BorderRadius.circular(12),
+                              child: Padding(
+                                padding: const EdgeInsets.all(16),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
-                                    Text(
-                                      'Tap untuk lihat detail',
-                                      style: TextStyle(
-                                        color: Colors.grey[600],
-                                        fontSize: 12,
-                                        fontStyle: FontStyle.italic,
-                                      ),
+                                    // Header with Status
+                                    Row(
+                                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                      children: [
+                                        Expanded(
+                                          child: Text(
+                                            'ULP ${asset.ulp}',
+                                            style: const TextStyle(
+                                              fontSize: 18,
+                                              fontWeight: FontWeight.bold,
+                                              color: Color(0xFF125E72),
+                                            ),
+                                          ),
+                                        ),
+                                        Container(
+                                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                                          decoration: BoxDecoration(
+                                            color: _getStatusColor(asset.status),
+                                            borderRadius: BorderRadius.circular(20),
+                                          ),
+                                          child: Text(
+                                            asset.status,
+                                            style: const TextStyle(
+                                              color: Colors.white,
+                                              fontSize: 12,
+                                              fontWeight: FontWeight.w500,
+                                            ),
+                                          ),
+                                        ),
+                                      ],
                                     ),
-                                    const SizedBox(width: 4),
-                                    Icon(
-                                      Icons.touch_app,
-                                      size: 14,
-                                      color: Colors.grey[600],
+                                    const SizedBox(height: 12),
+                                    
+                                    // Asset Details (Condensed)
+                                    _buildDetailRow(Icons.account_balance, 'UP3', asset.up3),
+                                    _buildDetailRow(Icons.business, 'Section', asset.section),
+                                    _buildDetailRow(Icons.store, 'Penyulang', asset.penyulang),
+
+                                    
+                                    const SizedBox(height: 8),
+                                    // Tap to view more indicator
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(vertical: 8),
+                                      child: Row(
+                                        mainAxisAlignment: MainAxisAlignment.center,
+                                        children: [
+                                          Text(
+                                            'Tap untuk lihat detail',
+                                            style: TextStyle(
+                                              color: Colors.grey[600],
+                                              fontSize: 12,
+                                              fontStyle: FontStyle.italic,
+                                            ),
+                                          ),
+                                          const SizedBox(width: 4),
+                                          Icon(
+                                            Icons.touch_app,
+                                            size: 14,
+                                            color: Colors.grey[600],
+                                          ),
+                                        ],
+                                      ),
                                     ),
                                   ],
                                 ),
                               ),
-                            ],
-                          ),
-                        ),
+                            ),
+                          );
+                        },
                       ),
-                    );
-                  },
+                    ),
+                  ],
                 );
               },
             ),
@@ -918,9 +1236,6 @@ class _DaftarAssetPageState extends State<DaftarAssetPage> {
   }
 
   Color _getStatusColor(String status) {
-    // Debug print untuk melihat nilai status yang diterima
-    print('Status received: "$status"');
-    
     switch (status.toLowerCase().trim()) {
       case 'sempurna':
         return Colors.green;
@@ -929,7 +1244,6 @@ class _DaftarAssetPageState extends State<DaftarAssetPage> {
       case 'sakit':
         return Colors.red;
       default:
-        print('Status tidak dikenali: "$status"');
         return Colors.grey;
     }
   }

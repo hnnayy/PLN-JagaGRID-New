@@ -171,6 +171,69 @@ class _CustomDropdownState extends State<CustomDropdown> with SingleTickerProvid
   }
 }
 
+// Widget untuk menampilkan indikator kekuatan password
+class PasswordStrengthIndicator extends StatelessWidget {
+  final String password;
+  
+  const PasswordStrengthIndicator({super.key, required this.password});
+  
+  @override
+  Widget build(BuildContext context) {
+    final validations = _getPasswordValidations(password);
+    
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const SizedBox(height: 8),
+        Text(
+          'Persyaratan Password:',
+          style: TextStyle(
+            fontSize: 12,
+            fontWeight: FontWeight.w500,
+            color: Colors.grey.shade700
+          ),
+        ),
+        const SizedBox(height: 8),
+        ...validations.entries.map((entry) => _buildValidationItem(entry.key, entry.value)),
+      ],
+    );
+  }
+  
+  Widget _buildValidationItem(String text, bool isValid) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 4),
+      child: Row(
+        children: [
+          Icon(
+            isValid ? Icons.check_circle : Icons.cancel,
+            size: 16,
+            color: isValid ? Colors.green : Colors.red,
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              text,
+              style: TextStyle(
+                fontSize: 12,
+                color: isValid ? Colors.green : Colors.red,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+  
+  Map<String, bool> _getPasswordValidations(String password) {
+    return {
+      'Minimal 6 karakter': password.length >= 6,
+      'Mengandung huruf besar': password.contains(RegExp(r'[A-Z]')),
+      'Mengandung angka': password.contains(RegExp(r'[0-9]')),
+      'Mengandung simbol (!@#\$%^&*)': password.contains(RegExp(r'[!@#$%^&*(),.?":{}|<>]')),
+    };
+  }
+}
+
 class FormAddUserPage extends StatefulWidget {
   const FormAddUserPage({super.key});
 
@@ -213,63 +276,151 @@ class _FormAddUserPageState extends State<FormAddUserPage> {
     return '${now.day} ${months[now.month - 1]} ${now.year}';
   }
 
+  // Validasi password sederhana
+  String? _validatePassword(String? value) {
+    if (value?.isEmpty ?? true) {
+      return "Password tidak boleh kosong";
+    }
+    
+    String password = value!;
+    List<String> errors = [];
+    
+    if (password.length < 6) {
+      errors.add("minimal 6 karakter");
+    }
+    
+    if (!password.contains(RegExp(r'[A-Z]'))) {
+      errors.add("huruf besar");
+    }
+    
+    if (!password.contains(RegExp(r'[0-9]'))) {
+      errors.add("angka");
+    }
+    
+    if (!password.contains(RegExp(r'[!@#$%^&*(),.?":{}|<>]'))) {
+      errors.add("simbol (!@#\$%^&*)");
+    }
+    
+    if (errors.isNotEmpty) {
+      return "Password harus mengandung: ${errors.join(', ')}";
+    }
+    
+    return null;
+  }
+
+  // Validasi username Telegram
+  String? _validateTelegramUsername(String? value) {
+    if (value?.trim().isEmpty ?? true) {
+      return "Username Telegram tidak boleh kosong";
+    }
+    
+    String username = value!.trim();
+    
+    // Hapus @ jika ada di awal
+    if (username.startsWith('@')) {
+      username = username.substring(1);
+    }
+    
+    // Validasi format username Telegram
+    if (!RegExp(r'^[a-zA-Z0-9_]{5,32}$').hasMatch(username)) {
+      return "Username Telegram harus 5-32 karakter (huruf, angka, underscore)";
+    }
+    
+    return null;
+  }
+
+  // Validasi Chat ID Telegram
+  String? _validateTelegramChatId(String? value) {
+    if (value?.trim().isEmpty ?? true) {
+      return "Chat ID Telegram tidak boleh kosong";
+    }
+    
+    String chatId = value!.trim();
+    
+    // Chat ID bisa berupa angka positif atau negatif
+    if (!RegExp(r'^-?\d+$').hasMatch(chatId)) {
+      return "Chat ID harus berupa angka";
+    }
+    
+    return null;
+  }
+
   Future<void> _saveUser() async {
+    // Cek unit kerja dulu
     if (selectedUnit == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text("Pilih unit kerja terlebih dahulu"), 
-          backgroundColor: Colors.red
-        )
-      );
+      _showErrorAlert("Pilih unit kerja terlebih dahulu");
       return;
     }
     
-    if (_formKey.currentState!.validate()) {
-      setState(() => _isLoading = true);
+    // Cek validasi form
+    if (!_formKey.currentState!.validate()) {
+      _showErrorAlert("Gagal menyimpan, perbaiki kesalahan");
+      return;
+    }
+    
+    setState(() => _isLoading = true);
 
-      try {
-        // Cek username sudah ada atau belum
-        final username = usernameController.text.trim().startsWith('@') 
-          ? usernameController.text.trim() 
-          : '@${usernameController.text.trim()}';
+    try {
+      // Cek username sudah ada atau belum
+      final username = usernameController.text.trim().startsWith('@') 
+        ? usernameController.text.trim() 
+        : '@${usernameController.text.trim()}';
 
-        final existingUser = await FirebaseFirestore.instance
-          .collection("users")
-          .where("username", isEqualTo: username)
-          .get();
+      final existingUser = await FirebaseFirestore.instance
+        .collection("users")
+        .where("username", isEqualTo: username)
+        .get();
 
-        if (existingUser.docs.isNotEmpty) {
-          setState(() => _isLoading = false);
-          _showErrorAlert("Username sudah terdaftar dalam sistem");
-          return;
-        }
-
-        final newUser = {
-          "name": fullNameController.text.trim(),
-          "username": username,
-          "unit": selectedUnit!,
-          "level": selectedLevel,
-          "password": passwordController.text.trim(),
-          "added": getCurrentDate(),
-          "username_telegram": telegramUsernameController.text.trim(),
-          "chat_id_telegram": telegramChatIdController.text.trim(),
-          "status": 1,
-        };
-
-        final docRef = await FirebaseFirestore.instance
-            .collection("users")
-            .add(newUser);
-        
-        newUser["id"] = docRef.id;
-
-        if (mounted) {
-          setState(() => _isLoading = false);
-          _showSuccessAlert();
-        }
-      } catch (e) {
+      if (existingUser.docs.isNotEmpty) {
         setState(() => _isLoading = false);
-        _showErrorAlert("Gagal menyimpan user: ${e.toString()}");
+        _showErrorAlert("Username sudah terdaftar dalam sistem");
+        return;
       }
+
+      // Cek Chat ID Telegram sudah ada atau belum
+      final chatId = telegramChatIdController.text.trim();
+      final existingChatId = await FirebaseFirestore.instance
+        .collection("users")
+        .where("chat_id_telegram", isEqualTo: chatId)
+        .get();
+
+      if (existingChatId.docs.isNotEmpty) {
+        setState(() => _isLoading = false);
+        _showErrorAlert("Chat ID Telegram sudah terdaftar dalam sistem");
+        return;
+      }
+
+      // Format username telegram (hapus @ jika ada)
+      String telegramUsername = telegramUsernameController.text.trim();
+      if (telegramUsername.startsWith('@')) {
+        telegramUsername = telegramUsername.substring(1);
+      }
+
+      final newUser = {
+        "name": fullNameController.text.trim(),
+        "username": username,
+        "unit": selectedUnit!,
+        "level": selectedLevel,
+        "password": passwordController.text.trim(),
+        "added": getCurrentDate(),
+        "username_telegram": telegramUsername,
+        "chat_id_telegram": chatId,
+        "status": 1,
+      };
+
+      final docRef = await FirebaseFirestore.instance
+          .collection("users")
+          .add(newUser);
+      
+      newUser["id"] = docRef.id;
+
+      if (mounted) {
+        setState(() => _isLoading = false);
+        _showSuccessAlert();
+      }
+    } catch (e) {
+      setState(() => _isLoading = false);
+      _showErrorAlert("Gagal menyimpan user ke database");
     }
   }
 
@@ -278,80 +429,70 @@ class _FormAddUserPageState extends State<FormAddUserPage> {
       context: context,
       barrierDismissible: false,
       builder: (context) => Dialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        backgroundColor: Colors.transparent,
         child: Container(
-          padding: const EdgeInsets.all(32),
+          width: MediaQuery.of(context).size.width * 0.85,
+          padding: const EdgeInsets.all(24),
           decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(16), 
-            color: Colors.white
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(20),
           ),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
               // Success Icon
               Container(
-                width: 80, 
+                width: 80,
                 height: 80,
                 decoration: const BoxDecoration(
-                  color: Color(0xFF2E5D6F), 
-                  shape: BoxShape.circle
+                  color: Color(0xFF2E5D6F),
+                  shape: BoxShape.circle,
                 ),
                 child: const Icon(
-                  Icons.check, 
-                  size: 45, 
-                  color: Colors.white
+                  Icons.check,
+                  color: Colors.white,
+                  size: 40,
                 ),
               ),
-              
               const SizedBox(height: 24),
-              
               // Title
               const Text(
-                "Berhasil!",
+                'Berhasil!',
                 style: TextStyle(
-                  fontSize: 24, 
-                  fontWeight: FontWeight.bold, 
-                  color: Color(0xFF2E5D6F)
-                )
+                  fontSize: 24,
+                  fontWeight: FontWeight.bold,
+                  color: Color(0xFF2E5D6F),
+                ),
               ),
-              
               const SizedBox(height: 12),
-              
-              // Description
+              // Message
               Text(
-                "User berhasil ditambahkan ke sistem",
+                'User berhasil ditambahkan ke sistem',
+                textAlign: TextAlign.center,
                 style: TextStyle(
-                  fontSize: 16, 
-                  color: Colors.grey.shade600
-                ), 
-                textAlign: TextAlign.center
+                  fontSize: 16,
+                  color: Colors.grey.shade600,
+                  height: 1.4,
+                ),
               ),
-              
               const SizedBox(height: 32),
-              
-              // OK Button
+              // Button
               SizedBox(
                 width: double.infinity,
+                height: 45,
                 child: ElevatedButton(
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF2E5D6F), 
-                    foregroundColor: Colors.white, 
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12)
-                    ), 
-                    padding: const EdgeInsets.symmetric(vertical: 16),
-                    elevation: 0,
+                    backgroundColor: const Color(0xFF2E5D6F),
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(25)),
                   ),
                   onPressed: () {
                     Navigator.of(context).pop(); // Close dialog
                     _resetForm(); // Reset form
                   },
                   child: const Text(
-                    "OK", 
-                    style: TextStyle(
-                      fontWeight: FontWeight.w600, 
-                      fontSize: 16
-                    )
+                    'OK',
+                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
                   ),
                 ),
               ),
@@ -362,82 +503,73 @@ class _FormAddUserPageState extends State<FormAddUserPage> {
     );
   }
 
+  // ALERT GAGAL YANG DIPERBAIKI - Konsisten dengan desain success
   void _showErrorAlert(String errorMessage) {
     showDialog(
       context: context,
       barrierDismissible: false,
       builder: (context) => Dialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        backgroundColor: Colors.transparent,
         child: Container(
-          padding: const EdgeInsets.all(32),
+          width: MediaQuery.of(context).size.width * 0.85,
+          padding: const EdgeInsets.all(24),
           decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(16), 
-            color: Colors.white
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(20),
           ),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              // Error Icon
+              // Error Icon - Sama dengan success tapi merah
               Container(
-                width: 80, 
+                width: 80,
                 height: 80,
-                decoration: const BoxDecoration(
-                  color: Colors.red, 
-                  shape: BoxShape.circle
+                decoration: BoxDecoration(
+                  color: Colors.red.shade600,
+                  shape: BoxShape.circle,
                 ),
                 child: const Icon(
-                  Icons.close, 
-                  size: 45, 
-                  color: Colors.white
+                  Icons.close,
+                  color: Colors.white,
+                  size: 40,
                 ),
               ),
-              
               const SizedBox(height: 24),
-              
               // Title
-              const Text(
-                "Gagal!",
+              Text(
+                'Gagal!',
                 style: TextStyle(
-                  fontSize: 24, 
-                  fontWeight: FontWeight.bold, 
-                  color: Color(0xFF2E5D6F)
-                )
+                  fontSize: 24,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.red.shade600,
+                ),
               ),
-              
               const SizedBox(height: 12),
-              
-              // Description
+              // Message - Konsisten dengan success dialog
               Text(
                 errorMessage,
+                textAlign: TextAlign.center,
                 style: TextStyle(
-                  fontSize: 16, 
-                  color: Colors.grey.shade600
-                ), 
-                textAlign: TextAlign.center
+                  fontSize: 16,
+                  color: Colors.grey.shade600,
+                  height: 1.4,
+                ),
               ),
-              
               const SizedBox(height: 32),
-              
-              // OK Button
+              // Button - Simple seperti success
               SizedBox(
                 width: double.infinity,
+                height: 45,
                 child: ElevatedButton(
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF2E5D6F), 
-                    foregroundColor: Colors.white, 
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12)
-                    ), 
-                    padding: const EdgeInsets.symmetric(vertical: 16),
-                    elevation: 0,
+                    backgroundColor: Colors.red.shade600,
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(25)),
                   ),
                   onPressed: () => Navigator.of(context).pop(),
                   child: const Text(
-                    "OK", 
-                    style: TextStyle(
-                      fontWeight: FontWeight.w600, 
-                      fontSize: 16
-                    )
+                    'OK',
+                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
                   ),
                 ),
               ),
@@ -469,6 +601,7 @@ class _FormAddUserPageState extends State<FormAddUserPage> {
     Widget? suffixIcon, 
     String? Function(String?)? validator,
     TextInputType keyboardType = TextInputType.text,
+    Widget? bottomWidget,
   }) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -497,11 +630,26 @@ class _FormAddUserPageState extends State<FormAddUserPage> {
               borderSide: const BorderSide(color: Color(0xFF2E5D6F), width: 2),
               borderRadius: BorderRadius.circular(8),
             ),
+            errorBorder: OutlineInputBorder(
+              borderSide: const BorderSide(color: Colors.red, width: 1),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            focusedErrorBorder: OutlineInputBorder(
+              borderSide: const BorderSide(color: Colors.red, width: 2),
+              borderRadius: BorderRadius.circular(8),
+            ),
             contentPadding: const EdgeInsets.all(16),
             suffixIcon: suffixIcon,
           ),
           validator: validator,
+          onChanged: (value) {
+            // Trigger rebuild untuk password indicator
+            if (label == "Password") {
+              setState(() {});
+            }
+          },
         ),
+        if (bottomWidget != null) bottomWidget,
       ],
     );
   }
@@ -614,9 +762,15 @@ class _FormAddUserPageState extends State<FormAddUserPage> {
               _buildField(
                 "Nama Lengkap", 
                 fullNameController, 
-                validator: (value) => value?.trim().isEmpty ?? true 
-                  ? "Nama tidak boleh kosong" 
-                  : null
+                validator: (value) {
+                  if (value?.trim().isEmpty ?? true) {
+                    return "Nama tidak boleh kosong";
+                  }
+                  if (value!.trim().length < 2) {
+                    return "Nama minimal 2 karakter";
+                  }
+                  return null;
+                }
               ),
               
               const SizedBox(height: 20),
@@ -629,8 +783,15 @@ class _FormAddUserPageState extends State<FormAddUserPage> {
                   if (value?.trim().isEmpty ?? true) {
                     return "Username tidak boleh kosong";
                   }
-                  if (value!.trim().length < 3) {
+                  String username = value!.trim();
+                  if (username.startsWith('@')) {
+                    username = username.substring(1);
+                  }
+                  if (username.length < 3) {
                     return "Username minimal 3 karakter";
+                  }
+                  if (!RegExp(r'^[a-zA-Z0-9_]+$').hasMatch(username)) {
+                    return "Username hanya boleh huruf, angka, dan underscore";
                   }
                   return null;
                 }
@@ -641,10 +802,8 @@ class _FormAddUserPageState extends State<FormAddUserPage> {
               // Username Telegram
               _buildField(
                 "Username Telegram", 
-                telegramUsernameController, 
-                validator: (value) => value?.trim().isEmpty ?? true 
-                  ? "Username Telegram tidak boleh kosong" 
-                  : null
+                telegramUsernameController,
+                validator: _validateTelegramUsername,
               ),
               
               const SizedBox(height: 20),
@@ -654,14 +813,12 @@ class _FormAddUserPageState extends State<FormAddUserPage> {
                 "Chat ID Telegram", 
                 telegramChatIdController,
                 keyboardType: TextInputType.number,
-                validator: (value) => value?.trim().isEmpty ?? true 
-                  ? "Chat ID Telegram tidak boleh kosong" 
-                  : null
+                validator: _validateTelegramChatId,
               ),
               
               const SizedBox(height: 20),
               
-              // Password
+              // Password dengan indikator kekuatan
               _buildField(
                 "Password", 
                 passwordController,
@@ -673,15 +830,10 @@ class _FormAddUserPageState extends State<FormAddUserPage> {
                   ), 
                   onPressed: () => setState(() => _isPasswordVisible = !_isPasswordVisible)
                 ),
-                validator: (value) {
-                  if (value?.isEmpty ?? true) {
-                    return "Password tidak boleh kosong";
-                  }
-                  if (value!.length < 6) {
-                    return "Password minimal 6 karakter";
-                  }
-                  return null;
-                },
+                validator: _validatePassword,
+                bottomWidget: passwordController.text.isNotEmpty 
+                  ? PasswordStrengthIndicator(password: passwordController.text)
+                  : null,
               ),
               
               const SizedBox(height: 32),

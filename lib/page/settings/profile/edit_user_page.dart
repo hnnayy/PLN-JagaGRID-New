@@ -387,7 +387,7 @@ class _EditUserPageState extends State<EditUserPage> {
                 child: ElevatedButton(
                   style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF2E5D6F), foregroundColor: Colors.white, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(25))),
                   onPressed: _isLoading ? null : _saveUser,
-                  child: _isLoading ? const CircularProgressIndicator(color: Colors.white) : const Text("Update User", style: TextStyle(fontWeight: FontWeight.w600, fontSize: 16)),
+                  child: _isLoading ? const CircularProgressIndicator(color: Colors.white) : const Text("Perbarui", style: TextStyle(fontWeight: FontWeight.w600, fontSize: 16)),
                 ),
               ),
             ],
