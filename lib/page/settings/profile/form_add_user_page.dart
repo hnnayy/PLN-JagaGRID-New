@@ -6,13 +6,15 @@ class CustomDropdown extends StatefulWidget {
   final List<String> items;
   final String labelText;
   final Function(String?) onChanged;
+  final String? errorText;
 
   const CustomDropdown({
     super.key, 
     required this.value, 
     required this.items, 
     required this.labelText, 
-    required this.onChanged
+    required this.onChanged,
+    this.errorText,
   });
 
   @override
@@ -140,8 +142,8 @@ class _CustomDropdownState extends State<CustomDropdown> with SingleTickerProvid
               width: double.infinity,
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
-                color: const Color(0xFFF0F9FF), 
-                borderRadius: BorderRadius.circular(8)
+                color: const Color(0xFFF0F9FF),
+                borderRadius: BorderRadius.circular(8),
               ),
               child: Row(
                 children: [
@@ -166,6 +168,17 @@ class _CustomDropdownState extends State<CustomDropdown> with SingleTickerProvid
             ),
           ),
         ),
+        if (widget.errorText != null) ...[
+          const SizedBox(height: 8),
+          Text(
+            widget.errorText!,
+            style: const TextStyle(
+              color: Colors.red,
+              fontSize: 14,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+        ],
       ],
     );
   }
@@ -267,6 +280,14 @@ class _FormAddUserPageState extends State<FormAddUserPage> {
   bool _isPasswordVisible = false;
   bool _isLoading = false;
 
+  // Error messages for inline validation
+  String? _unitError;
+  String? _nameError;
+  String? _usernameError;
+  String? _telegramUsernameError;
+  String? _telegramChatIdError;
+  String? _passwordError;
+
   String getCurrentDate() {
     final now = DateTime.now();
     final months = [
@@ -276,85 +297,113 @@ class _FormAddUserPageState extends State<FormAddUserPage> {
     return '${now.day} ${months[now.month - 1]} ${now.year}';
   }
 
-  // Validasi password sederhana
-  String? _validatePassword(String? value) {
-    if (value?.isEmpty ?? true) {
-      return "Password tidak boleh kosong";
-    }
-    
-    String password = value!;
-    List<String> errors = [];
-    
-    if (password.length < 6) {
-      errors.add("minimal 6 karakter");
-    }
-    
-    if (!password.contains(RegExp(r'[A-Z]'))) {
-      errors.add("huruf besar");
-    }
-    
-    if (!password.contains(RegExp(r'[0-9]'))) {
-      errors.add("angka");
-    }
-    
-    if (!password.contains(RegExp(r'[!@#$%^&*(),.?":{}|<>]'))) {
-      errors.add("simbol (!@#\$%^&*)");
-    }
-    
-    if (errors.isNotEmpty) {
-      return "Password harus mengandung: ${errors.join(', ')}";
-    }
-    
-    return null;
+  void _clearAllErrors() {
+    setState(() {
+      _unitError = null;
+      _nameError = null;
+      _usernameError = null;
+      _telegramUsernameError = null;
+      _telegramChatIdError = null;
+      _passwordError = null;
+    });
   }
 
-  // Validasi username Telegram
-  String? _validateTelegramUsername(String? value) {
-    if (value?.trim().isEmpty ?? true) {
-      return "Username Telegram tidak boleh kosong";
-    }
-    
-    String username = value!.trim();
-    
-    // Hapus @ jika ada di awal
-    if (username.startsWith('@')) {
-      username = username.substring(1);
-    }
-    
-    // Validasi format username Telegram
-    if (!RegExp(r'^[a-zA-Z0-9_]{5,32}$').hasMatch(username)) {
-      return "Username Telegram harus 5-32 karakter (huruf, angka, underscore)";
-    }
-    
-    return null;
-  }
+  bool _validateAllFields() {
+    _clearAllErrors();
+    bool isValid = true;
 
-  // Validasi Chat ID Telegram
-  String? _validateTelegramChatId(String? value) {
-    if (value?.trim().isEmpty ?? true) {
-      return "Chat ID Telegram tidak boleh kosong";
+    // Validate Unit Kerja
+    if (selectedUnit == null) {
+      setState(() => _unitError = 'Pilih unit kerja terlebih dahulu');
+      isValid = false;
     }
-    
-    String chatId = value!.trim();
-    
-    // Chat ID bisa berupa angka positif atau negatif
-    if (!RegExp(r'^-?\d+$').hasMatch(chatId)) {
-      return "Chat ID harus berupa angka";
+
+    // Validate Nama Lengkap
+    if (fullNameController.text.trim().isEmpty) {
+      setState(() => _nameError = 'Nama tidak boleh kosong');
+      isValid = false;
+    } else if (fullNameController.text.trim().length < 2) {
+      setState(() => _nameError = 'Nama minimal 2 karakter');
+      isValid = false;
     }
-    
-    return null;
+
+    // Validate Username
+    if (usernameController.text.trim().isEmpty) {
+      setState(() => _usernameError = 'Username tidak boleh kosong');
+      isValid = false;
+    } else {
+      String username = usernameController.text.trim();
+      if (username.startsWith('@')) {
+        username = username.substring(1);
+      }
+      if (username.length < 3) {
+        setState(() => _usernameError = 'Username minimal 3 karakter');
+        isValid = false;
+      } else if (!RegExp(r'^[a-zA-Z0-9_]+$').hasMatch(username)) {
+        setState(() => _usernameError = 'Username hanya boleh huruf, angka, dan underscore');
+        isValid = false;
+      }
+    }
+
+    // Validate Username Telegram
+    if (telegramUsernameController.text.trim().isEmpty) {
+      setState(() => _telegramUsernameError = 'Username Telegram tidak boleh kosong');
+      isValid = false;
+    } else {
+      String username = telegramUsernameController.text.trim();
+      if (username.startsWith('@')) {
+        username = username.substring(1);
+      }
+      if (!RegExp(r'^[a-zA-Z0-9_]{5,32}$').hasMatch(username)) {
+        setState(() => _telegramUsernameError = 'Username Telegram harus 5-32 karakter (huruf, angka, underscore)');
+        isValid = false;
+      }
+    }
+
+    // Validate Chat ID Telegram
+    if (telegramChatIdController.text.trim().isEmpty) {
+      setState(() => _telegramChatIdError = 'Chat ID Telegram tidak boleh kosong');
+      isValid = false;
+    } else {
+      String chatId = telegramChatIdController.text.trim();
+      if (!RegExp(r'^-?\d+$').hasMatch(chatId)) {
+        setState(() => _telegramChatIdError = 'Chat ID harus berupa angka');
+        isValid = false;
+      }
+    }
+
+    // Validate Password
+    if (passwordController.text.isEmpty) {
+      setState(() => _passwordError = 'Password tidak boleh kosong');
+      isValid = false;
+    } else {
+      String password = passwordController.text;
+      List<String> errors = [];
+      
+      if (password.length < 6) {
+        errors.add("minimal 6 karakter");
+      }
+      if (!password.contains(RegExp(r'[A-Z]'))) {
+        errors.add("huruf besar");
+      }
+      if (!password.contains(RegExp(r'[0-9]'))) {
+        errors.add("angka");
+      }
+      if (!password.contains(RegExp(r'[!@#$%^&*(),.?":{}|<>]'))) {
+        errors.add("simbol (!@#\$%^&*)");
+      }
+      
+      if (errors.isNotEmpty) {
+        setState(() => _passwordError = 'Password harus mengandung: ${errors.join(', ')}');
+        isValid = false;
+      }
+    }
+
+    return isValid;
   }
 
   Future<void> _saveUser() async {
-    // Cek unit kerja dulu
-    if (selectedUnit == null) {
-      _showErrorAlert("Pilih unit kerja terlebih dahulu");
-      return;
-    }
-    
-    // Cek validasi form
-    if (!_formKey.currentState!.validate()) {
-      _showErrorAlert("Gagal menyimpan, perbaiki kesalahan");
+    if (!_validateAllFields()) {
       return;
     }
     
@@ -372,8 +421,10 @@ class _FormAddUserPageState extends State<FormAddUserPage> {
         .get();
 
       if (existingUser.docs.isNotEmpty) {
-        setState(() => _isLoading = false);
-        _showErrorAlert("Username sudah terdaftar dalam sistem");
+        setState(() {
+          _isLoading = false;
+          _usernameError = 'Username sudah terdaftar dalam sistem';
+        });
         return;
       }
 
@@ -385,8 +436,10 @@ class _FormAddUserPageState extends State<FormAddUserPage> {
         .get();
 
       if (existingChatId.docs.isNotEmpty) {
-        setState(() => _isLoading = false);
-        _showErrorAlert("Chat ID Telegram sudah terdaftar dalam sistem");
+        setState(() {
+          _isLoading = false;
+          _telegramChatIdError = 'Chat ID Telegram sudah terdaftar dalam sistem';
+        });
         return;
       }
 
@@ -420,7 +473,14 @@ class _FormAddUserPageState extends State<FormAddUserPage> {
       }
     } catch (e) {
       setState(() => _isLoading = false);
-      _showErrorAlert("Gagal menyimpan user ke database");
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text("Error: ${e.toString()}"),
+          backgroundColor: Colors.red,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+        ),
+      );
     }
   }
 
@@ -503,83 +563,6 @@ class _FormAddUserPageState extends State<FormAddUserPage> {
     );
   }
 
-  // ALERT GAGAL YANG DIPERBAIKI - Konsisten dengan desain success
-  void _showErrorAlert(String errorMessage) {
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (context) => Dialog(
-        backgroundColor: Colors.transparent,
-        child: Container(
-          width: MediaQuery.of(context).size.width * 0.85,
-          padding: const EdgeInsets.all(24),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(20),
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              // Error Icon - Sama dengan success tapi merah
-              Container(
-                width: 80,
-                height: 80,
-                decoration: BoxDecoration(
-                  color: Colors.red.shade600,
-                  shape: BoxShape.circle,
-                ),
-                child: const Icon(
-                  Icons.close,
-                  color: Colors.white,
-                  size: 40,
-                ),
-              ),
-              const SizedBox(height: 24),
-              // Title
-              Text(
-                'Gagal!',
-                style: TextStyle(
-                  fontSize: 24,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.red.shade600,
-                ),
-              ),
-              const SizedBox(height: 12),
-              // Message - Konsisten dengan success dialog
-              Text(
-                errorMessage,
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  fontSize: 16,
-                  color: Colors.grey.shade600,
-                  height: 1.4,
-                ),
-              ),
-              const SizedBox(height: 32),
-              // Button - Simple seperti success
-              SizedBox(
-                width: double.infinity,
-                height: 45,
-                child: ElevatedButton(
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.red.shade600,
-                    foregroundColor: Colors.white,
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(25)),
-                  ),
-                  onPressed: () => Navigator.of(context).pop(),
-                  child: const Text(
-                    'OK',
-                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
   void _resetForm() {
     _formKey.currentState?.reset();
     setState(() {
@@ -592,6 +575,7 @@ class _FormAddUserPageState extends State<FormAddUserPage> {
       passwordController.clear();
       _isPasswordVisible = false;
     });
+    _clearAllErrors();
   }
 
   Widget _buildField(
@@ -599,9 +583,9 @@ class _FormAddUserPageState extends State<FormAddUserPage> {
     TextEditingController controller, {
     bool obscureText = false, 
     Widget? suffixIcon, 
-    String? Function(String?)? validator,
     TextInputType keyboardType = TextInputType.text,
     Widget? bottomWidget,
+    String? errorText,
   }) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -630,25 +614,38 @@ class _FormAddUserPageState extends State<FormAddUserPage> {
               borderSide: const BorderSide(color: Color(0xFF2E5D6F), width: 2),
               borderRadius: BorderRadius.circular(8),
             ),
-            errorBorder: OutlineInputBorder(
-              borderSide: const BorderSide(color: Colors.red, width: 1),
-              borderRadius: BorderRadius.circular(8),
-            ),
-            focusedErrorBorder: OutlineInputBorder(
-              borderSide: const BorderSide(color: Colors.red, width: 2),
-              borderRadius: BorderRadius.circular(8),
-            ),
             contentPadding: const EdgeInsets.all(16),
             suffixIcon: suffixIcon,
           ),
-          validator: validator,
           onChanged: (value) {
-            // Trigger rebuild untuk password indicator
-            if (label == "Password") {
-              setState(() {});
+            // Clear error when user starts typing
+            if (label == "Nama Lengkap" && _nameError != null) {
+              setState(() => _nameError = null);
+            } else if (label == "Username" && _usernameError != null) {
+              setState(() => _usernameError = null);
+            } else if (label == "Username Telegram" && _telegramUsernameError != null) {
+              setState(() => _telegramUsernameError = null);
+            } else if (label == "Chat ID Telegram" && _telegramChatIdError != null) {
+              setState(() => _telegramChatIdError = null);
+            } else if (label == "Password") {
+              if (_passwordError != null) {
+                setState(() => _passwordError = null);
+              }
+              setState(() {}); // Trigger rebuild untuk password indicator
             }
           },
         ),
+        if (errorText != null) ...[
+          const SizedBox(height: 8),
+          Text(
+            errorText,
+            style: const TextStyle(
+              color: Colors.red,
+              fontSize: 14,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+        ],
         if (bottomWidget != null) bottomWidget,
       ],
     );
@@ -693,7 +690,13 @@ class _FormAddUserPageState extends State<FormAddUserPage> {
                 value: selectedUnit, 
                 items: units, 
                 labelText: "Pilih Unit Kerja", 
-                onChanged: (value) => setState(() => selectedUnit = value)
+                onChanged: (value) {
+                  setState(() {
+                    selectedUnit = value;
+                    _unitError = null; // Clear error when user selects
+                  });
+                },
+                errorText: _unitError,
               ),
               
               const SizedBox(height: 20),
@@ -761,16 +764,8 @@ class _FormAddUserPageState extends State<FormAddUserPage> {
               // Nama Lengkap
               _buildField(
                 "Nama Lengkap", 
-                fullNameController, 
-                validator: (value) {
-                  if (value?.trim().isEmpty ?? true) {
-                    return "Nama tidak boleh kosong";
-                  }
-                  if (value!.trim().length < 2) {
-                    return "Nama minimal 2 karakter";
-                  }
-                  return null;
-                }
+                fullNameController,
+                errorText: _nameError,
               ),
               
               const SizedBox(height: 20),
@@ -778,23 +773,8 @@ class _FormAddUserPageState extends State<FormAddUserPage> {
               // Username
               _buildField(
                 "Username", 
-                usernameController, 
-                validator: (value) {
-                  if (value?.trim().isEmpty ?? true) {
-                    return "Username tidak boleh kosong";
-                  }
-                  String username = value!.trim();
-                  if (username.startsWith('@')) {
-                    username = username.substring(1);
-                  }
-                  if (username.length < 3) {
-                    return "Username minimal 3 karakter";
-                  }
-                  if (!RegExp(r'^[a-zA-Z0-9_]+$').hasMatch(username)) {
-                    return "Username hanya boleh huruf, angka, dan underscore";
-                  }
-                  return null;
-                }
+                usernameController,
+                errorText: _usernameError,
               ),
               
               const SizedBox(height: 20),
@@ -803,7 +783,7 @@ class _FormAddUserPageState extends State<FormAddUserPage> {
               _buildField(
                 "Username Telegram", 
                 telegramUsernameController,
-                validator: _validateTelegramUsername,
+                errorText: _telegramUsernameError,
               ),
               
               const SizedBox(height: 20),
@@ -813,7 +793,7 @@ class _FormAddUserPageState extends State<FormAddUserPage> {
                 "Chat ID Telegram", 
                 telegramChatIdController,
                 keyboardType: TextInputType.number,
-                validator: _validateTelegramChatId,
+                errorText: _telegramChatIdError,
               ),
               
               const SizedBox(height: 20),
@@ -830,10 +810,10 @@ class _FormAddUserPageState extends State<FormAddUserPage> {
                   ), 
                   onPressed: () => setState(() => _isPasswordVisible = !_isPasswordVisible)
                 ),
-                validator: _validatePassword,
                 bottomWidget: passwordController.text.isNotEmpty 
                   ? PasswordStrengthIndicator(password: passwordController.text)
                   : null,
+                errorText: _passwordError,
               ),
               
               const SizedBox(height: 32),
