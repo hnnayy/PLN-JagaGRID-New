@@ -24,6 +24,7 @@ class _MapPageState extends State<MapPage> {
   bool _prefsLoaded = false;
   int _sessionLevel = 2; // default
   String _sessionUnit = '';
+  bool _showSearchResults = false; // Tambahan untuk kontrol visibility
 
   @override
   void initState() {
@@ -58,6 +59,15 @@ class _MapPageState extends State<MapPage> {
 
   void _addMarker(LatLng pos) {
     // Biar cuma tambah marker dari AddDataPage, kosongin dulu
+  }
+
+  // Fungsi untuk clear search
+  void _clearSearch() {
+    _searchController.clear();
+    setState(() {
+      _searchResults.clear();
+      _showSearchResults = false;
+    });
   }
 
   String _getMapTypeLabel(MapType mapType) {
@@ -107,7 +117,8 @@ class _MapPageState extends State<MapPage> {
                             fontFamily: 'Poppins',
                             fontWeight: FontWeight.bold,
                             fontSize: 20,
-                            color: const Color.fromARGB(255, 255, 255, 255)                     ),
+                            color: const Color.fromARGB(255, 255, 255, 255),
+                          ),
                         ),
                       ),
                       Positioned(
@@ -130,7 +141,7 @@ class _MapPageState extends State<MapPage> {
                     ],
                   ),
                 ),
-                // Search Container (hanya input field)
+                // Search Container dengan tombol clear
                 Padding(
                   padding: const EdgeInsets.fromLTRB(8, 0, 8, 6),
                   child: Container(
@@ -169,10 +180,22 @@ class _MapPageState extends State<MapPage> {
                                   else if (pohon.prioritas == 3) prioritasLabel = 'tinggi';
                                   return nama.contains(q) || id.contains(q) || prioritasStr == q || prioritasLabel.contains(q);
                                 }).toList();
+                                
+                                // Show search results jika ada query dan hasil
+                                _showSearchResults = query.isNotEmpty && _searchResults.isNotEmpty;
                               });
                             },
                           ),
                         ),
+                        // Tombol clear/close - hanya tampil jika ada text atau search results
+                        if (_searchController.text.isNotEmpty || _showSearchResults)
+                          InkWell(
+                            onTap: _clearSearch,
+                            child: Container(
+                              padding: const EdgeInsets.all(4),
+                              child: const Icon(Icons.close, color: Colors.black54, size: 20),
+                            ),
+                          ),
                       ],
                     ),
                   ),
@@ -215,8 +238,8 @@ class _MapPageState extends State<MapPage> {
                                   offset: const Offset(0, 56),
                                   elevation: 8,
                                   constraints: BoxConstraints(
-                                    minWidth: constraints.maxWidth, // Set lebar minimum sama dengan container
-                                    maxWidth: constraints.maxWidth, // Set lebar maksimum sama dengan container
+                                    minWidth: constraints.maxWidth,
+                                    maxWidth: constraints.maxWidth,
                                   ),
                                   shape: RoundedRectangleBorder(
                                     borderRadius: BorderRadius.circular(8),
@@ -392,72 +415,161 @@ class _MapPageState extends State<MapPage> {
                 ),
               ],
             ),
-            // Search Results Overlay - positioned outside main column
-            if (_searchController.text.isNotEmpty && _searchResults.isNotEmpty)
+            // Search Results Overlay - HANYA TAMPIL JIKA _showSearchResults = true
+            if (_showSearchResults)
               Positioned(
-                top: 160, // Posisi tepat di bawah search container
+                top: 160,
                 left: 8,
                 right: 8,
                 child: Material(
                   elevation: 8,
                   borderRadius: BorderRadius.circular(12),
-                  child:                   Container(
+                  child: Container(
                     constraints: const BoxConstraints(
-                      maxHeight: 240, 
+                      maxHeight: 240,
                     ),
                     decoration: BoxDecoration(
                       color: Colors.white,
                       borderRadius: BorderRadius.circular(12),
                     ),
-                    child: ClipRRect(
-                      borderRadius: BorderRadius.circular(12),
-                      child: ListView.separated(
-                        shrinkWrap: true,
-                        padding: EdgeInsets.zero,
-                        itemCount: _searchResults.length,
-                        separatorBuilder: (ctx, idx) => const Divider(
-                          height: 1,
-                          color: Colors.grey,
+                    child: Column(
+                      children: [
+                        // Header dengan jumlah hasil dan tombol close
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                          decoration: const BoxDecoration(
+                            color: Color(0xFFF5F5F5),
+                            borderRadius: BorderRadius.only(
+                              topLeft: Radius.circular(12),
+                              topRight: Radius.circular(12),
+                            ),
+                          ),
+                          child: Row(
+                            children: [
+                              Icon(Icons.search_outlined, color: Colors.grey[600], size: 18),
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: Text(
+                                  '${_searchResults.length} hasil ditemukan',
+                                  style: TextStyle(
+                                    fontFamily: 'Poppins',
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w500,
+                                    color: Colors.grey[700],
+                                  ),
+                                ),
+                              ),
+                              InkWell(
+                                onTap: _clearSearch,
+                                child: Container(
+                                  padding: const EdgeInsets.all(4),
+                                  decoration: BoxDecoration(
+                                    color: Colors.grey[300],
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                  child: Icon(Icons.close, color: Colors.grey[600], size: 16),
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
-                        itemBuilder: (ctx, idx) {
-                          final pohon = _searchResults[idx];
-                          String prioritasLabel = '-';
-                          if (pohon.prioritas == 1) prioritasLabel = 'Rendah';
-                          else if (pohon.prioritas == 2) prioritasLabel = 'Sedang';
-                          else if (pohon.prioritas == 3) prioritasLabel = 'Tinggi';
-                          return ListTile(
-                            dense: true,
-                            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-                            title: Text(
-                              pohon.namaPohon, 
-                              style: const TextStyle(
-                                fontFamily: 'Poppins', 
-                                fontWeight: FontWeight.bold, 
-                                fontSize: 14
-                              )
+                        // List hasil search
+                        Expanded(
+                          child: ClipRRect(
+                            borderRadius: const BorderRadius.only(
+                              bottomLeft: Radius.circular(12),
+                              bottomRight: Radius.circular(12),
                             ),
-                            subtitle: Text(
-                              'ID: ${pohon.idPohon}  |  Prioritas: $prioritasLabel', 
-                              style: const TextStyle(
-                                fontFamily: 'Poppins', 
-                                fontSize: 12
-                              )
-                            ),
-                            onTap: () {
-                              _searchController.clear();
-                              setState(() { _searchResults.clear(); });
-                              final coords = pohon.koordinat.split(',');
-                              if (coords.length == 2) {
-                                double? lat = double.tryParse(coords[0]);
-                                double? lng = double.tryParse(coords[1]);
-                                if (lat != null && lng != null) {
-                                  _focusToMarker(LatLng(lat, lng));
+                            child: ListView.separated(
+                              shrinkWrap: true,
+                              padding: EdgeInsets.zero,
+                              itemCount: _searchResults.length,
+                              separatorBuilder: (ctx, idx) => const Divider(
+                                height: 1,
+                                color: Colors.grey,
+                              ),
+                              itemBuilder: (ctx, idx) {
+                                final pohon = _searchResults[idx];
+                                String prioritasLabel = '-';
+                                Color prioritasColor = Colors.grey;
+                                if (pohon.prioritas == 1) {
+                                  prioritasLabel = 'Rendah';
+                                  prioritasColor = Colors.green;
+                                } else if (pohon.prioritas == 2) {
+                                  prioritasLabel = 'Sedang';
+                                  prioritasColor = Colors.orange;
+                                } else if (pohon.prioritas == 3) {
+                                  prioritasLabel = 'Tinggi';
+                                  prioritasColor = Colors.red;
                                 }
-                              }
-                            },
-                          );
-                        },
-                      ),
+                                return ListTile(
+                                  dense: true,
+                                  contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                                  leading: Container(
+                                    width: 8,
+                                    height: 40,
+                                    decoration: BoxDecoration(
+                                      color: prioritasColor,
+                                      borderRadius: BorderRadius.circular(4),
+                                    ),
+                                  ),
+                                  title: Text(
+                                    pohon.namaPohon,
+                                    style: const TextStyle(
+                                      fontFamily: 'Poppins',
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 14,
+                                    ),
+                                  ),
+                                  subtitle: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        'ID: ${pohon.idPohon}',
+                                        style: const TextStyle(
+                                          fontFamily: 'Poppins',
+                                          fontSize: 12,
+                                          color: Colors.grey,
+                                        ),
+                                      ),
+                                      Text(
+                                        'Prioritas: $prioritasLabel',
+                                        style: TextStyle(
+                                          fontFamily: 'Poppins',
+                                          fontSize: 12,
+                                          color: prioritasColor,
+                                          fontWeight: FontWeight.w500,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                  trailing: const Icon(Icons.my_location, color: Colors.blue, size: 20),
+                                  onTap: () {
+                                    // Set text field ke nama pohon yang dipilih (seperti Google Search)
+                                    _searchController.text = pohon.namaPohon;
+                                    
+                                    // Hide search results setelah dipilih
+                                    setState(() {
+                                      _showSearchResults = false;
+                                      _searchResults.clear();
+                                    });
+                                    
+                                    // Focus ke marker
+                                    final coords = pohon.koordinat.split(',');
+                                    if (coords.length == 2) {
+                                      double? lat = double.tryParse(coords[0]);
+                                      double? lng = double.tryParse(coords[1]);
+                                      if (lat != null && lng != null) {
+                                        _focusToMarker(LatLng(lat, lng));
+                                      }
+                                    }
+                                  },
+                                );
+                              },
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
                   ),
                 ),
