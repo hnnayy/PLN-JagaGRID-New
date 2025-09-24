@@ -5,9 +5,10 @@ class AssetService {
   final CollectionReference _assetCollection =
       FirebaseFirestore.instance.collection("daftarjtm");
 
-  /// 🔹 Ambil semua data asset secara real-time
+  /// 🔹 Ambil semua data asset secara real-time, hanya yang aktif (status = 1)
   Stream<List<AssetModel>> getAssets() {
     return _assetCollection
+        .where('status', isEqualTo: 1)
         .orderBy("createdAt", descending: true)
         .snapshots()
         .map((snapshot) => snapshot.docs
@@ -18,11 +19,11 @@ class AssetService {
             .toList());
   }
 
-  /// 🔹 Ambil 1 asset by ID
+  /// 🔹 Ambil 1 asset by ID, hanya jika aktif (status = 1)
   Future<AssetModel?> getAssetById(String id) async {
     try {
       final doc = await _assetCollection.doc(id).get();
-      if (doc.exists) {
+      if (doc.exists && (doc.data() as Map<String, dynamic>)['status'] == 1) {
         return AssetModel.fromFirestore(
           doc.data() as Map<String, dynamic>,
           doc.id,
@@ -35,11 +36,12 @@ class AssetService {
     }
   }
 
-  /// 🔹 Tambah asset baru
+  /// 🔹 Tambah asset baru, default status = 1 (aktif)
   Future<void> addAsset(AssetModel asset) async {
     try {
       await _assetCollection.add({
         ...asset.toMap(),
+        'status': 1, // Pastikan status aktif saat ditambahkan
         "createdAt": FieldValue.serverTimestamp(),
       });
     } catch (e) {
@@ -78,12 +80,12 @@ class AssetService {
     }
   }
 
-  /// 🔹 Hapus asset by ID
+  /// 🔹 Soft delete asset by ID (set status = 0)
   Future<void> deleteAsset(String id) async {
     try {
-      await _assetCollection.doc(id).delete();
+      await _assetCollection.doc(id).update({'status': 0});
     } catch (e) {
-      print('Error deleting asset: $e');
+      print('Error soft deleting asset: $e');
       rethrow;
     }
   }
@@ -105,21 +107,21 @@ class AssetService {
     }
   }
 
-  /// 🔹 Check apakah asset dengan ID tertentu ada
+  /// 🔹 Check apakah asset dengan ID tertentu ada dan aktif
   Future<bool> assetExists(String id) async {
     try {
       final doc = await _assetCollection.doc(id).get();
-      return doc.exists;
+      return doc.exists && (doc.data() as Map<String, dynamic>)['status'] == 1;
     } catch (e) {
       print('Error checking asset existence: $e');
       return false;
     }
   }
 
-  /// 🔹 Get total count assets
+  /// 🔹 Get total count assets yang aktif
   Future<int> getAssetCount() async {
     try {
-      final snapshot = await _assetCollection.get();
+      final snapshot = await _assetCollection.where('status', isEqualTo: 1).get();
       return snapshot.docs.length;
     } catch (e) {
       print('Error getting asset count: $e');
@@ -127,11 +129,12 @@ class AssetService {
     }
   }
 
-  /// 🔹 Ambil assets berdasarkan penyulang (untuk memperkecil hasil, sisanya disaring di memori)
+  /// 🔹 Ambil assets berdasarkan penyulang, hanya yang aktif
   Future<List<AssetModel>> getAssetsByPenyulang(String penyulang) async {
     try {
       final snapshot = await _assetCollection
           .where('penyulang', isEqualTo: penyulang)
+          .where('status', isEqualTo: 1)
           .get();
       return snapshot.docs
           .map((doc) => AssetModel.fromFirestore(
@@ -146,7 +149,7 @@ class AssetService {
   }
 
   /// 🔹 Cari asset yang paling cocok berdasarkan kombinasi beberapa field
-  /// Strategi: query berdasarkan penyulang dulu (agar tidak terlalu besar), lalu filter di memori
+  /// Strategi: query berdasarkan penyulang dulu, hanya yang aktif, lalu filter di memori
   Future<AssetModel?> findBestMatchingAsset({
     required String penyulang,
     String? section,
@@ -155,7 +158,7 @@ class AssetService {
     String? ulp,
   }) async {
     try {
-      // Ambil kandidat berdasarkan penyulang terlebih dahulu
+      // Ambil kandidat berdasarkan penyulang, hanya yang aktif
       final candidates = await getAssetsByPenyulang(penyulang);
       if (candidates.isEmpty) return null;
 

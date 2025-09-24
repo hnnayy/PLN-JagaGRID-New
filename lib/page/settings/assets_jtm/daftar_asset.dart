@@ -7,6 +7,7 @@ import 'dart:io';
 import 'package:excel/excel.dart' as excel_pkg;
 import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
+import 'package:open_file/open_file.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:intl/intl.dart';
 
@@ -27,28 +28,28 @@ class _DaftarAssetPageState extends State<DaftarAssetPage> {
     'ZONA PROTEKSI': '',
     'SECTION': '',
     'ROLE': '',
-    'STATUS': '',
+    'HEALTH_INDEX': '',
     'VENDOR VB': '',
   };
 
   List<AssetModel> _filteredAssets(List<AssetModel> assets) {
+    print('Original assets: ${assets.length}');
     List<AssetModel> filtered = assets;
 
-    // Filter berdasarkan pencarian
     if (_searchQuery.isNotEmpty) {
       filtered = filtered.where((asset) {
         return asset.wilayah.toLowerCase().contains(_searchQuery.toLowerCase()) ||
-               asset.subWilayah.toLowerCase().contains(_searchQuery.toLowerCase()) ||
-               asset.section.toLowerCase().contains(_searchQuery.toLowerCase()) ||
-               asset.up3.toLowerCase().contains(_searchQuery.toLowerCase()) ||
-               asset.ulp.toLowerCase().contains(_searchQuery.toLowerCase()) ||
-               asset.penyulang.toLowerCase().contains(_searchQuery.toLowerCase()) ||
-               asset.role.toLowerCase().contains(_searchQuery.toLowerCase()) ||
-               asset.vendorVb.toLowerCase().contains(_searchQuery.toLowerCase());
+            asset.subWilayah.toLowerCase().contains(_searchQuery.toLowerCase()) ||
+            asset.section.toLowerCase().contains(_searchQuery.toLowerCase()) ||
+            asset.up3.toLowerCase().contains(_searchQuery.toLowerCase()) ||
+            asset.ulp.toLowerCase().contains(_searchQuery.toLowerCase()) ||
+            asset.penyulang.toLowerCase().contains(_searchQuery.toLowerCase()) ||
+            asset.role.toLowerCase().contains(_searchQuery.toLowerCase()) ||
+            asset.vendorVb.toLowerCase().contains(_searchQuery.toLowerCase()) ||
+            asset.healthIndex.toString().split('.').last.toLowerCase().contains(_searchQuery.toLowerCase());
       }).toList();
     }
 
-    // Apply all active filters
     _selectedFilters.forEach((filterType, filterValue) {
       if (filterValue.isNotEmpty) {
         filtered = filtered.where((asset) {
@@ -67,6 +68,8 @@ class _DaftarAssetPageState extends State<DaftarAssetPage> {
               return asset.role.toLowerCase().contains(filterValue.toLowerCase());
             case 'VENDOR VB':
               return asset.vendorVb.toLowerCase().contains(filterValue.toLowerCase());
+            case 'HEALTH_INDEX':
+              return asset.healthIndex.toString().split('.').last.toLowerCase().contains(filterValue.toLowerCase());
             default:
               return true;
           }
@@ -74,13 +77,12 @@ class _DaftarAssetPageState extends State<DaftarAssetPage> {
       }
     });
 
+    print('Filtered assets: ${filtered.length}');
     return filtered;
   }
 
-  // Fungsi untuk export ke Excel - VERSI TERBARU DENGAN KOLOM TANGGAL
   Future<void> _exportToExcel(List<AssetModel> assets) async {
     try {
-      // Show loading dialog
       showDialog(
         context: context,
         barrierDismissible: false,
@@ -96,30 +98,33 @@ class _DaftarAssetPageState extends State<DaftarAssetPage> {
         ),
       );
 
-      // Request storage permission
-      var status = await Permission.storage.request();
-      if (!status.isGranted) {
-        Navigator.pop(context);
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Permission storage diperlukan untuk menyimpan file'),
-            backgroundColor: Colors.red,
-          ),
-        );
-        return;
+      // Request storage permission only for Android versions < 13
+      if (Platform.isAndroid) {
+        var status = await Permission.storage.request();
+        if (!status.isGranted && (await Permission.storage.status).isPermanentlyDenied) {
+          Navigator.pop(context);
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: const Text('Izin penyimpanan diperlukan. Silakan izinkan di pengaturan.'),
+              backgroundColor: Colors.red,
+              action: SnackBarAction(
+                label: 'Buka Pengaturan',
+                onPressed: openAppSettings,
+              ),
+            ),
+          );
+          return;
+        }
       }
 
-      // Create Excel workbook
       var excel = excel_pkg.Excel.createExcel();
-      excel_pkg.Sheet sheetObject = excel['Asset JTM'];
-      excel.delete('Sheet1'); // Delete default sheet
+      excel_pkg.Sheet sheetObject = excel['Sheet1'];
 
-      // Add headers with styling - TERMASUK KOLOM TANGGAL EXPORT
       List<String> headers = [
         'No',
         'Tanggal Export',
         'Wilayah',
-        'Sub Wilayah', 
+        'Sub Wilayah',
         'UP3',
         'ULP',
         'Section',
@@ -128,10 +133,9 @@ class _DaftarAssetPageState extends State<DaftarAssetPage> {
         'Panjang (KMS)',
         'Role',
         'Vendor VB',
-        'Status'
+        'Health Index'
       ];
 
-      // Style for headers
       excel_pkg.CellStyle headerStyle = excel_pkg.CellStyle(
         backgroundColorHex: '#125E72',
         fontFamily: excel_pkg.getFontFamily(excel_pkg.FontFamily.Calibri),
@@ -142,26 +146,23 @@ class _DaftarAssetPageState extends State<DaftarAssetPage> {
         verticalAlign: excel_pkg.VerticalAlign.Center,
       );
 
-      // Add headers
       for (int i = 0; i < headers.length; i++) {
         var cell = sheetObject.cell(excel_pkg.CellIndex.indexByColumnRow(columnIndex: i, rowIndex: 0));
         cell.value = headers[i];
         cell.cellStyle = headerStyle;
       }
 
-      // Add data rows - DENGAN KOLOM TANGGAL EXPORT OTOMATIS
       excel_pkg.CellStyle dataStyle = excel_pkg.CellStyle(
         fontFamily: excel_pkg.getFontFamily(excel_pkg.FontFamily.Calibri),
         fontSize: 11,
         verticalAlign: excel_pkg.VerticalAlign.Center,
       );
 
-      // Style untuk kolom tanggal
       excel_pkg.CellStyle dateStyle = excel_pkg.CellStyle(
         fontFamily: excel_pkg.getFontFamily(excel_pkg.FontFamily.Calibri),
         fontSize: 11,
         verticalAlign: excel_pkg.VerticalAlign.Center,
-        backgroundColorHex: '#F0F8FF', // Light blue background untuk tanggal
+        backgroundColorHex: '#F0F8FF',
       );
 
       String currentDate = DateFormat('dd/MM/yyyy HH:mm').format(DateTime.now());
@@ -170,7 +171,7 @@ class _DaftarAssetPageState extends State<DaftarAssetPage> {
         AssetModel asset = assets[i];
         List<dynamic> rowData = [
           i + 1,
-          currentDate, // Tanggal export otomatis
+          currentDate,
           asset.wilayah,
           asset.subWilayah,
           asset.up3,
@@ -181,35 +182,30 @@ class _DaftarAssetPageState extends State<DaftarAssetPage> {
           asset.panjangKms,
           asset.role,
           asset.vendorVb,
-          asset.status,
+          asset.healthIndex.toString().split('.').last,
         ];
 
         for (int j = 0; j < rowData.length; j++) {
           var cell = sheetObject.cell(excel_pkg.CellIndex.indexByColumnRow(columnIndex: j, rowIndex: i + 1));
           cell.value = rowData[j];
-          // Gunakan style khusus untuk kolom tanggal (index 1)
           cell.cellStyle = j == 1 ? dateStyle : dataStyle;
         }
       }
 
-      // Generate filename with timestamp
       String timestamp = DateFormat('yyyyMMdd_HHmmss').format(DateTime.now());
       String filename = 'Daftar_Asset_JTM_$timestamp.xlsx';
+      String filePath;
 
-      // Get directory to save file
       Directory? directory;
       if (Platform.isAndroid) {
-        directory = await getExternalStorageDirectory();
-        if (directory != null) {
-          // Create Downloads folder path
-          String downloadsPath = '${directory.path}/../../../Download';
-          directory = Directory(downloadsPath);
-          if (!await directory.exists()) {
-            directory = await getExternalStorageDirectory();
-          }
+        filePath = '/storage/emulated/0/Download/$filename';
+        directory = Directory('/storage/emulated/0/Download');
+        if (!await directory.exists()) {
+          await directory.create(recursive: true);
         }
       } else {
-        directory = await getApplicationDocumentsDirectory();
+        directory = await getTemporaryDirectory();
+        filePath = '${directory.path}/$filename';
       }
 
       if (directory == null) {
@@ -223,90 +219,54 @@ class _DaftarAssetPageState extends State<DaftarAssetPage> {
         return;
       }
 
-      // Save file
-      String filePath = '${directory.path}/$filename';
       File file = File(filePath);
-      await file.writeAsBytes(excel.encode()!);
-
-      Navigator.pop(context); // Close loading dialog
-
-      // Show success dialog with options - VERSI LEBIH INFORMATIF
-      showDialog(
-        context: context,
-        builder: (context) => AlertDialog(
-          title: const Row(
-            children: [
-              Icon(Icons.check_circle, color: Colors.green, size: 28),
-              SizedBox(width: 8),
-              Text('Export Berhasil'),
-            ],
+      print('Saving file to: $filePath');
+      var encodedExcel = excel.encode();
+      if (encodedExcel == null) {
+        Navigator.pop(context);
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Gagal mengenkode file Excel'),
+            backgroundColor: Colors.red,
           ),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text('File Excel berhasil dibuat:'),
-              const SizedBox(height: 8),
-              Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: Colors.grey[100],
-                  borderRadius: BorderRadius.circular(4),
-                ),
-                child: Text(
-                  filename,
-                  style: const TextStyle(
-                    fontSize: 12,
-                    fontFamily: 'monospace',
-                  ),
-                ),
-              ),
-              const SizedBox(height: 12),
-              Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: Colors.blue[50],
-                  borderRadius: BorderRadius.circular(4),
-                  border: Border.all(color: Colors.blue[200]!),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text('📊 Total data: ${assets.length} asset'),
-                    Text('📅 Tanggal export: $currentDate'),
-                    Text('📁 Lokasi: Download folder'),
-                  ],
-                ),
-              ),
-            ],
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text('OK'),
-            ),
-            ElevatedButton.icon(
+        );
+        return;
+      }
+      await file.writeAsBytes(encodedExcel);
+      bool fileExists = await file.exists();
+      print('File exists: $fileExists');
+
+      Navigator.pop(context); // Close the loading dialog
+
+      print('Attempting to open file: $filePath');
+      final openResult = await OpenFile.open(
+        filePath,
+        type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      );
+      print('Open result: ${openResult.type}, message: ${openResult.message}');
+
+      if (openResult.type != ResultType.done) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Gagal membuka file: ${openResult.message}. File tersimpan di Download folder.'),
+            backgroundColor: Colors.red,
+            duration: const Duration(seconds: 5),
+            action: SnackBarAction(
+              label: 'Bagikan',
               onPressed: () async {
-                Navigator.pop(context);
-                // Share file
                 await Share.shareXFiles(
-                  [XFile(filePath)],
+                  [XFile(filePath, mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')],
                   text: 'Daftar Asset JTM - ${DateFormat('dd/MM/yyyy').format(DateTime.now())}',
                 );
               },
-              icon: const Icon(Icons.share),
-              label: const Text('Share'),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF125E72),
-                foregroundColor: Colors.white,
-              ),
             ),
-          ],
-        ),
-      );
-
-    } catch (e) {
-      Navigator.pop(context); // Close loading dialog if open
+          ),
+        );
+      }
+    } catch (e, stackTrace) {
+      Navigator.pop(context);
+      print('Error exporting Excel: $e');
+      print('Stack trace: $stackTrace');
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('Error saat export: $e'),
@@ -316,7 +276,6 @@ class _DaftarAssetPageState extends State<DaftarAssetPage> {
     }
   }
 
-  // Widget untuk menampilkan filter yang aktif
   Widget _buildActiveFiltersContent() {
     List<String> activeFilters = _selectedFilters.entries
         .where((entry) => entry.value.isNotEmpty)
@@ -389,8 +348,7 @@ class _DaftarAssetPageState extends State<DaftarAssetPage> {
             );
           }).toList(),
         ),
-        // Tombol clear all filters
-        if (activeFilters.isNotEmpty)
+        if (activeFilters.isEmpty)
           Padding(
             padding: const EdgeInsets.only(top: 8),
             child: TextButton.icon(
@@ -437,7 +395,6 @@ class _DaftarAssetPageState extends State<DaftarAssetPage> {
                 padding: const EdgeInsets.all(0),
                 child: Column(
                   children: [
-                    // Header
                     Container(
                       padding: const EdgeInsets.all(16),
                       decoration: const BoxDecoration(
@@ -464,8 +421,6 @@ class _DaftarAssetPageState extends State<DaftarAssetPage> {
                         ],
                       ),
                     ),
-                    
-                    // Filter Options
                     Expanded(
                       child: ListView(
                         children: _selectedFilters.keys.map((filterType) {
@@ -481,9 +436,9 @@ class _DaftarAssetPageState extends State<DaftarAssetPage> {
                             subtitle: currentValue.isNotEmpty
                                 ? Text(
                                     'Filter: $currentValue',
-                                    style: TextStyle(
+                                    style: const TextStyle(
                                       fontSize: 12,
-                                      color: const Color(0xFF125E72),
+                                      color: Color(0xFF125E72),
                                       fontWeight: FontWeight.w500,
                                     ),
                                   )
@@ -497,6 +452,7 @@ class _DaftarAssetPageState extends State<DaftarAssetPage> {
                                       setDialogState(() {
                                         _selectedFilters[filterType] = '';
                                       });
+                                      setState(() {});
                                     },
                                     icon: const Icon(Icons.clear, size: 20, color: Colors.red),
                                   ),
@@ -510,8 +466,6 @@ class _DaftarAssetPageState extends State<DaftarAssetPage> {
                         }).toList(),
                       ),
                     ),
-                    
-                    // Bottom Actions
                     Container(
                       padding: const EdgeInsets.all(16),
                       child: Row(
@@ -566,65 +520,92 @@ class _DaftarAssetPageState extends State<DaftarAssetPage> {
   }
 
   void _showFilterValueDialog(String filterType, StateSetter setDialogState) {
-    TextEditingController controller = TextEditingController(
-      text: _selectedFilters[filterType] ?? '',
-    );
-    
-    showDialog(
-      context: context,
-      builder: (context) {
-        return AlertDialog(
-          title: Text('Filter berdasarkan $filterType'),
-          content: TextField(
-            controller: controller,
-            decoration: InputDecoration(
-              hintText: 'Cari $filterType ...',
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(8),
+    if (filterType == 'HEALTH_INDEX') {
+      String? selectedValue = _selectedFilters[filterType];
+      showDialog(
+        context: context,
+        builder: (context) {
+          return AlertDialog(
+            title: Text('Filter berdasarkan $filterType'),
+            content: DropdownButton<String>(
+              value: selectedValue?.isEmpty ?? true ? null : selectedValue,
+              hint: Text('Pilih $filterType'),
+              isExpanded: true,
+              items: ['SEMPURNA', 'SEHAT', 'SAKIT'].map((value) {
+                return DropdownMenuItem<String>(
+                  value: value,
+                  child: Text(value),
+                );
+              }).toList(),
+              onChanged: (value) {
+                setDialogState(() {
+                  _selectedFilters[filterType] = value ?? '';
+                });
+                Navigator.pop(context);
+                setState(() {});
+              },
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('Batal'),
+              ),
+            ],
+          );
+        },
+      );
+    } else {
+      TextEditingController controller = TextEditingController(text: _selectedFilters[filterType]);
+      showDialog(
+        context: context,
+        builder: (context) {
+          return AlertDialog(
+            title: Text('Filter berdasarkan $filterType'),
+            content: TextField(
+              controller: controller,
+              decoration: InputDecoration(
+                hintText: 'Cari $filterType ...',
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
               ),
             ),
-          ),
-          actions: [
-            Row(
-              children: [
-                Expanded(
-                  child: TextButton(
-                    onPressed: () => Navigator.pop(context),
-                    style: TextButton.styleFrom(
-                      side: const BorderSide(color: Color(0xFF2E5D6F), width: 2),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(25)),
-                      foregroundColor: const Color(0xFF2E5D6F),
-                      padding: const EdgeInsets.symmetric(vertical: 12),
+            actions: [
+              Row(
+                children: [
+                  Expanded(
+                    child: TextButton(
+                      onPressed: () => Navigator.pop(context),
+                      child: const Text('Batal'),
                     ),
-                    child: const Text('Batal'),
                   ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: ElevatedButton(
-                    onPressed: () {
-                      setDialogState(() {
-                        _selectedFilters[filterType] = controller.text;
-                      });
-                      Navigator.pop(context);
-                    },
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF125E72),
-                      foregroundColor: Colors.white,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(25),
+                  Expanded(
+                    child: ElevatedButton(
+                      onPressed: () {
+                        setDialogState(() {
+                          _selectedFilters[filterType] = controller.text;
+                        });
+                        Navigator.pop(context);
+                        setState(() {});
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFF125E72),
+                        foregroundColor: Colors.white,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(25),
+                        ),
+                        padding: const EdgeInsets.symmetric(vertical: 12),
                       ),
-                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      child: const Text('Terapkan'),
                     ),
-                    child: const Text('Terapkan'),
                   ),
-                ),
-              ],
-            ),
-          ],
-        );
-      },
-    );
+                ],
+              ),
+            ],
+          );
+        },
+      );
+    }
   }
 
   void _showAssetDetail(AssetModel asset) {
@@ -648,7 +629,6 @@ class _DaftarAssetPageState extends State<DaftarAssetPage> {
               padding: const EdgeInsets.all(16),
               child: Column(
                 children: [
-                  // Handle bar
                   Container(
                     width: 40,
                     height: 4,
@@ -658,8 +638,6 @@ class _DaftarAssetPageState extends State<DaftarAssetPage> {
                     ),
                   ),
                   const SizedBox(height: 16),
-                  
-                  // Header
                   Row(
                     children: [
                       Expanded(
@@ -670,16 +648,17 @@ class _DaftarAssetPageState extends State<DaftarAssetPage> {
                             fontWeight: FontWeight.bold,
                             color: Color(0xFF125E72),
                           ),
+                          overflow: TextOverflow.ellipsis,
                         ),
                       ),
                       Container(
                         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                         decoration: BoxDecoration(
-                          color: _getStatusColor(asset.status),
+                          color: _getStatusColor(asset.healthIndex),
                           borderRadius: BorderRadius.circular(20),
                         ),
                         child: Text(
-                          asset.status,
+                          asset.healthIndex.toString().split('.').last,
                           style: const TextStyle(
                             color: Colors.white,
                             fontSize: 12,
@@ -690,8 +669,6 @@ class _DaftarAssetPageState extends State<DaftarAssetPage> {
                     ],
                   ),
                   const SizedBox(height: 24),
-                  
-                  // Details - Single Container
                   Expanded(
                     child: ListView(
                       controller: scrollController,
@@ -725,6 +702,7 @@ class _DaftarAssetPageState extends State<DaftarAssetPage> {
                                 _buildDetailItem('Panjang', '${asset.panjangKms} KMS'),
                                 _buildDetailItem('Role', asset.role),
                                 _buildDetailItem('Vendor VB', asset.vendorVb),
+                                _buildDetailItem('Health Index', asset.healthIndex.toString().split('.').last),
                               ],
                             ),
                           ),
@@ -732,8 +710,6 @@ class _DaftarAssetPageState extends State<DaftarAssetPage> {
                       ],
                     ),
                   ),
-                  
-                  // Action Buttons
                   Row(
                     children: [
                       Expanded(
@@ -745,7 +721,7 @@ class _DaftarAssetPageState extends State<DaftarAssetPage> {
                           icon: const Icon(Icons.edit),
                           label: const Text('Edit'),
                           style: ElevatedButton.styleFrom(
-                            backgroundColor: Color(0xFF125E72),
+                            backgroundColor: const Color(0xFF125E72),
                             foregroundColor: Colors.white,
                             padding: const EdgeInsets.symmetric(vertical: 12),
                             shape: RoundedRectangleBorder(
@@ -790,24 +766,30 @@ class _DaftarAssetPageState extends State<DaftarAssetPage> {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          SizedBox(
-            width: 120,
+          Flexible(
+            flex: 2,
             child: Text(
               '$label:',
-              style: TextStyle(
-                fontSize: 14,
-                color: Colors.grey[600],
+              style: const TextStyle(
+                fontSize: 12,
+                color: Colors.grey,
                 fontWeight: FontWeight.w500,
               ),
+              overflow: TextOverflow.ellipsis,
+              maxLines: 1,
             ),
           ),
+          const SizedBox(width: 6),
           Expanded(
+            flex: 3,
             child: Text(
               value,
               style: const TextStyle(
-                fontSize: 14,
+                fontSize: 12,
                 fontWeight: FontWeight.w600,
               ),
+              overflow: TextOverflow.ellipsis,
+              maxLines: 1,
             ),
           ),
         ],
@@ -816,18 +798,72 @@ class _DaftarAssetPageState extends State<DaftarAssetPage> {
   }
 
   void _editAsset(AssetModel asset) {
-    // Navigate to edit page with proper import
     Navigator.push(
       context,
       MaterialPageRoute(
         builder: (context) => EditAssetPage(asset: asset),
       ),
     ).then((result) {
-      // Refresh data jika ada perubahan
       if (result == true) {
         setState(() {});
       }
     });
+  }
+
+  void _showSuccessDialog(AssetModel deletedAsset) {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => Dialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        child: Container(
+          padding: const EdgeInsets.all(28),
+          decoration: BoxDecoration(borderRadius: BorderRadius.circular(20), color: Colors.white),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 85,
+                height: 85,
+                decoration: const BoxDecoration(color: Color(0xFF2E5D6F), shape: BoxShape.circle),
+                child: const Icon(Icons.check_circle_rounded, size: 55, color: Colors.white),
+              ),
+              const SizedBox(height: 24),
+              const Text(
+                "Berhasil!",
+                style: TextStyle(fontSize: 26, fontWeight: FontWeight.bold, color: Color(0xFF2E5D6F)),
+              ),
+              const SizedBox(height: 10),
+              Text(
+                "Asset ${deletedAsset.wilayah} - ${deletedAsset.section} berhasil dihapus",
+                style: TextStyle(fontSize: 15, color: Colors.grey.shade600),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 28),
+              SizedBox(
+                width: double.infinity,
+                height: 50,
+                child: ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF2E5D6F),
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                  ),
+                  onPressed: () {
+                    Navigator.of(context).pop();
+                  },
+                  child: const Text(
+                    "OK",
+                    style: TextStyle(fontWeight: FontWeight.w600, fontSize: 15),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 
   void _deleteAsset(AssetModel asset) {
@@ -859,19 +895,19 @@ class _DaftarAssetPageState extends State<DaftarAssetPage> {
                       Navigator.pop(context);
                       try {
                         await _assetService.deleteAsset(asset.id);
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text('Asset berhasil dihapus'),
-                            backgroundColor: Colors.green,
-                          ),
-                        );
+                        if (mounted) {
+                          _showSuccessDialog(asset);
+                        }
+                        setState(() {});
                       } catch (e) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(
-                            content: Text('Error: $e'),
-                            backgroundColor: Colors.red,
-                          ),
-                        );
+                        if (mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text('Error: $e'),
+                              backgroundColor: Colors.red,
+                            ),
+                          );
+                        }
                       }
                     },
                     style: ElevatedButton.styleFrom(
@@ -902,18 +938,13 @@ class _DaftarAssetPageState extends State<DaftarAssetPage> {
         foregroundColor: Colors.white,
         elevation: 0,
         actions: [
-          // Excel Export Button di AppBar
           StreamBuilder<List<AssetModel>>(
             stream: _assetService.getAssets(),
             builder: (context, snapshot) {
               if (!snapshot.hasData) return Container();
-              
               final filteredAssets = _filteredAssets(snapshot.data!);
-              
               return IconButton(
-                onPressed: filteredAssets.isNotEmpty 
-                  ? () => _exportToExcel(filteredAssets)
-                  : null,
+                onPressed: filteredAssets.isNotEmpty ? () => _exportToExcel(filteredAssets) : null,
                 icon: const Icon(Icons.file_download),
                 tooltip: 'Export ke Excel',
               );
@@ -923,7 +954,6 @@ class _DaftarAssetPageState extends State<DaftarAssetPage> {
       ),
       body: Column(
         children: [
-          // Search and Filter Section
           Container(
             padding: const EdgeInsets.all(16),
             decoration: const BoxDecoration(
@@ -935,7 +965,6 @@ class _DaftarAssetPageState extends State<DaftarAssetPage> {
             ),
             child: Column(
               children: [
-                // Search Bar
                 TextField(
                   onChanged: (value) {
                     setState(() {
@@ -955,8 +984,6 @@ class _DaftarAssetPageState extends State<DaftarAssetPage> {
                   ),
                 ),
                 const SizedBox(height: 12),
-                
-                // Filter and Export Buttons Row - HANYA TOMBOL FILTER SAJA
                 Row(
                   children: [
                     const Icon(Icons.filter_list, color: Colors.white),
@@ -971,9 +998,10 @@ class _DaftarAssetPageState extends State<DaftarAssetPage> {
                         onPressed: _showFilterDialog,
                         icon: const Icon(Icons.tune, size: 16),
                         label: Text(
-                          _selectedFilters.values.where((v) => v.isNotEmpty).isEmpty 
-                            ? 'Pilih Filter' 
-                            : '${_selectedFilters.values.where((v) => v.isNotEmpty).length} Filter Aktif'
+                          _selectedFilters.values.where((v) => v.isNotEmpty).isEmpty
+                              ? 'Pilih Filter'
+                              : '${_selectedFilters.values.where((v) => v.isNotEmpty).length} Filter Aktif',
+                          overflow: TextOverflow.ellipsis,
                         ),
                         style: ElevatedButton.styleFrom(
                           backgroundColor: Colors.white,
@@ -986,8 +1014,6 @@ class _DaftarAssetPageState extends State<DaftarAssetPage> {
                     ),
                   ],
                 ),
-                
-                // Container untuk Active Filters
                 Container(
                   width: double.infinity,
                   margin: const EdgeInsets.only(top: 16),
@@ -1008,12 +1034,13 @@ class _DaftarAssetPageState extends State<DaftarAssetPage> {
               ],
             ),
           ),
-          
-          // Asset List
           Expanded(
             child: StreamBuilder<List<AssetModel>>(
               stream: _assetService.getAssets(),
               builder: (context, snapshot) {
+                if (snapshot.hasError) {
+                  return Center(child: Text('Error: ${snapshot.error}'));
+                }
                 if (snapshot.connectionState == ConnectionState.waiting) {
                   return const Center(child: CircularProgressIndicator());
                 }
@@ -1053,10 +1080,9 @@ class _DaftarAssetPageState extends State<DaftarAssetPage> {
 
                 return Column(
                   children: [
-                    // Summary Info - TANPA TOMBOL EXCEL LAGI
                     Container(
                       margin: const EdgeInsets.all(16),
-                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                       decoration: BoxDecoration(
                         color: const Color(0xFF125E72).withOpacity(0.1),
                         borderRadius: BorderRadius.circular(8),
@@ -1065,6 +1091,7 @@ class _DaftarAssetPageState extends State<DaftarAssetPage> {
                         ),
                       ),
                       child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.center,
                         children: [
                           const Icon(
                             Icons.info_outline,
@@ -1072,25 +1099,29 @@ class _DaftarAssetPageState extends State<DaftarAssetPage> {
                             size: 20,
                           ),
                           const SizedBox(width: 8),
-                          Text(
-                            'Menampilkan ${filteredAssets.length} dari ${snapshot.data!.length} total asset',
-                            style: const TextStyle(
-                              color: Color(0xFF125E72),
-                              fontWeight: FontWeight.w500,
+                          Expanded(
+                            child: Text(
+                              'Menampilkan ${filteredAssets.length} dari ${snapshot.data!.length} total asset',
+                              style: const TextStyle(
+                                color: Color(0xFF125E72),
+                                fontWeight: FontWeight.w500,
+                                fontSize: 12,
+                              ),
+                              maxLines: 2,
+                              softWrap: true,
                             ),
                           ),
-                          const Spacer(),
-                          // Info tambahan tanpa tombol
+                          const SizedBox(width: 8),
                           Container(
                             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                             decoration: BoxDecoration(
                               color: const Color(0xFF125E72).withOpacity(0.1),
                               borderRadius: BorderRadius.circular(12),
                             ),
-                            child: Text(
+                            child: const Text(
                               'JTM Assets',
                               style: TextStyle(
-                                color: const Color(0xFF125E72),
+                                color: Color(0xFF125E72),
                                 fontSize: 12,
                                 fontWeight: FontWeight.w500,
                               ),
@@ -1099,8 +1130,6 @@ class _DaftarAssetPageState extends State<DaftarAssetPage> {
                         ],
                       ),
                     ),
-                    
-                    // Asset List
                     Expanded(
                       child: ListView.builder(
                         padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -1121,7 +1150,6 @@ class _DaftarAssetPageState extends State<DaftarAssetPage> {
                                 child: Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
-                                    // Header with Status
                                     Row(
                                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                       children: [
@@ -1133,16 +1161,17 @@ class _DaftarAssetPageState extends State<DaftarAssetPage> {
                                               fontWeight: FontWeight.bold,
                                               color: Color(0xFF125E72),
                                             ),
+                                            overflow: TextOverflow.ellipsis,
                                           ),
                                         ),
                                         Container(
                                           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                                           decoration: BoxDecoration(
-                                            color: _getStatusColor(asset.status),
+                                            color: _getStatusColor(asset.healthIndex),
                                             borderRadius: BorderRadius.circular(20),
                                           ),
                                           child: Text(
-                                            asset.status,
+                                            asset.healthIndex.toString().split('.').last,
                                             style: const TextStyle(
                                               color: Colors.white,
                                               fontSize: 12,
@@ -1153,15 +1182,10 @@ class _DaftarAssetPageState extends State<DaftarAssetPage> {
                                       ],
                                     ),
                                     const SizedBox(height: 12),
-                                    
-                                    // Asset Details (Condensed)
                                     _buildDetailRow(Icons.account_balance, 'UP3', asset.up3),
                                     _buildDetailRow(Icons.business, 'Section', asset.section),
                                     _buildDetailRow(Icons.store, 'Penyulang', asset.penyulang),
-
-                                    
                                     const SizedBox(height: 8),
-                                    // Tap to view more indicator
                                     Container(
                                       padding: const EdgeInsets.symmetric(vertical: 8),
                                       child: Row(
@@ -1205,43 +1229,53 @@ class _DaftarAssetPageState extends State<DaftarAssetPage> {
   Widget _buildDetailRow(IconData icon, String label, String value) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 8),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Icon(icon, size: 16, color: Colors.grey[600]),
-          const SizedBox(width: 8),
-          SizedBox(
-            width: 80,
-            child: Text(
-              '$label:',
-              style: TextStyle(
-                fontSize: 14,
-                color: Colors.grey[600],
-                fontWeight: FontWeight.w500,
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          return Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Icon(icon, size: 14, color: Colors.grey[600]),
+              const SizedBox(width: 6),
+              Flexible(
+                flex: 2,
+                child: Text(
+                  '$label:',
+                  style: const TextStyle(
+                    fontSize: 12,
+                    color: Colors.grey,
+                    fontWeight: FontWeight.w500,
+                  ),
+                  overflow: TextOverflow.ellipsis,
+                  maxLines: 1,
+                ),
               ),
-            ),
-          ),
-          Expanded(
-            child: Text(
-              value,
-              style: const TextStyle(
-                fontSize: 14,
-                fontWeight: FontWeight.w600,
+              const SizedBox(width: 6),
+              Flexible(
+                flex: 3,
+                child: Text(
+                  value,
+                  style: const TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                  ),
+                  overflow: TextOverflow.ellipsis,
+                  maxLines: 1,
+                ),
               ),
-            ),
-          ),
-        ],
+            ],
+          );
+        },
       ),
     );
   }
 
-  Color _getStatusColor(String status) {
-    switch (status.toLowerCase().trim()) {
-      case 'sempurna':
+  Color _getStatusColor(HealthIndex healthIndex) {
+    switch (healthIndex) {
+      case HealthIndex.SEMPURNA:
         return Colors.green;
-      case 'sehat':
+      case HealthIndex.SEHAT:
         return Colors.blue;
-      case 'sakit':
+      case HealthIndex.SAKIT:
         return Colors.red;
       default:
         return Colors.grey;

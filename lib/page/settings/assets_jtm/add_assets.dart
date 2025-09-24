@@ -11,10 +11,10 @@ class CustomDropdown extends StatefulWidget {
   final String? errorText;
 
   const CustomDropdown({
-    super.key, 
-    required this.value, 
-    required this.items, 
-    required this.labelText, 
+    super.key,
+    required this.value,
+    required this.items,
+    required this.labelText,
     required this.onChanged,
     this.validator,
     this.errorText,
@@ -69,9 +69,9 @@ class _CustomDropdownState extends State<CustomDropdown> with SingleTickerProvid
                 child: Container(
                   constraints: const BoxConstraints(maxHeight: 200),
                   decoration: BoxDecoration(
-                    color: Colors.white, 
-                    borderRadius: BorderRadius.circular(8), 
-                    border: Border.all(color: Colors.grey.shade300)
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: Colors.grey.shade300),
                   ),
                   child: ListView.builder(
                     shrinkWrap: true,
@@ -85,14 +85,18 @@ class _CustomDropdownState extends State<CustomDropdown> with SingleTickerProvid
                       child: Container(
                         padding: const EdgeInsets.all(16),
                         decoration: BoxDecoration(
-                          color: widget.value == widget.items[index] ? const Color(0xFFF0F9FF) : null
+                          color: widget.value == widget.items[index] ? const Color(0xFFF0F9FF) : null,
                         ),
                         child: Text(
                           widget.items[index],
                           style: TextStyle(
                             fontSize: 16,
-                            color: widget.value == widget.items[index] ? const Color(0xFF2E5D6F) : Colors.black87,
-                            fontWeight: widget.value == widget.items[index] ? FontWeight.w500 : FontWeight.normal,
+                            color: widget.value == widget.items[index]
+                                ? const Color(0xFF2E5D6F)
+                                : Colors.black87,
+                            fontWeight: widget.value == widget.items[index]
+                                ? FontWeight.w500
+                                : FontWeight.normal,
                           ),
                         ),
                       ),
@@ -119,12 +123,12 @@ class _CustomDropdownState extends State<CustomDropdown> with SingleTickerProvid
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          widget.labelText, 
+          widget.labelText,
           style: TextStyle(
-            fontSize: 12, 
-            color: Colors.grey.shade600, 
-            fontWeight: FontWeight.w500
-          )
+            fontSize: 12,
+            color: Colors.grey.shade600,
+            fontWeight: FontWeight.w500,
+          ),
         ),
         const SizedBox(height: 8),
         CompositedTransformTarget(
@@ -144,17 +148,17 @@ class _CustomDropdownState extends State<CustomDropdown> with SingleTickerProvid
                 children: [
                   Expanded(
                     child: Text(
-                      widget.value ?? 'Pilih status', 
+                      widget.value ?? 'Pilih ${widget.labelText.toLowerCase()}',
                       style: TextStyle(
-                        fontSize: 16, 
-                        color: widget.value != null ? Colors.black87 : Colors.grey.shade500
-                      )
-                    )
+                        fontSize: 16,
+                        color: widget.value != null ? Colors.black87 : Colors.grey.shade500,
+                      ),
+                    ),
                   ),
                   AnimatedRotation(
-                    turns: isExpanded ? 0.5 : 0, 
-                    duration: const Duration(milliseconds: 200), 
-                    child: Icon(Icons.keyboard_arrow_down, color: Colors.grey.shade600)
+                    turns: isExpanded ? 0.5 : 0,
+                    duration: const Duration(milliseconds: 200),
+                    child: Icon(Icons.keyboard_arrow_down, color: Colors.grey.shade600),
                   ),
                 ],
               ),
@@ -200,8 +204,8 @@ class _AddAssetsPageState extends State<AddAssetsPage> {
   final TextEditingController _roleController = TextEditingController();
   final TextEditingController _vendorVbController = TextEditingController();
 
-  String? _selectedStatus;
-  final List<String> _statusOptions = ['Sempurna', 'Sehat', 'Sakit'];
+  String? _selectedHealthIndex;
+  final List<String> _healthIndexOptions = ['SEMPURNA', 'SEHAT', 'SAKIT'];
 
   bool _isLoading = false;
 
@@ -216,11 +220,24 @@ class _AddAssetsPageState extends State<AddAssetsPage> {
   String? _panjangKmsError;
   String? _roleError;
   String? _vendorVbError;
-  String? _statusError;
+  String? _healthIndexError;
 
   String getCurrentDate() {
     final now = DateTime.now();
-    final months = ['Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'];
+    final months = [
+      'Januari',
+      'Februari',
+      'Maret',
+      'April',
+      'Mei',
+      'Juni',
+      'Juli',
+      'Agustus',
+      'September',
+      'Oktober',
+      'November',
+      'Desember'
+    ];
     return '${now.day} ${months[now.month - 1]} ${now.year}';
   }
 
@@ -236,7 +253,7 @@ class _AddAssetsPageState extends State<AddAssetsPage> {
       _panjangKmsError = null;
       _roleError = null;
       _vendorVbError = null;
-      _statusError = null;
+      _healthIndexError = null;
     });
   }
 
@@ -246,8 +263,8 @@ class _AddAssetsPageState extends State<AddAssetsPage> {
 
     // Validate Wilayah
     if (_wilayahController.text.trim().isEmpty || _wilayahController.text.trim() == '1') {
-      setState(() => _wilayahError = _wilayahController.text.trim().isEmpty 
-          ? 'Wilayah tidak boleh kosong' 
+      setState(() => _wilayahError = _wilayahController.text.trim().isEmpty
+          ? 'Wilayah tidak boleh kosong'
           : 'Masukkan nama wilayah yang valid');
       isValid = false;
     } else if (_wilayahController.text.trim().length < 2) {
@@ -257,8 +274,8 @@ class _AddAssetsPageState extends State<AddAssetsPage> {
 
     // Validate Sub Wilayah
     if (_subWilayahController.text.trim().isEmpty || _subWilayahController.text.trim() == '1') {
-      setState(() => _subWilayahError = _subWilayahController.text.trim().isEmpty 
-          ? 'Sub wilayah tidak boleh kosong' 
+      setState(() => _subWilayahError = _subWilayahController.text.trim().isEmpty
+          ? 'Sub wilayah tidak boleh kosong'
           : 'Masukkan nama sub wilayah yang valid');
       isValid = false;
     } else if (_subWilayahController.text.trim().length < 2) {
@@ -268,8 +285,8 @@ class _AddAssetsPageState extends State<AddAssetsPage> {
 
     // Validate Section
     if (_sectionController.text.trim().isEmpty || _sectionController.text.trim() == '1') {
-      setState(() => _sectionError = _sectionController.text.trim().isEmpty 
-          ? 'Section tidak boleh kosong' 
+      setState(() => _sectionError = _sectionController.text.trim().isEmpty
+          ? 'Section tidak boleh kosong'
           : 'Masukkan nama section yang valid');
       isValid = false;
     } else if (_sectionController.text.trim().length < 2) {
@@ -279,8 +296,8 @@ class _AddAssetsPageState extends State<AddAssetsPage> {
 
     // Validate UP3
     if (_up3Controller.text.trim().isEmpty || _up3Controller.text.trim() == '1') {
-      setState(() => _up3Error = _up3Controller.text.trim().isEmpty 
-          ? 'UP3 tidak boleh kosong' 
+      setState(() => _up3Error = _up3Controller.text.trim().isEmpty
+          ? 'UP3 tidak boleh kosong'
           : 'Masukkan nama UP3 yang valid');
       isValid = false;
     } else if (_up3Controller.text.trim().length < 2) {
@@ -290,8 +307,8 @@ class _AddAssetsPageState extends State<AddAssetsPage> {
 
     // Validate ULP
     if (_ulpController.text.trim().isEmpty || _ulpController.text.trim() == '1') {
-      setState(() => _ulpError = _ulpController.text.trim().isEmpty 
-          ? 'ULP tidak boleh kosong' 
+      setState(() => _ulpError = _ulpController.text.trim().isEmpty
+          ? 'ULP tidak boleh kosong'
           : 'Masukkan nama ULP yang valid');
       isValid = false;
     } else if (_ulpController.text.trim().length < 2) {
@@ -301,8 +318,8 @@ class _AddAssetsPageState extends State<AddAssetsPage> {
 
     // Validate Penyulang
     if (_penyulangController.text.trim().isEmpty || _penyulangController.text.trim() == '1') {
-      setState(() => _penyulangError = _penyulangController.text.trim().isEmpty 
-          ? 'Penyulang tidak boleh kosong' 
+      setState(() => _penyulangError = _penyulangController.text.trim().isEmpty
+          ? 'Penyulang tidak boleh kosong'
           : 'Masukkan nama penyulang yang valid');
       isValid = false;
     } else if (_penyulangController.text.trim().length < 2) {
@@ -312,8 +329,8 @@ class _AddAssetsPageState extends State<AddAssetsPage> {
 
     // Validate Zona Proteksi
     if (_zonaProteksiController.text.trim().isEmpty || _zonaProteksiController.text.trim() == '1') {
-      setState(() => _zonaProteksiError = _zonaProteksiController.text.trim().isEmpty 
-          ? 'Zona proteksi tidak boleh kosong' 
+      setState(() => _zonaProteksiError = _zonaProteksiController.text.trim().isEmpty
+          ? 'Zona proteksi tidak boleh kosong'
           : 'Masukkan nama zona proteksi yang valid');
       isValid = false;
     } else if (_zonaProteksiController.text.trim().length < 2) {
@@ -324,8 +341,8 @@ class _AddAssetsPageState extends State<AddAssetsPage> {
     // Validate Panjang KMS
     String panjangText = _panjangKmsController.text.trim();
     if (panjangText.isEmpty || panjangText == '1') {
-      setState(() => _panjangKmsError = panjangText.isEmpty 
-          ? 'Panjang tidak boleh kosong' 
+      setState(() => _panjangKmsError = panjangText.isEmpty
+          ? 'Panjang tidak boleh kosong'
           : 'Masukkan panjang yang sebenarnya (contoh: 12.5)');
       isValid = false;
     } else {
@@ -345,8 +362,8 @@ class _AddAssetsPageState extends State<AddAssetsPage> {
 
     // Validate Role
     if (_roleController.text.trim().isEmpty || _roleController.text.trim() == '1') {
-      setState(() => _roleError = _roleController.text.trim().isEmpty 
-          ? 'Role tidak boleh kosong' 
+      setState(() => _roleError = _roleController.text.trim().isEmpty
+          ? 'Role tidak boleh kosong'
           : 'Masukkan nama role yang valid');
       isValid = false;
     } else if (_roleController.text.trim().length < 2) {
@@ -354,16 +371,16 @@ class _AddAssetsPageState extends State<AddAssetsPage> {
       isValid = false;
     }
 
-    // Validate Status
-    if (_selectedStatus == null) {
-      setState(() => _statusError = 'Status harus dipilih');
+    // Validate Health Index
+    if (_selectedHealthIndex == null) {
+      setState(() => _healthIndexError = 'Health index harus dipilih');
       isValid = false;
     }
 
     // Validate Vendor VB
     if (_vendorVbController.text.trim().isEmpty || _vendorVbController.text.trim() == '1') {
-      setState(() => _vendorVbError = _vendorVbController.text.trim().isEmpty 
-          ? 'Vendor VB tidak boleh kosong' 
+      setState(() => _vendorVbError = _vendorVbController.text.trim().isEmpty
+          ? 'Vendor VB tidak boleh kosong'
           : 'Masukkan nama vendor VB yang valid');
       isValid = false;
     } else if (_vendorVbController.text.trim().length < 2) {
@@ -384,6 +401,11 @@ class _AddAssetsPageState extends State<AddAssetsPage> {
     });
 
     try {
+      // Konversi _selectedHealthIndex ke HealthIndex
+      HealthIndex healthIndex = HealthIndex.values.firstWhere(
+        (e) => e.toString().split('.').last == _selectedHealthIndex,
+      );
+
       final newAsset = AssetModel(
         id: '', // Firestore akan generate otomatis
         wilayah: _wilayahController.text.trim(),
@@ -394,7 +416,8 @@ class _AddAssetsPageState extends State<AddAssetsPage> {
         penyulang: _penyulangController.text.trim(),
         zonaProteksi: _zonaProteksiController.text.trim(),
         panjangKms: double.tryParse(_panjangKmsController.text.replaceAll(',', '.')) ?? 0,
-        status: _selectedStatus!,
+        healthIndex: healthIndex,
+        status: 1, // Default aktif
         role: _roleController.text.trim(),
         vendorVb: _vendorVbController.text.trim(),
         createdAt: DateTime.now(),
@@ -438,65 +461,42 @@ class _AddAssetsPageState extends State<AddAssetsPage> {
             mainAxisSize: MainAxisSize.min,
             children: [
               Container(
-                width: 85, 
+                width: 85,
                 height: 85,
                 decoration: const BoxDecoration(color: Color(0xFF2E5D6F), shape: BoxShape.circle),
                 child: const Icon(Icons.check_circle_rounded, size: 55, color: Colors.white),
               ),
               const SizedBox(height: 24),
-              const Text("Berhasil!", style: TextStyle(fontSize: 26, fontWeight: FontWeight.bold, color: Color(0xFF2E5D6F))),
+              const Text(
+                "Berhasil!",
+                style: TextStyle(fontSize: 26, fontWeight: FontWeight.bold, color: Color(0xFF2E5D6F)),
+              ),
               const SizedBox(height: 10),
-              Text("Asset ${newAsset.wilayah} - ${newAsset.section} berhasil ditambahkan", style: TextStyle(fontSize: 15, color: Colors.grey.shade600), textAlign: TextAlign.center),
-              const SizedBox(height: 24),
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.all(20),
-                decoration: BoxDecoration(color: const Color(0xFFF8FAFB), borderRadius: BorderRadius.circular(15)),
-                child: Column(
-                  children: [
-                    ("Wilayah", newAsset.wilayah),
-                    ("Sub Wilayah", newAsset.subWilayah),
-                    ("Section", newAsset.section),
-                    ("Status", newAsset.status),
-                    ("Ditambahkan", getCurrentDate()),
-                  ].map((detail) => Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 6),
-                    child: Row(
-                      children: [
-                        SizedBox(width: 90, child: Text("${detail.$1}:", style: TextStyle(color: Colors.grey.shade700, fontWeight: FontWeight.w600, fontSize: 14))),
-                        Expanded(child: Text(detail.$2, style: const TextStyle(color: Color(0xFF2E5D6F), fontSize: 14, fontWeight: FontWeight.w500))),
-                      ],
-                    ),
-                  )).toList(),
-                ),
+              Text(
+                "Asset ${newAsset.wilayah} - ${newAsset.section} berhasil ditambahkan",
+                style: TextStyle(fontSize: 15, color: Colors.grey.shade600),
+                textAlign: TextAlign.center,
               ),
               const SizedBox(height: 28),
-              Row(
-                children: [
-                  Expanded(
-                    child: OutlinedButton.icon(
-                      style: OutlinedButton.styleFrom(side: BorderSide(color: Colors.grey.shade400, width: 1.5), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)), padding: const EdgeInsets.symmetric(vertical: 14)),
-                      onPressed: () {
-                        Navigator.of(context).pop();
-                        _clearForm();
-                      },
-                      icon: Icon(Icons.add_circle_outline_rounded, color: Colors.grey.shade700, size: 20),
-                      label: Text("Tambah Lagi", style: TextStyle(color: Colors.grey.shade700, fontWeight: FontWeight.w600, fontSize: 15)),
-                    ),
+              SizedBox(
+                width: double.infinity,
+                height: 50,
+                child: ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF2E5D6F),
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    padding: const EdgeInsets.symmetric(vertical: 14),
                   ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: ElevatedButton.icon(
-                      style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF2E5D6F), foregroundColor: Colors.white, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)), padding: const EdgeInsets.symmetric(vertical: 14)),
-                      onPressed: () {
-                        Navigator.of(context).pop();
-                        Navigator.pop(context, newAsset);
-                      },
-                      icon: const Icon(Icons.list_rounded, size: 20),
-                      label: const Text("Lihat List", style: TextStyle(fontWeight: FontWeight.w600, fontSize: 15)),
-                    ),
+                  onPressed: () {
+                    Navigator.of(context).pop();
+                    Navigator.pop(context, newAsset);
+                  },
+                  child: const Text(
+                    "OK",
+                    style: TextStyle(fontWeight: FontWeight.w600, fontSize: 15),
                   ),
-                ],
+                ),
               ),
             ],
           ),
@@ -508,7 +508,7 @@ class _AddAssetsPageState extends State<AddAssetsPage> {
   void _clearForm() {
     _formKey.currentState?.reset();
     setState(() {
-      _selectedStatus = null;
+      _selectedHealthIndex = null;
       _wilayahController.clear();
       _subWilayahController.clear();
       _sectionController.clear();
@@ -523,7 +523,9 @@ class _AddAssetsPageState extends State<AddAssetsPage> {
     _clearAllErrors();
   }
 
-  Widget _buildField(String label, TextEditingController controller, {
+  Widget _buildField(
+    String label,
+    TextEditingController controller, {
     TextInputType keyboardType = TextInputType.text,
     String? suffixText,
     String? errorText,
@@ -545,7 +547,7 @@ class _AddAssetsPageState extends State<AddAssetsPage> {
           keyboardType: keyboardType,
           decoration: InputDecoration(
             filled: true,
-            fillColor: const Color(0xFFF0F9FF),
+            fillColor: errorText != null ? Colors.red.shade50 : const Color(0xFFF0F9FF),
             border: const OutlineInputBorder(
               borderSide: BorderSide.none,
               borderRadius: BorderRadius.all(Radius.circular(8)),
@@ -554,6 +556,14 @@ class _AddAssetsPageState extends State<AddAssetsPage> {
             suffixText: suffixText,
             hintText: label == 'Panjang (KMS)' ? 'Contoh: 12.5' : 'Masukkan $label',
             hintStyle: TextStyle(color: Colors.grey.shade400, fontSize: 14),
+            errorBorder: OutlineInputBorder(
+              borderSide: BorderSide(color: Colors.red.shade300),
+              borderRadius: const BorderRadius.all(Radius.circular(8)),
+            ),
+            focusedErrorBorder: OutlineInputBorder(
+              borderSide: BorderSide(color: Colors.red.shade300),
+              borderRadius: const BorderRadius.all(Radius.circular(8)),
+            ),
           ),
         ),
         if (errorText != null) ...[
@@ -631,54 +641,44 @@ class _AddAssetsPageState extends State<AddAssetsPage> {
             children: [
               _buildField("Wilayah", _wilayahController, errorText: _wilayahError),
               const SizedBox(height: 20),
-              
               _buildField("Sub Wilayah", _subWilayahController, errorText: _subWilayahError),
               const SizedBox(height: 20),
-              
               _buildField("Section", _sectionController, errorText: _sectionError),
               const SizedBox(height: 20),
-              
               _buildField("UP3", _up3Controller, errorText: _up3Error),
               const SizedBox(height: 20),
-              
               _buildField("ULP", _ulpController, errorText: _ulpError),
               const SizedBox(height: 20),
-              
               _buildField("Penyulang", _penyulangController, errorText: _penyulangError),
               const SizedBox(height: 20),
-              
               _buildField("Zona Proteksi", _zonaProteksiController, errorText: _zonaProteksiError),
               const SizedBox(height: 20),
-              
               _buildField(
-                "Panjang (KMS)", 
-                _panjangKmsController, 
+                "Panjang (KMS)",
+                _panjangKmsController,
                 keyboardType: const TextInputType.numberWithOptions(decimal: true),
                 suffixText: "km",
                 errorText: _panjangKmsError,
               ),
               const SizedBox(height: 20),
-              
               _buildField("Role", _roleController, errorText: _roleError),
               const SizedBox(height: 20),
-
               CustomDropdown(
-                value: _selectedStatus,
-                items: _statusOptions,
-                labelText: "Status",
+                value: _selectedHealthIndex,
+                items: _healthIndexOptions,
+                labelText: "Health Index",
                 onChanged: (value) {
                   setState(() {
-                    _selectedStatus = value;
-                    _statusError = null; // Clear error when user selects
+                    _selectedHealthIndex = value;
+                    _healthIndexError = null; // Clear error when user selects
                   });
                 },
-                errorText: _statusError,
+                errorText: _healthIndexError,
+                validator: (value) => value == null ? 'Health index harus dipilih' : null,
               ),
               const SizedBox(height: 20),
-              
               _buildField("Vendor VB", _vendorVbController, errorText: _vendorVbError),
               const SizedBox(height: 32),
-
               SizedBox(
                 width: double.infinity,
                 height: 50,
@@ -697,8 +697,6 @@ class _AddAssetsPageState extends State<AddAssetsPage> {
                 ),
               ),
               const SizedBox(height: 24),
-              
-              // Info box
               Container(
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(

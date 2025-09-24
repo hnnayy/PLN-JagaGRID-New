@@ -10,10 +10,10 @@ class CustomDropdown extends StatefulWidget {
   final String? Function(String?)? validator;
 
   const CustomDropdown({
-    super.key, 
-    required this.value, 
-    required this.items, 
-    required this.labelText, 
+    super.key,
+    required this.value,
+    required this.items,
+    required this.labelText,
     required this.onChanged,
     this.validator,
   });
@@ -67,9 +67,9 @@ class _CustomDropdownState extends State<CustomDropdown> with SingleTickerProvid
                 child: Container(
                   constraints: const BoxConstraints(maxHeight: 200),
                   decoration: BoxDecoration(
-                    color: Colors.white, 
-                    borderRadius: BorderRadius.circular(8), 
-                    border: Border.all(color: Colors.grey.shade300)
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: Colors.grey.shade300),
                   ),
                   child: ListView.builder(
                     shrinkWrap: true,
@@ -83,14 +83,20 @@ class _CustomDropdownState extends State<CustomDropdown> with SingleTickerProvid
                       child: Container(
                         padding: const EdgeInsets.all(16),
                         decoration: BoxDecoration(
-                          color: widget.value == widget.items[index] ? const Color(0xFFF0F9FF) : null
+                          color: widget.value == widget.items[index]
+                              ? const Color(0xFFF0F9FF)
+                              : null,
                         ),
                         child: Text(
                           widget.items[index],
                           style: TextStyle(
                             fontSize: 16,
-                            color: widget.value == widget.items[index] ? const Color(0xFF2E5D6F) : Colors.black87,
-                            fontWeight: widget.value == widget.items[index] ? FontWeight.w500 : FontWeight.normal,
+                            color: widget.value == widget.items[index]
+                                ? const Color(0xFF2E5D6F)
+                                : Colors.black87,
+                            fontWeight: widget.value == widget.items[index]
+                                ? FontWeight.w500
+                                : FontWeight.normal,
                           ),
                         ),
                       ),
@@ -117,12 +123,12 @@ class _CustomDropdownState extends State<CustomDropdown> with SingleTickerProvid
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          widget.labelText, 
+          widget.labelText,
           style: TextStyle(
-            fontSize: 12, 
-            color: Colors.grey.shade600, 
-            fontWeight: FontWeight.w500
-          )
+            fontSize: 12,
+            color: Colors.grey.shade600,
+            fontWeight: FontWeight.w500,
+          ),
         ),
         const SizedBox(height: 8),
         CompositedTransformTarget(
@@ -134,24 +140,26 @@ class _CustomDropdownState extends State<CustomDropdown> with SingleTickerProvid
               width: double.infinity,
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
-                color: const Color(0xFFF0F9FF), 
-                borderRadius: BorderRadius.circular(8)
+                color: const Color(0xFFF0F9FF),
+                borderRadius: BorderRadius.circular(8),
               ),
               child: Row(
                 children: [
                   Expanded(
                     child: Text(
-                      widget.value ?? 'Pilih status', 
+                      widget.value ?? 'Pilih ${widget.labelText.toLowerCase()}',
                       style: TextStyle(
-                        fontSize: 16, 
-                        color: widget.value != null ? Colors.black87 : Colors.grey.shade500
-                      )
-                    )
+                        fontSize: 16,
+                        color: widget.value != null
+                            ? Colors.black87
+                            : Colors.grey.shade500,
+                      ),
+                    ),
                   ),
                   AnimatedRotation(
-                    turns: isExpanded ? 0.5 : 0, 
-                    duration: const Duration(milliseconds: 200), 
-                    child: Icon(Icons.keyboard_arrow_down, color: Colors.grey.shade600)
+                    turns: isExpanded ? 0.5 : 0,
+                    duration: const Duration(milliseconds: 200),
+                    child: Icon(Icons.keyboard_arrow_down, color: Colors.grey.shade600),
                   ),
                 ],
               ),
@@ -163,7 +171,6 @@ class _CustomDropdownState extends State<CustomDropdown> with SingleTickerProvid
   }
 }
 
-// Custom Success Dialog Widget
 class SuccessDialog extends StatelessWidget {
   final String title;
   final String message;
@@ -191,7 +198,6 @@ class SuccessDialog extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            // Success Icon
             Container(
               width: 80,
               height: 80,
@@ -206,8 +212,6 @@ class SuccessDialog extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 24),
-            
-            // Title
             Text(
               title,
               style: const TextStyle(
@@ -218,8 +222,6 @@ class SuccessDialog extends StatelessWidget {
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 16),
-            
-            // Message
             Text(
               message,
               style: TextStyle(
@@ -229,8 +231,6 @@ class SuccessDialog extends StatelessWidget {
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 32),
-            
-            // OK Button
             SizedBox(
               width: 120,
               height: 45,
@@ -267,7 +267,7 @@ class SuccessDialog extends StatelessWidget {
 
 class EditAssetPage extends StatefulWidget {
   final AssetModel asset;
-  
+
   const EditAssetPage({super.key, required this.asset});
 
   @override
@@ -277,7 +277,7 @@ class EditAssetPage extends StatefulWidget {
 class _EditAssetPageState extends State<EditAssetPage> {
   final _formKey = GlobalKey<FormState>();
   final _assetService = AssetService();
-  
+
   // Controllers for form fields
   late TextEditingController _wilayahController;
   late TextEditingController _subWilayahController;
@@ -289,10 +289,10 @@ class _EditAssetPageState extends State<EditAssetPage> {
   late TextEditingController _panjangKmsController;
   late TextEditingController _roleController;
   late TextEditingController _vendorVbController;
-  
-  String? _selectedStatus;
-  final List<String> _statusOptions = ['Sempurna', 'Sehat', 'Sakit'];
-  
+
+  String? _selectedHealthIndex;
+  final List<String> _healthIndexOptions = ['SEMPURNA', 'SEHAT', 'SAKIT'];
+
   bool _isLoading = false;
 
   @override
@@ -309,20 +309,13 @@ class _EditAssetPageState extends State<EditAssetPage> {
     _panjangKmsController = TextEditingController(text: widget.asset.panjangKms.toString());
     _roleController = TextEditingController(text: widget.asset.role);
     _vendorVbController = TextEditingController(text: widget.asset.vendorVb);
-    
-    // Validasi dan set selectedStatus
-    final validStatuses = ['Sempurna', 'Sehat', 'Sakit'];
-    if (validStatuses.contains(widget.asset.status)) {
-      _selectedStatus = widget.asset.status;
-    } else {
-      _selectedStatus = null; // Set null jika status tidak valid
-      print('Warning: Invalid status "${widget.asset.status}" found, resetting to null');
-    }
+
+    // Initialize dropdown values
+    _selectedHealthIndex = widget.asset.healthIndex.toString().split('.').last;
   }
 
   @override
   void dispose() {
-    // Dispose all controllers
     _wilayahController.dispose();
     _subWilayahController.dispose();
     _sectionController.dispose();
@@ -345,7 +338,6 @@ class _EditAssetPageState extends State<EditAssetPage> {
           title: "Berhasil!",
           message: "Asset berhasil diperbarui ke sistem",
           onOkPressed: () {
-            // Navigate back to previous screen with success result
             Navigator.pop(context, true);
           },
         );
@@ -396,8 +388,8 @@ class _EditAssetPageState extends State<EditAssetPage> {
   }
 
   Future<void> _updateAsset() async {
-    if (_selectedStatus == null) {
-      _showErrorDialog("Pilih status terlebih dahulu");
+    if (_selectedHealthIndex == null) {
+      _showErrorDialog("Pilih health index terlebih dahulu");
       return;
     }
 
@@ -408,6 +400,14 @@ class _EditAssetPageState extends State<EditAssetPage> {
     });
 
     try {
+      // Konversi _selectedHealthIndex ke HealthIndex
+      HealthIndex healthIndex = HealthIndex.values.firstWhere(
+        (e) => e.toString().split('.').last == _selectedHealthIndex,
+      );
+
+      // Gunakan status dari asset yang ada (default, tidak berubah)
+      int status = widget.asset.status;
+
       // Create updated asset model
       AssetModel updatedAsset = widget.asset.copyWith(
         wilayah: _wilayahController.text.trim(),
@@ -418,8 +418,9 @@ class _EditAssetPageState extends State<EditAssetPage> {
         penyulang: _penyulangController.text.trim(),
         zonaProteksi: _zonaProteksiController.text.trim(),
         panjangKms: double.tryParse(_panjangKmsController.text) ?? 0.0,
+        healthIndex: healthIndex,
+        status: status,
         role: _roleController.text.trim(),
-        status: _selectedStatus!,
         vendorVb: _vendorVbController.text.trim(),
       );
 
@@ -427,12 +428,10 @@ class _EditAssetPageState extends State<EditAssetPage> {
       await _assetService.updateAsset(updatedAsset);
 
       if (mounted) {
-        // Show success dialog instead of snackbar
         _showSuccessDialog();
       }
     } catch (e) {
       if (mounted) {
-        // Show error dialog instead of snackbar
         _showErrorDialog('Gagal memperbarui asset: ${e.toString()}');
       }
     } finally {
@@ -518,49 +517,42 @@ class _EditAssetPageState extends State<EditAssetPage> {
                 validator: (value) => value?.isEmpty ?? true ? "Wilayah tidak boleh kosong" : null,
               ),
               const SizedBox(height: 20),
-              
               _buildField(
                 "Sub Wilayah",
                 _subWilayahController,
                 validator: (value) => value?.isEmpty ?? true ? "Sub wilayah tidak boleh kosong" : null,
               ),
               const SizedBox(height: 20),
-              
               _buildField(
                 "Section",
                 _sectionController,
                 validator: (value) => value?.isEmpty ?? true ? "Section tidak boleh kosong" : null,
               ),
               const SizedBox(height: 20),
-              
               _buildField(
                 "UP3",
                 _up3Controller,
                 validator: (value) => value?.isEmpty ?? true ? "UP3 tidak boleh kosong" : null,
               ),
               const SizedBox(height: 20),
-              
               _buildField(
                 "ULP",
                 _ulpController,
                 validator: (value) => value?.isEmpty ?? true ? "ULP tidak boleh kosong" : null,
               ),
               const SizedBox(height: 20),
-              
               _buildField(
                 "Penyulang",
                 _penyulangController,
                 validator: (value) => value?.isEmpty ?? true ? "Penyulang tidak boleh kosong" : null,
               ),
               const SizedBox(height: 20),
-              
               _buildField(
                 "Zona Proteksi",
                 _zonaProteksiController,
                 validator: (value) => value?.isEmpty ?? true ? "Zona proteksi tidak boleh kosong" : null,
               ),
               const SizedBox(height: 20),
-              
               _buildField(
                 "Panjang (KMS)",
                 _panjangKmsController,
@@ -569,10 +561,8 @@ class _EditAssetPageState extends State<EditAssetPage> {
                   if (value == null || value.trim().isEmpty) {
                     return 'Panjang tidak boleh kosong';
                   }
-                  
                   String cleanValue = value.trim().replaceAll(',', '.');
                   double? panjang = double.tryParse(cleanValue);
-                  
                   if (panjang == null) {
                     return 'Masukkan angka yang valid (contoh: 12.5)';
                   }
@@ -586,29 +576,26 @@ class _EditAssetPageState extends State<EditAssetPage> {
                 },
               ),
               const SizedBox(height: 20),
-              
               _buildField(
                 "Role",
                 _roleController,
                 validator: (value) => value?.isEmpty ?? true ? "Role tidak boleh kosong" : null,
               ),
               const SizedBox(height: 20),
-
               CustomDropdown(
-                value: _selectedStatus,
-                items: _statusOptions,
-                labelText: "Status",
-                onChanged: (value) => setState(() => _selectedStatus = value),
+                value: _selectedHealthIndex,
+                items: _healthIndexOptions,
+                labelText: "Health Index",
+                onChanged: (value) => setState(() => _selectedHealthIndex = value),
+                validator: (value) => value == null ? "Health index harus dipilih" : null,
               ),
               const SizedBox(height: 20),
-              
               _buildField(
                 "Vendor VB",
                 _vendorVbController,
                 validator: (value) => value?.isEmpty ?? true ? "Vendor VB tidak boleh kosong" : null,
               ),
               const SizedBox(height: 32),
-
               SizedBox(
                 width: double.infinity,
                 height: 50,

@@ -1,5 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 
+enum HealthIndex { SEMPURNA, SEHAT, SAKIT }
+
 class AssetModel {
   final String id;
   final String wilayah;
@@ -10,7 +12,8 @@ class AssetModel {
   final String penyulang;
   final String zonaProteksi;
   final double panjangKms;
-  final String status; // Health Index
+  final HealthIndex healthIndex;
+  final int status; // 0 = deleted, 1 = aktif
   final String role;
   final String vendorVb;
   final DateTime createdAt;
@@ -25,6 +28,7 @@ class AssetModel {
     required this.penyulang,
     required this.zonaProteksi,
     required this.panjangKms,
+    required this.healthIndex,
     required this.status,
     required this.role,
     required this.vendorVb,
@@ -42,6 +46,7 @@ class AssetModel {
       'penyulang': penyulang,
       'zonaProteksi': zonaProteksi,
       'panjangKms': panjangKms,
+      'health_index': healthIndex.toString().split('.').last,
       'status': status,
       'role': role,
       'vendorVb': vendorVb,
@@ -60,6 +65,7 @@ class AssetModel {
       'penyulang': penyulang,
       'zonaProteksi': zonaProteksi,
       'panjangKms': panjangKms,
+      'health_index': healthIndex.toString().split('.').last,
       'status': status,
       'role': role,
       'vendorVb': vendorVb,
@@ -79,7 +85,11 @@ class AssetModel {
       penyulang: data['penyulang'] ?? '',
       zonaProteksi: data['zonaProteksi'] ?? '',
       panjangKms: (data['panjangKms'] ?? 0).toDouble(),
-      status: data['status'] ?? '',
+      healthIndex: HealthIndex.values.firstWhere(
+        (e) => e.toString().split('.').last == (data['health_index'] ?? 'SEHAT'),
+        orElse: () => HealthIndex.SEHAT,
+      ),
+      status: data['status'] ?? 1, // Default ke aktif jika tidak ada
       role: data['role'] ?? '',
       vendorVb: data['vendorVb'] ?? '',
       createdAt: data['createdAt'] is Timestamp
@@ -99,7 +109,8 @@ class AssetModel {
     String? penyulang,
     String? zonaProteksi,
     double? panjangKms,
-    String? status,
+    HealthIndex? healthIndex,
+    int? status,
     String? role,
     String? vendorVb,
     DateTime? createdAt,
@@ -114,6 +125,7 @@ class AssetModel {
       penyulang: penyulang ?? this.penyulang,
       zonaProteksi: zonaProteksi ?? this.zonaProteksi,
       panjangKms: panjangKms ?? this.panjangKms,
+      healthIndex: healthIndex ?? this.healthIndex,
       status: status ?? this.status,
       role: role ?? this.role,
       vendorVb: vendorVb ?? this.vendorVb,
