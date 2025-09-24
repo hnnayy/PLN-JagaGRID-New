@@ -103,9 +103,7 @@ class _TreeGrowthFormPageState extends State<TreeGrowthFormPage> {
                       const SizedBox(height: 8),
                       _buildDetailRow('Pertumbuhan:', '${_rateController.text} cm/tahun'),
                       const SizedBox(height: 8),
-                      _buildDetailRow('Status:', 'Berhasil Disimpan'),
-                      const SizedBox(height: 8),
-                      _buildDetailRow('Waktu:', _formatDate(DateTime.now())),
+                      _buildDetailRow('Disimpan:', _formatDate(DateTime.now())),
                     ],
                   ),
                 ),
@@ -157,6 +155,9 @@ class _TreeGrowthFormPageState extends State<TreeGrowthFormPage> {
                               final updated = widget.item!.copyWith(
                                 name: _nameController.text.trim(),
                                 growthRate: rate,
+                                // Status tetap aktif (1) untuk data yang diedit
+                                status: 1,
+                                deletedAt: null, // Clear deletedAt karena data kembali aktif
                               );
                               Navigator.pop(context, updated);
                             } else {
@@ -165,6 +166,9 @@ class _TreeGrowthFormPageState extends State<TreeGrowthFormPage> {
                                 name: _nameController.text.trim(),
                                 growthRate: rate,
                                 createdAt: DateTime.now(),
+                                // Status default aktif (1) untuk data baru
+                                status: 1,
+                                deletedAt: null,
                               );
                               Navigator.pop(context, created);
                             }
@@ -193,7 +197,7 @@ class _TreeGrowthFormPageState extends State<TreeGrowthFormPage> {
     );
   }
 
-  // Alert Dialog untuk Gagal - DESIGN YANG DIPERBAIKI
+  // Alert Dialog untuk Gagal
   void _showFailureDialog() {
     final isEdit = widget.item != null;
     showDialog(
@@ -212,7 +216,7 @@ class _TreeGrowthFormPageState extends State<TreeGrowthFormPage> {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                // Icon Error - Sama dengan success tapi merah
+                // Icon Error
                 Container(
                   width: 80,
                   height: 80,
@@ -237,7 +241,7 @@ class _TreeGrowthFormPageState extends State<TreeGrowthFormPage> {
                   ),
                 ),
                 const SizedBox(height: 12),
-                // Message - Konsisten dengan success dialog
+                // Message
                 Text(
                   'Gagal menyimpan, perbaiki kesalahan',
                   textAlign: TextAlign.center,
@@ -248,7 +252,7 @@ class _TreeGrowthFormPageState extends State<TreeGrowthFormPage> {
                   ),
                 ),
                 const SizedBox(height: 32),
-                // Button - Simple seperti gambar yang diinginkan
+                // Button
                 SizedBox(
                   width: double.infinity,
                   height: 45,
@@ -308,9 +312,8 @@ class _TreeGrowthFormPageState extends State<TreeGrowthFormPage> {
 
   // Validasi dan pembersihan input data
   String _cleanString(String input) {
-    // Hapus karakter khusus yang bermasalah dan trim whitespace
     return input
-        .replaceAll(RegExp(r'[^\w\s\-\.\,\(\)\/]'), '') // Hanya izinkan huruf, angka, spasi, dan karakter umum
+        .replaceAll(RegExp(r'[^\w\s\-\.\,\(\)\/]'), '')
         .trim();
   }
 
@@ -319,20 +322,16 @@ class _TreeGrowthFormPageState extends State<TreeGrowthFormPage> {
     final cleanName = _cleanString(_nameController.text);
     final rateText = _rateController.text.trim();
     
-    // Cek nama pohon
     if (cleanName.isEmpty || cleanName.length < 2) {
       return false;
     }
     
-    // Cek angka pertumbuhan
     final rate = double.tryParse(rateText);
     if (rate == null || rate <= 0 || rate > 1000) {
       return false;
     }
     
-    // Update controller dengan data yang sudah dibersihkan
     _nameController.text = cleanName;
-    
     return true;
   }
 
@@ -355,12 +354,10 @@ class _TreeGrowthFormPageState extends State<TreeGrowthFormPage> {
   // Simulasi save data dengan alert
   Future<void> _saveData() async {
     if (!_formKey.currentState!.validate()) {
-      // Tampilkan alert gagal jika form validation gagal
       _showFailureDialog();
       return;
     }
     
-    // Validasi tambahan untuk data
     if (!_validateData()) {
       _showFailureDialog();
       return;
@@ -371,21 +368,17 @@ class _TreeGrowthFormPageState extends State<TreeGrowthFormPage> {
     });
 
     try {
-      // Simulasi delay network
       await Future.delayed(const Duration(seconds: 1));
       
       // Simulasi random success/failure (70% success, 30% failure untuk testing)
       final isSuccess = DateTime.now().millisecond % 10 >= 3;
       
       if (isSuccess) {
-        // Tampilkan alert sukses, data akan di-return dari alert
         _showSuccessDialog();
       } else {
-        // Tampilkan alert gagal
         _showFailureDialog();
       }
     } catch (e) {
-      // Tampilkan alert gagal untuk error
       _showFailureDialog();
     } finally {
       setState(() {
@@ -405,6 +398,9 @@ class _TreeGrowthFormPageState extends State<TreeGrowthFormPage> {
       final updated = widget.item!.copyWith(
         name: _nameController.text.trim(),
         growthRate: rate,
+        // Status tetap aktif (1) untuk data yang diedit
+        status: 1,
+        deletedAt: null, // Clear deletedAt karena data kembali aktif
       );
       Navigator.pop(context, updated);
     } else {
@@ -413,6 +409,9 @@ class _TreeGrowthFormPageState extends State<TreeGrowthFormPage> {
         name: _nameController.text.trim(),
         growthRate: rate,
         createdAt: DateTime.now(),
+        // Status default aktif (1) untuk data baru
+        status: 1,
+        deletedAt: null,
       );
       Navigator.pop(context, created);
     }
@@ -496,7 +495,6 @@ class _TreeGrowthFormPageState extends State<TreeGrowthFormPage> {
                 validator: (v) {
                   if (v == null || v.trim().isEmpty) return 'Nama wajib diisi';
                   if (v.trim().length < 2) return 'Nama minimal 2 karakter';
-                  // Cek karakter aneh
                   if (RegExp(r'[^\w\s\-\.\,\(\)\/]').hasMatch(v)) {
                     return 'Nama tidak boleh mengandung karakter khusus';
                   }
@@ -504,13 +502,13 @@ class _TreeGrowthFormPageState extends State<TreeGrowthFormPage> {
                 },
               ),
               const SizedBox(height: 20),
+              
               _buildField(
                 label: 'Pertumbuhan pohon (cm/tahun)',
                 controller: _rateController,
                 keyboardType: TextInputType.number,
                 validator: (v) {
                   if (v == null || v.isEmpty) return 'Pertumbuhan pohon wajib diisi';
-                  // Hanya izinkan angka dan titik desimal
                   if (!RegExp(r'^\d+(\.\d+)?$').hasMatch(v)) {
                     return 'Hanya angka yang diizinkan';
                   }
@@ -620,7 +618,7 @@ class _TreeGrowthFormPageState extends State<TreeGrowthFormPage> {
               ),
               const SizedBox(height: 16),
               
-              // Quick save button (tanpa alert, langsung return)
+              // Quick save button
               SizedBox(
                 width: double.infinity,
                 height: 45,
@@ -674,7 +672,7 @@ class _TreeGrowthFormPageState extends State<TreeGrowthFormPage> {
               borderRadius: BorderRadius.all(Radius.circular(8)),
             ),
             contentPadding: EdgeInsets.all(16),
-          ),
+            ),
         ),
       ],
     );

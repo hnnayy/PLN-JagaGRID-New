@@ -20,8 +20,8 @@ class _TreeGrowthListPageState extends State<TreeGrowthListPage> {
     });
   }
 
-  // Alert Dialog untuk delete success
-  void _showDeleteSuccessDialog(String itemName) {
+  // Alert Dialog untuk delete success - diperbarui sesuai gambar
+  void _showDeleteSuccessDialog(String itemName, double growthRate) {
     showDialog(
       context: context,
       barrierDismissible: false,
@@ -38,11 +38,12 @@ class _TreeGrowthListPageState extends State<TreeGrowthListPage> {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
+                // Icon Success - warna teal sesuai gambar
                 Container(
                   width: 80,
                   height: 80,
                   decoration: const BoxDecoration(
-                    color: Color(0xFF14A2B9),
+                    color: Color(0xFF5A8A94), // Warna teal dari gambar
                     shape: BoxShape.circle,
                   ),
                   child: const Icon(
@@ -52,112 +53,67 @@ class _TreeGrowthListPageState extends State<TreeGrowthListPage> {
                   ),
                 ),
                 const SizedBox(height: 24),
+                // Title
                 const Text(
                   'Berhasil!',
                   style: TextStyle(
                     fontSize: 24,
                     fontWeight: FontWeight.bold,
-                    color: Color(0xFF14A2B9),
+                    color: Color(0xFF5A8A94),
                   ),
                 ),
                 const SizedBox(height: 12),
-                const Text(
-                  'Data berhasil dihapus dari sistem',
+                // Message
+                Text(
+                  'Data pertumbuhan pohon berhasil diperbarui',
                   textAlign: TextAlign.center,
                   style: TextStyle(
                     fontSize: 16,
-                    color: Colors.grey,
+                    color: Colors.grey.shade600,
                     height: 1.4,
                   ),
                 ),
                 const SizedBox(height: 20),
+                // Details Container - background biru muda sesuai gambar
                 Container(
                   width: double.infinity,
                   padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(
-                    color: const Color(0xFFE8F8F5),
-                    borderRadius: BorderRadius.circular(8),
-                    border: Border.all(color: const Color(0xFF14A2B9).withOpacity(0.3)),
+                    color: const Color(0xFFE8F4F6), // Background biru muda dari gambar
+                    borderRadius: BorderRadius.circular(12),
                   ),
                   child: Column(
                     children: [
-                      Row(
-                        children: [
-                          const Icon(Icons.eco, color: Color(0xFF14A2B9), size: 16),
-                          const SizedBox(width: 8),
-                          Expanded(
-                            child: Text(
-                              itemName,
-                              style: const TextStyle(
-                                fontSize: 14,
-                                fontWeight: FontWeight.w600,
-                                color: Color(0xFF14A2B9),
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
+                      _buildDetailRow('Nama Pohon:', itemName),
                       const SizedBox(height: 8),
-                      Row(
-                        children: [
-                          Text(
-                            'Status:',
-                            style: TextStyle(
-                              fontSize: 12,
-                              fontWeight: FontWeight.w500,
-                              color: Colors.grey.shade600,
-                            ),
-                          ),
-                          const SizedBox(width: 8),
-                          const Text(
-                            'Berhasil Dihapus',
-                            style: TextStyle(
-                              fontSize: 12,
-                              fontWeight: FontWeight.w600,
-                              color: Color(0xFF14A2B9),
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 4),
-                      Row(
-                        children: [
-                          Text(
-                            'Waktu:',
-                            style: TextStyle(
-                              fontSize: 12,
-                              fontWeight: FontWeight.w500,
-                              color: Colors.grey.shade600,
-                            ),
-                          ),
-                          const SizedBox(width: 8),
-                          Text(
-                            _formatDate(DateTime.now()),
-                            style: const TextStyle(
-                              fontSize: 12,
-                              fontWeight: FontWeight.w600,
-                              color: Color(0xFF14A2B9),
-                            ),
-                          ),
-                        ],
-                      ),
+                      _buildDetailRow('Pertumbuhan:', '${growthRate.round()} cm/tahun'),
+                      const SizedBox(height: 8),
+                      _buildDetailRow('Disimpan:', _formatDate(DateTime.now())),
                     ],
                   ),
                 ),
                 const SizedBox(height: 32),
+                // Button - dengan icon dan warna sesuai gambar
                 SizedBox(
                   width: double.infinity,
-                  height: 45,
+                  height: 50,
                   child: ElevatedButton(
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF14A2B9),
+                      backgroundColor: const Color(0xFF5A8A94),
                       foregroundColor: Colors.white,
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(25)),
                     ),
                     onPressed: () => Navigator.of(context).pop(),
-                    child: const Text(
-                      'OK',
-                      style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                    child: const Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(Icons.list, size: 20),
+                        SizedBox(width: 8),
+                        Text(
+                          'Kembali ke List',
+                          style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                        ),
+                      ],
                     ),
                   ),
                 ),
@@ -166,6 +122,37 @@ class _TreeGrowthListPageState extends State<TreeGrowthListPage> {
           ),
         );
       },
+    );
+  }
+
+  // Helper method untuk detail row
+  Widget _buildDetailRow(String label, String value, {bool isError = false}) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        SizedBox(
+          width: 90,
+          child: Text(
+            label,
+            style: TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w500,
+              color: Colors.grey.shade600,
+            ),
+          ),
+        ),
+        const SizedBox(width: 8),
+        Expanded(
+          child: Text(
+            value,
+            style: TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+              color: isError ? Colors.grey.shade800 : const Color(0xFF5A8A94),
+            ),
+          ),
+        ),
+      ],
     );
   }
 
@@ -321,7 +308,7 @@ class _TreeGrowthListPageState extends State<TreeGrowthListPage> {
     );
   }
 
-  // Delete Confirmation Dialog
+  // Delete Confirmation Dialog - sederhana
   void _showDeleteConfirmDialog(TreeGrowth item) {
     showDialog(
       context: context,
@@ -339,39 +326,42 @@ class _TreeGrowthListPageState extends State<TreeGrowthListPage> {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
+                // Icon Warning - sederhana
                 Container(
-                  width: 80,
-                  height: 80,
+                  width: 60,
+                  height: 60,
                   decoration: BoxDecoration(
-                    color: Colors.orange.shade600,
+                    color: Colors.orange.shade400,
                     shape: BoxShape.circle,
                   ),
                   child: const Icon(
                     Icons.warning_rounded,
                     color: Colors.white,
-                    size: 40,
-                  ),
-                ),
-                const SizedBox(height: 24),
-                Text(
-                  'Konfirmasi Hapus',
-                  style: TextStyle(
-                    fontSize: 24,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.orange.shade700,
-                  ),
-                ),
-                const SizedBox(height: 12),
-                const Text(
-                  'Apakah Anda yakin ingin menghapus data ini?',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    fontSize: 16,
-                    color: Colors.grey,
-                    height: 1.4,
+                    size: 30,
                   ),
                 ),
                 const SizedBox(height: 20),
+                // Title
+                Text(
+                  'Konfirmasi Hapus',
+                  style: TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.grey.shade800,
+                  ),
+                ),
+                const SizedBox(height: 12),
+                // Message
+                Text(
+                  'Apakah Anda yakin ingin menghapus data ini?',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontSize: 14,
+                    color: Colors.grey.shade600,
+                  ),
+                ),
+                const SizedBox(height: 20),
+                // Item info
                 Container(
                   width: double.infinity,
                   padding: const EdgeInsets.all(16),
@@ -413,7 +403,7 @@ class _TreeGrowthListPageState extends State<TreeGrowthListPage> {
                     ],
                   ),
                 ),
-                const SizedBox(height: 24),
+                const SizedBox(height: 16),
                 const Text(
                   'Data yang sudah dihapus tidak dapat dikembalikan!',
                   textAlign: TextAlign.center,
@@ -424,22 +414,23 @@ class _TreeGrowthListPageState extends State<TreeGrowthListPage> {
                   ),
                 ),
                 const SizedBox(height: 24),
+                // Buttons
                 Row(
                   children: [
                     Expanded(
                       child: SizedBox(
-                        height: 45,
+                        height: 40,
                         child: OutlinedButton(
                           style: OutlinedButton.styleFrom(
                             backgroundColor: Colors.white,
                             foregroundColor: Colors.grey.shade600,
-                            side: BorderSide(color: Colors.grey.shade400, width: 1),
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(25)),
+                            side: BorderSide(color: Colors.grey.shade300),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
                           ),
                           onPressed: () => Navigator.of(context).pop(false),
                           child: const Text(
                             'Batal',
-                            style: TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
+                            style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
                           ),
                         ),
                       ),
@@ -447,12 +438,12 @@ class _TreeGrowthListPageState extends State<TreeGrowthListPage> {
                     const SizedBox(width: 12),
                     Expanded(
                       child: SizedBox(
-                        height: 45,
+                        height: 40,
                         child: ElevatedButton(
                           style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.red.shade600,
+                            backgroundColor: Colors.red.shade500,
                             foregroundColor: Colors.white,
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(25)),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
                           ),
                           onPressed: () => Navigator.of(context).pop(true),
                           child: const Text(
@@ -474,7 +465,7 @@ class _TreeGrowthListPageState extends State<TreeGrowthListPage> {
         try {
           await context.read<TreeGrowthProvider>().remove(item.id);
           if (mounted) {
-            _showDeleteSuccessDialog(item.name);
+            _showDeleteSuccessDialog(item.name, item.growthRate);
           }
         } catch (e) {
           if (mounted) {
