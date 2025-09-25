@@ -14,12 +14,40 @@ import '../../services/asset_service.dart';
 import 'pick_location_page.dart';
 import '../../providers/tree_growth_provider.dart';
 
+// Simple coordinator to ensure only one dropdown is open at a time across the page
+class DropdownCoordinator {
+  static VoidCallback? _closeCurrent;
+
+  static void register(VoidCallback closeThis) {
+    if (_closeCurrent != null && _closeCurrent != closeThis) {
+      try {
+        _closeCurrent!.call();
+      } catch (_) {}
+    }
+    _closeCurrent = closeThis;
+  }
+
+  static void clearIfSame(VoidCallback closeThis) {
+    if (identical(_closeCurrent, closeThis)) {
+      _closeCurrent = null;
+    }
+  }
+
+  static void closeAny() {
+    try {
+      _closeCurrent?.call();
+    } catch (_) {}
+    _closeCurrent = null;
+  }
+}
+
 // CustomDropdown Widget
 class CustomDropdown extends StatefulWidget {
   final String? value;
   final List<String> items;
   final String labelText;
   final Function(String?) onChanged;
+  final String? errorText;
 
   const CustomDropdown({
     super.key,
@@ -27,6 +55,7 @@ class CustomDropdown extends StatefulWidget {
     required this.items,
     required this.labelText,
     required this.onChanged,
+    this.errorText,
   });
 
   @override
@@ -39,6 +68,7 @@ class _CustomDropdownState extends State<CustomDropdown> with SingleTickerProvid
   OverlayEntry? _overlayEntry;
   final LayerLink _layerLink = LayerLink();
   final GlobalKey _dropdownKey = GlobalKey();
+  bool _overlayInserted = false;
 
   @override
   void initState() {
@@ -49,13 +79,19 @@ class _CustomDropdownState extends State<CustomDropdown> with SingleTickerProvid
   @override
   void dispose() {
     _controller.dispose();
-    _overlayEntry?.remove();
+    if (_overlayInserted) {
+      try { _overlayEntry?.remove(); } catch (_) {}
+      _overlayInserted = false;
+    }
+    _overlayEntry = null;
     super.dispose();
   }
 
   void _toggleDropdown() => isExpanded ? _closeDropdown() : _openDropdown();
 
   void _openDropdown() {
+    // Close any other open dropdown first and register this one as current
+    DropdownCoordinator.register(_closeDropdown);
     setState(() => isExpanded = true);
     _controller.forward();
 
@@ -118,12 +154,21 @@ class _CustomDropdownState extends State<CustomDropdown> with SingleTickerProvid
         ),
       ),
     );
-    Overlay.of(context).insert(_overlayEntry!);
+    final overlay = Overlay.of(context);
+    overlay.insert(_overlayEntry!);
+    _overlayInserted = true;
   }
 
   void _closeDropdown() {
     setState(() => isExpanded = false);
-    _controller.reverse().then((_) => _overlayEntry?.remove());
+    _controller.reverse().then((_) {
+      if (_overlayInserted) {
+        try { _overlayEntry?.remove(); } catch (_) {}
+        _overlayInserted = false;
+      }
+      _overlayEntry = null;
+      DropdownCoordinator.clearIfSame(_closeDropdown);
+    });
   }
 
   @override
@@ -173,6 +218,17 @@ class _CustomDropdownState extends State<CustomDropdown> with SingleTickerProvid
             ),
           ),
         ),
+        if (widget.errorText != null) ...[
+          const SizedBox(height: 8),
+          Text(
+            widget.errorText!,
+            style: const TextStyle(
+              color: Colors.red,
+              fontSize: 14,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+        ],
       ],
     );
   }
@@ -235,6 +291,24 @@ class _AddDataPageState extends State<AddDataPage> {
   List<String> _vendorOptions = [];
   bool _dropdownDataLoaded = false;
 
+  // Error messages for inline validation
+  String? _idError;
+  String? _up3Error;
+  String? _ulpError;
+  String? _kmsAsetError;
+  String? _dateError;
+  String? _coordinatesError;
+  String? _initialHeightError;
+  String? _namaPohonError;
+  String? _tujuanError;
+  String? _prioritasError;
+  String? _selectedPenyulangError;
+  String? _selectedZonaProteksiError;
+  String? _selectedSectionError;
+  String? _selectedVendorError;
+  String? _fotoError;
+  String? _catatanError;
+
   @override
   void initState() {
     super.initState();
@@ -283,8 +357,174 @@ class _AddDataPageState extends State<AddDataPage> {
     });
   }
 
+  void _clearAllErrors() {
+    setState(() {
+      _idError = null;
+      _up3Error = null;
+      _ulpError = null;
+      _kmsAsetError = null;
+      _dateError = null;
+      _coordinatesError = null;
+      _initialHeightError = null;
+      _namaPohonError = null;
+      _tujuanError = null;
+      _prioritasError = null;
+      _selectedPenyulangError = null;
+      _selectedZonaProteksiError = null;
+      _selectedSectionError = null;
+      _selectedVendorError = null;
+      _fotoError = null;
+      _catatanError = null;
+    });
+  }
+
+  bool _validateAllFields() {
+    _clearAllErrors();
+    bool isValid = true;
+
+    // Validate ID Pohon
+    if (_idController.text.trim().isEmpty) {
+      setState(() => _idError = 'ID Pohon tidak boleh kosong');
+      isValid = false;
+    } else if (_idController.text.trim().length < 3) {
+      setState(() => _idError = 'ID Pohon terlalu pendek');
+      isValid = false;
+    }
+
+    // Validate UP3
+    if (_up3Controller.text.trim().isEmpty) {
+      setState(() => _up3Error = 'UP3 tidak boleh kosong');
+      isValid = false;
+    } else if (_up3Controller.text.trim().length < 2) {
+      setState(() => _up3Error = 'Nama UP3 terlalu pendek');
+      isValid = false;
+    }
+
+    // Validate ULP
+    if (_ulpController.text.trim().isEmpty) {
+      setState(() => _ulpError = 'ULP tidak boleh kosong');
+      isValid = false;
+    } else if (_ulpController.text.trim().length < 2) {
+      setState(() => _ulpError = 'Nama ULP terlalu pendek');
+      isValid = false;
+    }
+
+    // Validate Penyulang
+    if (_selectedPenyulang == null || _selectedPenyulang!.trim().isEmpty) {
+      setState(() => _selectedPenyulangError = 'Penyulang harus dipilih');
+      isValid = false;
+    }
+
+    // Validate Zona Proteksi
+    if (_selectedZonaProteksi == null || _selectedZonaProteksi!.trim().isEmpty) {
+      setState(() => _selectedZonaProteksiError = 'Zona proteksi harus dipilih');
+      isValid = false;
+    }
+
+    // Validate Section
+    if (_selectedSection == null || _selectedSection!.trim().isEmpty) {
+      setState(() => _selectedSectionError = 'Section harus dipilih');
+      isValid = false;
+    }
+
+    // Validate Vendor
+    if (_selectedVendor == null || _selectedVendor!.trim().isEmpty) {
+      setState(() => _selectedVendorError = 'Vendor harus dipilih');
+      isValid = false;
+    }
+
+    // Validate KMS Aset (wajib)
+    if (_kmsAsetController.text.trim().isEmpty) {
+      setState(() => _kmsAsetError = 'Kms Aset tidak boleh kosong');
+      isValid = false;
+    }
+
+    // Validate Date
+    if (_dateController.text.trim().isEmpty) {
+      setState(() => _dateError = 'Tanggal penjadwalan tidak boleh kosong');
+      isValid = false;
+    }
+
+    // Validate Coordinates
+    if (_coordinatesController.text.trim().isEmpty) {
+      setState(() => _coordinatesError = 'Koordinat tidak boleh kosong');
+      isValid = false;
+    }
+
+    // Validate Initial Height
+    if (_initialHeightController.text.trim().isEmpty) {
+      setState(() => _initialHeightError = 'Tinggi awal tidak boleh kosong');
+      isValid = false;
+    } else {
+      double? height = double.tryParse(_initialHeightController.text.trim());
+      if (height == null) {
+        setState(() => _initialHeightError = 'Masukkan angka yang valid');
+        isValid = false;
+      } else if (height <= 0) {
+        setState(() => _initialHeightError = 'Tinggi awal harus lebih dari 0');
+        isValid = false;
+      }
+    }
+
+    // Validate Nama Pohon
+    if (_selectedNamaPohon == null) {
+      setState(() => _namaPohonError = 'Nama pohon harus dipilih');
+      isValid = false;
+    }
+
+    // Validate Tujuan
+    if (_selectedTujuan == null) {
+      setState(() => _tujuanError = 'Tujuan penjadwalan harus dipilih');
+      isValid = false;
+    }
+
+    // Validate Prioritas
+    if (_selectedPrioritas == null) {
+      setState(() => _prioritasError = 'Prioritas harus dipilih');
+      isValid = false;
+    }
+
+    // Validate Selected Penyulang
+    if (_selectedPenyulang == null) {
+      setState(() => _selectedPenyulangError = 'Penyulang harus dipilih');
+      isValid = false;
+    }
+
+    // Validate Selected Zona Proteksi
+    if (_selectedZonaProteksi == null) {
+      setState(() => _selectedZonaProteksiError = 'Zona proteksi harus dipilih');
+      isValid = false;
+    }
+
+    // Validate Selected Section
+    if (_selectedSection == null) {
+      setState(() => _selectedSectionError = 'Section harus dipilih');
+      isValid = false;
+    }
+
+    // Validate Selected Vendor
+    if (_selectedVendor == null) {
+      setState(() => _selectedVendorError = 'Vendor harus dipilih');
+      isValid = false;
+    }
+
+    // Validate Foto
+    if (_fotoPohon == null) {
+      setState(() => _fotoError = 'Foto pohon harus dipilih');
+      isValid = false;
+    }
+
+    // Validate Catatan
+    if (_noteController.text.trim().isEmpty) {
+      setState(() => _catatanError = 'Catatan tidak boleh kosong');
+      isValid = false;
+    }
+
+    return isValid;
+  }
+
   Widget _buildField(String label, TextEditingController controller,
-      {bool readOnly = false, Icon? suffixIcon, void Function()? onTap, String? Function(String?)? validator, TextInputType? keyboardType}) {
+      {bool readOnly = false, Icon? suffixIcon, void Function()? onTap, String? Function(String?)? validator, TextInputType? keyboardType, String? errorText}) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -311,6 +551,17 @@ class _AddDataPageState extends State<AddDataPage> {
           ),
           validator: validator,
         ),
+        if (errorText != null) ...[
+          const SizedBox(height: 8),
+          Text(
+            errorText,
+            style: const TextStyle(
+              color: Colors.red,
+              fontSize: 14,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+        ],
       ],
     );
   }
@@ -558,6 +809,7 @@ class _AddDataPageState extends State<AddDataPage> {
                 _idController,
                 readOnly: true,
                 validator: (value) => value!.isEmpty ? 'ID wajib diisi' : null,
+                errorText: _idError,
               ),
               const SizedBox(height: 20),
               _buildField(
@@ -565,6 +817,7 @@ class _AddDataPageState extends State<AddDataPage> {
                 _up3Controller,
                 readOnly: true,
                 validator: (value) => value!.isEmpty ? 'UP3 wajib diisi' : null,
+                errorText: _up3Error,
               ),
               const SizedBox(height: 20),
               _buildField(
@@ -572,6 +825,7 @@ class _AddDataPageState extends State<AddDataPage> {
                 _ulpController,
                 readOnly: true,
                 validator: (value) => value!.isEmpty ? 'ULP wajib diisi' : null,
+                errorText: _ulpError,
               ),
               const SizedBox(height: 20),
               !_dropdownDataLoaded
@@ -586,6 +840,7 @@ class _AddDataPageState extends State<AddDataPage> {
                           _penyulangController.text = value ?? '';
                         });
                       },
+                      errorText: _selectedPenyulangError,
                     ),
               const SizedBox(height: 20),
               !_dropdownDataLoaded
@@ -600,6 +855,7 @@ class _AddDataPageState extends State<AddDataPage> {
                           _zonaProteksiController.text = value ?? '';
                         });
                       },
+                      errorText: _selectedZonaProteksiError,
                     ),
               const SizedBox(height: 20),
               !_dropdownDataLoaded
@@ -614,12 +870,14 @@ class _AddDataPageState extends State<AddDataPage> {
                           _sectionController.text = value ?? '';
                         });
                       },
+                      errorText: _selectedSectionError,
                     ),
               const SizedBox(height: 20),
               _buildField(
                 'Kms Aset',
                 _kmsAsetController,
                 validator: (value) => value!.isEmpty ? 'Kms Aset wajib diisi' : null,
+                errorText: _kmsAsetError,
               ),
               const SizedBox(height: 20),
               !_dropdownDataLoaded
@@ -634,6 +892,7 @@ class _AddDataPageState extends State<AddDataPage> {
                           _vendorController.text = value ?? '';
                         });
                       },
+                      errorText: _selectedVendorError,
                     ),
               const SizedBox(height: 20),
               _buildField(
@@ -668,6 +927,7 @@ class _AddDataPageState extends State<AddDataPage> {
                     _dateController.text = dateFormat.format(pickedDate);
                   }
                 },
+                errorText: _dateError,
               ),
               const SizedBox(height: 20),
               CustomDropdown(
@@ -679,6 +939,7 @@ class _AddDataPageState extends State<AddDataPage> {
                     _selectedNamaPohon = value;
                   });
                 },
+                errorText: _namaPohonError,
               ),
               const SizedBox(height: 20),
               _buildField(
@@ -691,86 +952,108 @@ class _AddDataPageState extends State<AddDataPage> {
                   if (height == null || height < 0) return 'Tinggi awal harus angka valid';
                   return null;
                 },
+                errorText: _initialHeightError,
               ),
               const SizedBox(height: 20),
-              GestureDetector(
-                onTap: () async {
-                  await showDialog(
-                    context: context,
-                    builder: (context) {
-                      return Dialog(
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
-                        child: Padding(
-                          padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 16),
-                          child: Column(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              const Text(
-                                'Pilih Sumber Foto',
-                                style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Foto Pohon',
+                    style: TextStyle(fontSize: 12, color: Colors.grey.shade600, fontWeight: FontWeight.w500),
+                  ),
+                  const SizedBox(height: 8),
+                  GestureDetector(
+                    onTap: () async {
+                      await showDialog(
+                        context: context,
+                        builder: (context) {
+                          return Dialog(
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+                            child: Padding(
+                              padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 16),
+                              child: Column(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  const Text(
+                                    'Pilih Sumber Foto',
+                                    style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+                                  ),
+                                  const SizedBox(height: 24),
+                                  ListTile(
+                                    leading: const Icon(Icons.camera_alt, size: 32),
+                                    title: const Text('Ambil Foto', style: TextStyle(fontSize: 18)),
+                                    onTap: () async {
+                                      Navigator.pop(context);
+                                      final picker = ImagePicker();
+                                      final picked = await picker.pickImage(source: ImageSource.camera);
+                                      if (picked != null) {
+                                        setState(() {
+                                          _fotoPohon = File(picked.path);
+                                        });
+                                      }
+                                    },
+                                  ),
+                                  const SizedBox(height: 8),
+                                  ListTile(
+                                    leading: const Icon(Icons.photo_library, size: 32),
+                                    title: const Text('Pilih dari Galeri', style: TextStyle(fontSize: 18)),
+                                    onTap: () async {
+                                      Navigator.pop(context);
+                                      final picker = ImagePicker();
+                                      final picked = await picker.pickImage(source: ImageSource.gallery);
+                                      if (picked != null) {
+                                        setState(() {
+                                          _fotoPohon = File(picked.path);
+                                        });
+                                      }
+                                    },
+                                  ),
+                                ],
                               ),
-                              const SizedBox(height: 24),
-                              ListTile(
-                                leading: const Icon(Icons.camera_alt, size: 32),
-                                title: const Text('Ambil Foto', style: TextStyle(fontSize: 18)),
-                                onTap: () async {
-                                  Navigator.pop(context);
-                                  final picker = ImagePicker();
-                                  final picked = await picker.pickImage(source: ImageSource.camera);
-                                  if (picked != null) {
-                                    setState(() {
-                                      _fotoPohon = File(picked.path);
-                                    });
-                                  }
-                                },
-                              ),
-                              const SizedBox(height: 8),
-                              ListTile(
-                                leading: const Icon(Icons.photo_library, size: 32),
-                                title: const Text('Pilih dari Galeri', style: TextStyle(fontSize: 18)),
-                                onTap: () async {
-                                  Navigator.pop(context);
-                                  final picker = ImagePicker();
-                                  final picked = await picker.pickImage(source: ImageSource.gallery);
-                                  if (picked != null) {
-                                    setState(() {
-                                      _fotoPohon = File(picked.path);
-                                    });
-                                  }
-                                },
-                              ),
-                            ],
-                          ),
-                        ),
+                            ),
+                          );
+                        },
                       );
                     },
-                  );
-                },
-                child: Container(
-                  margin: const EdgeInsets.symmetric(vertical: 8),
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFF0F9FF),
-                    borderRadius: BorderRadius.circular(8),
-                    border: Border.all(color: Colors.grey.shade300),
-                  ),
-                  child: Row(
-                    children: [
-                      Icon(
-                        _fotoPohon == null ? Icons.camera_alt : Icons.check_circle,
-                        size: 28,
-                        color: Colors.grey.shade600,
+                    child: Container(
+                      margin: const EdgeInsets.symmetric(vertical: 8),
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFF0F9FF),
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: Colors.grey.shade300),
                       ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Text(
-                          _fotoPohon == null ? 'Pilih Foto Pohon' : 'Foto Dipilih',
-                          style: const TextStyle(fontSize: 16, color: Colors.black87),
-                        ),
+                      child: Row(
+                        children: [
+                          Icon(
+                            _fotoPohon == null ? Icons.camera_alt : Icons.check_circle,
+                            size: 28,
+                            color: Colors.grey.shade600,
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Text(
+                              _fotoPohon == null ? 'Pilih Foto Pohon' : 'Foto Dipilih',
+                              style: const TextStyle(fontSize: 16, color: Colors.black87),
+                            ),
+                          ),
+                        ],
                       ),
-                    ],
+                    ),
                   ),
-                ),
+                  if (_fotoError != null) ...[
+                    const SizedBox(height: 8),
+                    Text(
+                      _fotoError!,
+                      style: const TextStyle(
+                        color: Colors.red,
+                        fontSize: 14,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ],
+                ],
               ),
               const SizedBox(height: 20),
               _buildField(
@@ -832,6 +1115,7 @@ class _AddDataPageState extends State<AddDataPage> {
                     },
                   );
                 },
+                errorText: _coordinatesError,
               ),
               const SizedBox(height: 20),
               CustomDropdown(
@@ -845,6 +1129,7 @@ class _AddDataPageState extends State<AddDataPage> {
                         .key;
                   });
                 },
+                errorText: _tujuanError,
               ),
               const SizedBox(height: 20),
               CustomDropdown(
@@ -858,12 +1143,14 @@ class _AddDataPageState extends State<AddDataPage> {
                         .key;
                   });
                 },
+                errorText: _prioritasError,
               ),
               const SizedBox(height: 20),
               _buildField(
                 'Catatan',
                 _noteController,
                 validator: (value) => null, // Optional field
+                errorText: _catatanError,
               ),
               const SizedBox(height: 32),
               Row(
@@ -901,15 +1188,7 @@ class _AddDataPageState extends State<AddDataPage> {
                         onPressed: _isLoading
                             ? null
                             : () async {
-                                if (_formKey.currentState!.validate() &&
-                                    _selectedPenyulang != null &&
-                                    _selectedZonaProteksi != null &&
-                                    _selectedSection != null &&
-                                    _selectedVendor != null &&
-                                    _selectedNamaPohon != null &&
-                                    _selectedTujuan != null &&
-                                    _selectedPrioritas != null &&
-                                    _ulpController.text.isNotEmpty) {
+                                if (_validateAllFields()) {
                                   setState(() {
                                     _isLoading = true;
                                   });
@@ -967,8 +1246,11 @@ class _AddDataPageState extends State<AddDataPage> {
                                     final documentId = await Provider.of<DataPohonProvider>(context, listen: false)
                                         .addPohon(pohon, _fotoPohon);
 
-                                    final notifMsg =
-                                        '${_selectedNamaPohon ?? ''} dengan ID ${_idController.text} baru ditambahkan dengan tanggal penjadwalan ${_dateController.text}.';
+                  final ulpText = (_ulpController.text.trim().isNotEmpty)
+                    ? ' oleh ULP ${_ulpController.text.trim()}'
+                    : '';
+                  final notifMsg =
+                    '${_selectedNamaPohon ?? ''} dengan ID ${_idController.text} baru ditambahkan$ulpText dengan tanggal penjadwalan ${_dateController.text}.';
                                     final notification = AppNotification(
                                       title: 'Pohon Baru Ditambahkan',
                                       message: notifMsg,
@@ -976,14 +1258,22 @@ class _AddDataPageState extends State<AddDataPage> {
                                       idPohon: _idController.text, // ID pohon untuk display
                                     );
 
-                                    // Tambah notifikasi (termasuk scheduling)
-                                    await Provider.of<NotificationProvider>(context, listen: false)
-                                        .addNotification(
+                                    final notifProvider = Provider.of<NotificationProvider>(context, listen: false);
+
+                                    // 1) Notifikasi INSTAN: masuk ke page notif + kirim Telegram sesuai hak akses
+                                    await notifProvider.addNotification(
+                                      notification,
+                                      scheduleDate: null,
+                                      documentIdPohon: documentId,
+                                    );
+
+                                    // 2) Notifikasi TERJADWAL Hari-H (local notif saja; Telegram untuk H-3 dikelola ReminderService)
+                                    await notifProvider.addNotification(
                                       notification,
                                       scheduleDate: scheduleDate,
                                       pohonId: _idController.text,
                                       namaPohon: _selectedNamaPohon ?? '',
-                                      documentIdPohon: documentId, // Document ID untuk navigasi
+                                      documentIdPohon: documentId,
                                     );
 
                                     if (!mounted) return;
@@ -999,11 +1289,6 @@ class _AddDataPageState extends State<AddDataPage> {
                                       });
                                     }
                                   }
-                                } else {
-                                  setState(() {
-                                    _isLoading = false;
-                                  });
-                                  await _showErrorAlert('Harap lengkapi semua field wajib');
                                 }
                               },
                         child: _isLoading

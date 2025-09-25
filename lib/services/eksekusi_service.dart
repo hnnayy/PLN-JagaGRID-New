@@ -125,7 +125,8 @@ class EksekusiService {
 
           // Kirim notifikasi Telegram + in-app: "pohon dengan id {} telah dieksekusi pada tanggal {} wita dengan prediksi penjadwalan selanjutnya adalah tanggal {}"
           try {
-            final message = 'Pohon dengan ID ${pohon.idPohon} telah dieksekusi pada tanggal ${updatedEksekusi.tanggalEksekusi} '
+            final ulpSuffix = (pohon.ulp.isNotEmpty) ? ' oleh ULP ${pohon.ulp}' : '';
+            final message = 'Pohon dengan ID ${pohon.idPohon} telah dieksekusi$ulpSuffix pada tanggal ${updatedEksekusi.tanggalEksekusi} '
                 'dengan prediksi penjadwalan selanjutnya pada ${DateFormat('dd/MM/yyyy').format(createdPrediction.predictedNextExecution)}';
 
             // Buat AppNotification dan masukkan ke page notif + Telegram
@@ -143,9 +144,9 @@ class EksekusiService {
             // Jadwalkan pengingat 3 hari sebelum tanggal prediksi berikutnya
             final reminderDate = createdPrediction.predictedNextExecution.subtract(const Duration(days: 3));
             final tujuanText = pohon.tujuanPenjadwalan == 1 ? 'Tebang Pangkas' : 'Tebang Habis';
-            final reminderMessage = 'Pohon dengan ID ${pohon.idPohon} harus dieksekusi pada tanggal '
-                '${DateFormat('dd/MM/yyyy').format(createdPrediction.predictedNextExecution)} '
-                'dengan tujuan penjadwalan adalah $tujuanText';
+      final reminderMessage = 'Pohon dengan ID ${pohon.idPohon} harus dieksekusi${ulpSuffix.isNotEmpty ? ulpSuffix : ''} pada tanggal '
+        '${DateFormat('dd/MM/yyyy').format(createdPrediction.predictedNextExecution)} '
+        'dengan tujuan penjadwalan adalah $tujuanText';
 
             await notificationProvider.addNotification(
               AppNotification(

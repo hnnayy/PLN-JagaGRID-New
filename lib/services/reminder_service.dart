@@ -58,13 +58,15 @@ class ReminderService {
           final pohon = pohonDoc.data()!;
           final idPohon = (pohon['id_pohon'] ?? '') as String;
           final tujuan = (pohon['tujuan_penjadwalan'] ?? 1) as int;
+          final ulp = (pohon['ulp'] ?? '') as String;
           final tujuanText = tujuan == 2 ? 'Tebang Habis' : 'Tebang Pangkas';
 
           final dateText = DateFormat('dd/MM/yyyy').format(predictedWita);
-          final message = 'Pohon dengan ID $idPohon harus dieksekusi pada tanggal $dateText dengan tujuan penjadwalan adalah $tujuanText';
+          final ulpSuffix = ulp.isNotEmpty ? ' oleh ULP $ulp' : '';
+          final message = 'Pohon dengan ID $idPohon harus dieksekusi$ulpSuffix pada tanggal $dateText dengan tujuan penjadwalan adalah $tujuanText';
 
-          // Send Telegram now and add to in-app notifications list
-          await notificationProvider.sendTelegramMessage('Pengingat Eksekusi (H-3)\n$message');
+          // Send Telegram now (filtered by access for this tree)
+          await notificationProvider.sendTelegramMessageForTree('Pengingat Eksekusi (H-3)\n$message', dataPohonId: pohonDoc.id);
 
           await notificationProvider.addInAppOnly(
             AppNotification(

@@ -14,6 +14,7 @@ class NotificationPage extends StatelessWidget {
     return {
       'session_level': prefs.getInt('session_level') ?? 2,
       'session_unit': prefs.getString('session_unit') ?? '',
+      'session_id': prefs.getString('session_id') ?? '',
     };
   }
 
@@ -65,9 +66,10 @@ class NotificationPage extends StatelessWidget {
             return const Center(child: Text('Terjadi kesalahan mengambil data sesi'));
           }
 
-          final sessionData = sessionSnapshot.data ?? {'session_level': 2, 'session_unit': ''};
+          final sessionData = sessionSnapshot.data ?? {'session_level': 2, 'session_unit': '', 'session_id': ''};
           final sessionLevel = sessionData['session_level'] as int;
-          final sessionUnit = sessionData['session_unit'] as String;
+          // final sessionUnit = sessionData['session_unit'] as String; // not used in creator-based filter
+          final sessionId = sessionData['session_id'] as String;
 
           return Container(
             decoration: const BoxDecoration(
@@ -92,12 +94,12 @@ class NotificationPage extends StatelessWidget {
                 List<QueryDocumentSnapshot> docs = snapshot.data?.docs ?? [];
 
                 // Apply client-side filtering based on session level
-                if (sessionLevel == 2 && sessionUnit.isNotEmpty) {
+                if (sessionLevel == 2) {
+                  // For Unit Layanan (level 2), show only notifications created by the current user
                   docs = docs.where((doc) {
                     final data = doc.data() as Map<String, dynamic>;
-                    final up3 = data['up3'] as String? ?? '';
-                    final ulp = data['ulp'] as String? ?? '';
-                    return up3 == sessionUnit || ulp == sessionUnit;
+                    final createdBy = (data['created_by'] as String? ?? '').trim();
+                    return createdBy.isNotEmpty && createdBy == sessionId;
                   }).toList();
                 }
 
