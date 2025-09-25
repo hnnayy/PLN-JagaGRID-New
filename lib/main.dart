@@ -4,6 +4,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'models/data_pohon.dart';
 import 'firebase_options.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
@@ -19,7 +20,8 @@ import 'page/peta_pohon/add_data_page.dart';
 import 'page/report/treemapping_report.dart';
 import 'page/report/treemapping_detail.dart';
 import 'page/tree_growth/tree_growth_list_page.dart';
-import 'page/login/login.dart'; // Import LoginPage
+import 'page/login/login.dart';
+import 'navigation_menu.dart';
 import 'services/reminder_service.dart';
 
 // Global navigator key untuk navigasi dari notification
@@ -61,11 +63,23 @@ void main() async {
     print('❌ Failed to sign in anonymously: $e');
   }
 
-  runApp(const OverlaySupport(child: MyApp()));
+  // Periksa status login dengan penanganan error
+  bool isLoggedIn = false;
+  try {
+    final prefs = await SharedPreferences.getInstance();
+    isLoggedIn = prefs.getString('session_username') != null;
+  } catch (e) {
+    print('❌ Error accessing SharedPreferences: $e');
+    isLoggedIn = false; // Default ke false jika gagal
+  }
+
+  runApp(OverlaySupport(
+    child: MyApp(isLoggedIn: isLoggedIn),
+  ));
 
   // Fungsi rekursif untuk setup navigation callback dengan retry
   void _setupNavigationCallback(int attempt) {
-    if (attempt >= 5) { // Max 5 attempts
+    if (attempt >= 5) {
       debugPrint('❌ Gagal setup navigation callback setelah 5 percobaan');
       return;
     }
@@ -77,7 +91,6 @@ void main() async {
         notificationProvider.setNotificationTapCallback((String? documentId) async {
           if (documentId != null && documentId.isNotEmpty) {
             try {
-              // Ambil data pohon dari Firestore menggunakan document ID
               final docSnapshot = await FirebaseFirestore.instance
                   .collection('data_pohon')
                   .doc(documentId)
@@ -89,7 +102,6 @@ void main() async {
                   'id': docSnapshot.id,
                 });
 
-                // Pastikan context masih valid sebelum navigasi
                 if (navigatorKey.currentContext != null && navigatorKey.currentContext!.mounted) {
                   navigatorKey.currentState!.push(
                     MaterialPageRoute(
@@ -113,26 +125,21 @@ void main() async {
         debugPrint('🔧 Navigation callback berhasil di-setup pada attempt ${attempt + 1}');
       } catch (e) {
         debugPrint('❌ Error setting up navigation callback pada attempt ${attempt + 1}: $e');
-        // Retry dengan delay yang lebih lama
         Future.delayed(Duration(milliseconds: 1000 * (attempt + 1)), () {
           _setupNavigationCallback(attempt + 1);
         });
       }
     } else {
       debugPrint('⏳ Menunggu context stabil... attempt ${attempt + 1}');
-      // Retry dengan delay
       Future.delayed(const Duration(milliseconds: 500), () {
         _setupNavigationCallback(attempt + 1);
       });
     }
   }
 
-  // Setup navigation callback untuk local notifications setelah app berjalan
   WidgetsBinding.instance.addPostFrameCallback((_) {
-    // Multiple attempts dengan delay yang berbeda untuk memastikan context stabil
     _setupNavigationCallback(0);
 
-    // Jalankan pengingat H-3 sekali per hari saat app start
     final ctx = navigatorKey.currentContext;
     if (ctx != null) {
       final notif = Provider.of<NotificationProvider>(ctx, listen: false);
@@ -142,7 +149,9 @@ void main() async {
 }
 
 class MyApp extends StatelessWidget {
-  const MyApp({super.key});
+  final bool isLoggedIn;
+
+  const MyApp({super.key, required this.isLoggedIn});
 
   @override
   Widget build(BuildContext context) {
@@ -157,13 +166,13 @@ class MyApp extends StatelessWidget {
       child: MaterialApp(
         navigatorKey: navigatorKey,
         debugShowCheckedModeBanner: false,
-        home: const SplashScreen(), // SplashScreen sebagai titik masuk awal
+        home: isLoggedIn ? const NavigationMenu() : const SplashScreen(),
         routes: {
           '/map': (context) => MapPage(),
           '/addData': (context) => AddDataPage(),
           '/report': (context) => TreeMappingReportPage(),
           '/treeGrowth': (context) => const TreeGrowthListPage(),
-          '/login': (context) => const LoginPage(), // Tambahkan rute untuk LoginPage
+          '/login': (context) => const LoginPage(),
         },
       ),
     );
