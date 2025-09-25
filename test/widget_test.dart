@@ -1,30 +1,56 @@
-// This is a basic Flutter widget test.
-//
-// To perform an interaction with a widget in your test, use the WidgetTester
-// utility in the flutter_test package. For example, you can send tap and scroll
-// gestures. You can also use WidgetTester to find child widgets in the widget
-// tree, read text, and verify that the values of widget properties are correct.
-
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:firebase_core/firebase_core.dart';
+import 'package:mockito/mockito.dart';
 import 'package:flutter_application_2/main.dart';
+import 'package:flutter_application_2/page/splash_screen.dart';
+import 'package:flutter_application_2/navigation_menu.dart';
+
+// Mock class untuk Firebase
+class MockFirebaseApp extends Mock implements FirebaseApp {}
 
 void main() {
-  testWidgets('Counter increments smoke test', (WidgetTester tester) async {
-    // Build our app and trigger a frame.
-    await tester.pumpWidget(const MyApp());
+  // Setup untuk menangani inisialisasi Firebase dan SharedPreferences
+  setUpAll(() async {
+    // Mock SharedPreferences
+    SharedPreferences.setMockInitialValues({});
 
-    // Verify that our counter starts at 0.
-    expect(find.text('0'), findsOneWidget);
-    expect(find.text('1'), findsNothing);
+    // Mock Firebase
+    TestWidgetsFlutterBinding.ensureInitialized();
+  });
 
-    // Tap the '+' icon and trigger a frame.
-    await tester.tap(find.byIcon(Icons.add));
-    await tester.pump();
+  group('MyApp Widget Tests', () {
+    testWidgets('MyApp menampilkan SplashScreen saat belum login', (WidgetTester tester) async {
+      // Atur SharedPreferences agar tidak ada session_username (belum login)
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.clear();
 
-    // Verify that our counter has incremented.
-    expect(find.text('0'), findsNothing);
-    expect(find.text('1'), findsOneWidget);
+      // Build MyApp dengan isLoggedIn = false
+      await tester.pumpWidget(const MyApp(isLoggedIn: false));
+
+      // Tunggu hingga frame selesai dirender
+      await tester.pumpAndSettle();
+
+      // Verifikasi bahwa SplashScreen ditampilkan
+      expect(find.byType(SplashScreen), findsOneWidget);
+      expect(find.byType(NavigationMenu), findsNothing);
+    });
+
+    testWidgets('MyApp menampilkan NavigationMenu saat sudah login', (WidgetTester tester) async {
+      // Atur SharedPreferences agar ada session_username (sudah login)
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString('session_username', '@testuser');
+
+      // Build MyApp dengan isLoggedIn = true
+      await tester.pumpWidget(const MyApp(isLoggedIn: true));
+
+      // Tunggu hingga frame selesai dirender
+      await tester.pumpAndSettle();
+
+      // Verifikasi bahwa NavigationMenu ditampilkan
+      expect(find.byType(NavigationMenu), findsOneWidget);
+      expect(find.byType(SplashScreen), findsNothing);
+    });
   });
 }
