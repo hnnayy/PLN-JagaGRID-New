@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import '../../models/tree_growth.dart';
+import '../../providers/tree_growth_provider.dart';
 
 class TreeGrowthFormPage extends StatefulWidget {
   final TreeGrowth? item;
@@ -32,9 +34,8 @@ class _TreeGrowthFormPageState extends State<TreeGrowthFormPage> {
   }
 
   // Alert Dialog untuk Berhasil
-  void _showSuccessDialog() {
-    final isEdit = widget.item != null;
-    showDialog(
+  Future<void> _showSuccessDialog({bool isEdit = false}) async {
+    await showDialog<void>(
       context: context,
       barrierDismissible: false,
       builder: (BuildContext context) {
@@ -50,144 +51,53 @@ class _TreeGrowthFormPageState extends State<TreeGrowthFormPage> {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                // Icon Success
+                // Icon Success (circular check)
                 Container(
-                  width: 80,
-                  height: 80,
+                  width: 88,
+                  height: 88,
                   decoration: const BoxDecoration(
-                    color: Color(0xFF2E5D6F),
+                    color: Color(0xFF256D78),
                     shape: BoxShape.circle,
                   ),
-                  child: const Icon(
-                    Icons.check,
-                    color: Colors.white,
-                    size: 40,
+                  child: const Center(
+                    child: Icon(
+                      Icons.check,
+                      color: Colors.white,
+                      size: 48,
+                    ),
                   ),
                 ),
-                const SizedBox(height: 24),
-                // Title
+                const SizedBox(height: 16),
                 const Text(
                   'Berhasil!',
                   style: TextStyle(
-                    fontSize: 24,
+                    fontSize: 18,
                     fontWeight: FontWeight.bold,
-                    color: Color(0xFF2E5D6F),
                   ),
                 ),
-                const SizedBox(height: 12),
-                // Message
+                const SizedBox(height: 8),
                 Text(
                   isEdit 
                     ? 'Data pertumbuhan pohon berhasil diperbarui'
                     : 'Data pertumbuhan pohon berhasil ditambahkan',
                   textAlign: TextAlign.center,
-                  style: TextStyle(
-                    fontSize: 16,
-                    color: Colors.grey.shade600,
-                    height: 1.4,
-                  ),
                 ),
                 const SizedBox(height: 20),
-                // Details Container
-                Container(
+                SizedBox(
                   width: double.infinity,
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFF0F9FF),
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: const Color(0xFF2E5D6F).withOpacity(0.2)),
-                  ),
-                  child: Column(
-                    children: [
-                      _buildDetailRow('Nama Pohon:', _nameController.text),
-                      const SizedBox(height: 8),
-                      _buildDetailRow('Pertumbuhan:', '${_rateController.text} cm/tahun'),
-                      const SizedBox(height: 8),
-                      _buildDetailRow('Disimpan:', _formatDate(DateTime.now())),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 32),
-                // Buttons
-                Row(
-                  children: [
-                    if (!isEdit) ...[
-                      Expanded(
-                        child: SizedBox(
-                          height: 45,
-                          child: OutlinedButton(
-                            style: OutlinedButton.styleFrom(
-                              backgroundColor: Colors.white,
-                              foregroundColor: const Color(0xFF2E5D6F),
-                              side: const BorderSide(color: Color(0xFF2E5D6F), width: 1),
-                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(25)),
-                            ),
-                            onPressed: () {
-                              Navigator.of(context).pop(); // Close alert
-                              // Reset form untuk tambah lagi
-                              _resetForm();
-                            },
-                            child: const Text(
-                              'Tambah Lagi',
-                              style: TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
-                            ),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                    ],
-                    Expanded(
-                      child: SizedBox(
-                        height: 45,
-                        child: ElevatedButton(
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: const Color(0xFF2E5D6F),
-                            foregroundColor: Colors.white,
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(25)),
-                          ),
-                          onPressed: () {
-                            Navigator.of(context).pop(); // Close alert
-                            // Return data ke list page
-                            final rate = double.parse(_rateController.text);
-                            final isEdit = widget.item != null;
-                            
-                            if (isEdit) {
-                              final updated = widget.item!.copyWith(
-                                name: _nameController.text.trim(),
-                                growthRate: rate,
-                                // Status tetap aktif (1) untuk data yang diedit
-                                status: 1,
-                                deletedAt: null, // Clear deletedAt karena data kembali aktif
-                              );
-                              Navigator.pop(context, updated);
-                            } else {
-                              final created = TreeGrowth(
-                                id: '',
-                                name: _nameController.text.trim(),
-                                growthRate: rate,
-                                createdAt: DateTime.now(),
-                                // Status default aktif (1) untuk data baru
-                                status: 1,
-                                deletedAt: null,
-                              );
-                              Navigator.pop(context, created);
-                            }
-                          },
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              const Icon(Icons.list, size: 18),
-                              const SizedBox(width: 8),
-                              Text(
-                                isEdit ? 'Kembali ke List' : 'Lihat List',
-                                style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
+                  height: 45,
+                  child: ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF256D78),
+                      foregroundColor: Colors.white,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(25)),
                     ),
-                  ],
+                    onPressed: () => Navigator.of(context).pop(),
+                    child: const Text(
+                      'OK',
+                      style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                    ),
+                  ),
                 ),
               ],
             ),
@@ -338,10 +248,10 @@ class _TreeGrowthFormPageState extends State<TreeGrowthFormPage> {
   // Format tanggal
   String _formatDate(DateTime date) {
     final months = [
-      'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni',
-      'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'
+      'Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun',
+      'Jul', 'Ags', 'Sep', 'Okt', 'Nov', 'Des'
     ];
-    return '${date.day} ${months[date.month - 1]} ${date.year}';
+    return '${date.day} ${months[date.month - 1]} ${date.year} WITA';
   }
 
   // Reset form
@@ -351,15 +261,16 @@ class _TreeGrowthFormPageState extends State<TreeGrowthFormPage> {
     setState(() {});
   }
 
-  // Simulasi save data dengan alert
+  // Save data to database
   Future<void> _saveData() async {
     if (!_formKey.currentState!.validate()) {
-      _showFailureDialog();
+      // Form validation akan menampilkan pesan error di field
+      // Tidak perlu alert "Gagal!" tambahan
       return;
     }
     
     if (!_validateData()) {
-      _showFailureDialog();
+      // Custom validation juga tidak perlu alert "Gagal!"
       return;
     }
     
@@ -368,54 +279,69 @@ class _TreeGrowthFormPageState extends State<TreeGrowthFormPage> {
     });
 
     try {
-      await Future.delayed(const Duration(seconds: 1));
+      final provider = context.read<TreeGrowthProvider>();
+      final name = _nameController.text.trim();
+      final rate = double.parse(_rateController.text.trim());
       
-      // Simulasi random success/failure (70% success, 30% failure untuk testing)
-      final isSuccess = DateTime.now().millisecond % 10 >= 3;
-      
-      if (isSuccess) {
-        _showSuccessDialog();
+      if (widget.item != null) {
+        // Update existing item
+        final updatedItem = TreeGrowth(
+          id: widget.item!.id,
+          name: name,
+          growthRate: rate,
+          createdAt: widget.item!.createdAt,
+          status: widget.item!.status,
+          deletedAt: widget.item!.deletedAt,
+        );
+        
+        final success = await provider.update(updatedItem);
+        if (success && mounted) {
+          // Show success dialog, then return updated item
+          await _showSuccessDialog(isEdit: true);
+          if (mounted) {
+            Navigator.of(context).pop(updatedItem);
+          }
+          return;
+        }
       } else {
+        // Create new item
+        final success = await provider.add(name, rate);
+        if (success && mounted) {
+          // Show success dialog first
+          await _showSuccessDialog(isEdit: false);
+          if (mounted) {
+            // Get the newly created item from provider
+            final newItem = TreeGrowth(
+              id: '', // Will be set by service
+              name: name,
+              growthRate: rate,
+              createdAt: DateTime.now(),
+              status: 1,
+            );
+            Navigator.of(context).pop(newItem);
+          }
+          return;
+        }
+      }
+      
+      // If we get here, something went wrong
+      if (mounted) {
         _showFailureDialog();
       }
     } catch (e) {
-      _showFailureDialog();
+      if (mounted) {
+        _showFailureDialog();
+      }
     } finally {
-      setState(() {
-        _isLoading = false;
-      });
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
     }
   }
 
-  // Save data tanpa alert (untuk return langsung ke list page)
-  void _saveDataDirectly() {
-    if (!_formKey.currentState!.validate()) return;
-    
-    final rate = double.parse(_rateController.text);
-    final isEdit = widget.item != null;
-    
-    if (isEdit) {
-      final updated = widget.item!.copyWith(
-        name: _nameController.text.trim(),
-        growthRate: rate,
-        // Status tetap aktif (1) untuk data yang diedit
-        status: 1,
-        deletedAt: null, // Clear deletedAt karena data kembali aktif
-      );
-      Navigator.pop(context, updated);
-    } else {
-      final created = TreeGrowth(
-        id: '',
-        name: _nameController.text.trim(),
-        growthRate: rate,
-        createdAt: DateTime.now(),
-        // Status default aktif (1) untuk data baru
-        status: 1,
-        deletedAt: null,
-      );
-      Navigator.pop(context, created);
-    }
-  }
+  // ...existing code...
 
   @override
   Widget build(BuildContext context) {
@@ -448,47 +374,6 @@ class _TreeGrowthFormPageState extends State<TreeGrowthFormPage> {
           child: ListView(
             padding: const EdgeInsets.all(24),
             children: [
-              // Form info
-              if (isEdit) ...[
-                Container(
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFF2E5D6F).withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: const Color(0xFF2E5D6F).withOpacity(0.2)),
-                  ),
-                  child: Row(
-                    children: [
-                      const Icon(Icons.edit, color: Color(0xFF2E5D6F), size: 20),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            const Text(
-                              'Mode Edit',
-                              style: TextStyle(
-                                fontSize: 14,
-                                fontWeight: FontWeight.w600,
-                                color: Color(0xFF2E5D6F),
-                              ),
-                            ),
-                            Text(
-                              'Mengubah data: ${widget.item!.name}',
-                              style: TextStyle(
-                                fontSize: 12,
-                                color: Colors.grey.shade600,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 24),
-              ],
-              
               _buildField(
                 label: 'Nama Pohon',
                 controller: _nameController,
@@ -517,45 +402,6 @@ class _TreeGrowthFormPageState extends State<TreeGrowthFormPage> {
                   if (d > 1000) return 'Maksimal 1000 cm/tahun';
                   return null;
                 },
-              ),
-              const SizedBox(height: 32),
-              
-              // Info box
-              Container(
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: Colors.blue.shade50,
-                  borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: Colors.blue.shade200),
-                ),
-                child: Row(
-                  children: [
-                    Icon(Icons.info_outline, color: Colors.blue.shade600, size: 20),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            'Tips:',
-                            style: TextStyle(
-                              fontSize: 12,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.blue.shade700,
-                            ),
-                          ),
-                          Text(
-                            'Masukkan nama pohon yang jelas dan nilai pertumbuhan dalam cm per tahun.',
-                            style: TextStyle(
-                              fontSize: 12,
-                              color: Colors.blue.shade700,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
               ),
               const SizedBox(height: 32),
               
@@ -603,8 +449,6 @@ class _TreeGrowthFormPageState extends State<TreeGrowthFormPage> {
                             : Row(
                                 mainAxisAlignment: MainAxisAlignment.center,
                                 children: [
-                                  Icon(isEdit ? Icons.update : Icons.save, size: 18),
-                                  const SizedBox(width: 8),
                                   Text(
                                     isEdit ? 'Perbarui' : 'Simpan',
                                     style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 16),
@@ -617,23 +461,6 @@ class _TreeGrowthFormPageState extends State<TreeGrowthFormPage> {
                 ],
               ),
               const SizedBox(height: 16),
-              
-              // Quick save button
-              SizedBox(
-                width: double.infinity,
-                height: 45,
-                child: TextButton(
-                  style: TextButton.styleFrom(
-                    foregroundColor: const Color(0xFF2E5D6F),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(25)),
-                  ),
-                  onPressed: _isLoading ? null : _saveDataDirectly,
-                  child: Text(
-                    isEdit ? 'Simpan Cepat (tanpa konfirmasi)' : 'Simpan Cepat (tanpa konfirmasi)',
-                    style: const TextStyle(fontSize: 14, decoration: TextDecoration.underline),
-                  ),
-                ),
-              ),
             ],
           ),
         ),

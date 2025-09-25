@@ -11,11 +11,15 @@ class TreeGrowthService {
       return _db
           .collection(_collection)
           .where('status', isEqualTo: 1)
-          .orderBy('name')
           .snapshots()
-          .map((snap) => snap.docs
-              .map((d) => TreeGrowth.fromMap(d.data(), d.id))
-              .toList());
+          .map((snap) {
+        final list = snap.docs
+            .map((d) => TreeGrowth.fromMap(d.data(), d.id))
+            .toList();
+        // Sort by name in the app instead of Firestore
+        list.sort((a, b) => a.name.compareTo(b.name));
+        return list;
+      });
     } catch (e) {
       print('Error watching all: $e');
       return Stream.value([]); // Return empty list on error
