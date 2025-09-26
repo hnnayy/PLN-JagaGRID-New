@@ -13,6 +13,7 @@ import '../../models/data_pohon.dart';
 import '../../services/asset_service.dart';
 import 'pick_location_page.dart';
 import '../../providers/tree_growth_provider.dart';
+import '../../models/tree_growth.dart';
 
 // Simple coordinator to ensure only one dropdown is open at a time across the page
 class DropdownCoordinator {
@@ -773,8 +774,6 @@ class _AddDataPageState extends State<AddDataPage> {
   @override
   Widget build(BuildContext context) {
     final dateFormat = DateFormat('d-M-y'); // Format d-M-y for UI
-    final treeGrowthProvider = Provider.of<TreeGrowthProvider>(context);
-    final treeNames = treeGrowthProvider.items.map((e) => e.name).toList();
     
     return Scaffold(
       backgroundColor: const Color(0xFF2E5D6F),
@@ -930,16 +929,29 @@ class _AddDataPageState extends State<AddDataPage> {
                 errorText: _dateError,
               ),
               const SizedBox(height: 20),
-              CustomDropdown(
-                value: _selectedNamaPohon,
-                items: treeNames,
-                labelText: 'Nama Pohon',
-                onChanged: (value) {
-                  setState(() {
-                    _selectedNamaPohon = value;
-                  });
+              StreamBuilder<List<TreeGrowth>>(
+                stream: context.read<TreeGrowthProvider>().watchAll(),
+                builder: (context, snapshot) {
+                  List<String> treeNames;
+                  if (snapshot.hasData) {
+                    treeNames = snapshot.data!.map((e) => e.name).toSet().toList();
+                    treeNames.sort();
+                  } else {
+                    treeNames = <String>[];
+                  }
+                  
+                  return CustomDropdown(
+                    value: _selectedNamaPohon,
+                    items: treeNames,
+                    labelText: 'Nama Pohon',
+                    onChanged: (value) {
+                      setState(() {
+                        _selectedNamaPohon = value;
+                      });
+                    },
+                    errorText: _namaPohonError,
+                  );
                 },
-                errorText: _namaPohonError,
               ),
               const SizedBox(height: 20),
               _buildField(
@@ -1209,10 +1221,12 @@ class _AddDataPageState extends State<AddDataPage> {
                                     final creatorId = prefs.getString('session_id') ?? '';
 
                                     double selectedGrowth = 0;
-                                    if (treeGrowthProvider.items.isNotEmpty && _selectedNamaPohon != null) {
-                                      final match = treeGrowthProvider.items.firstWhere(
+                                    final provider = context.read<TreeGrowthProvider>();
+                                    final trees = await provider.watchAll().first;
+                                    if (trees.isNotEmpty && _selectedNamaPohon != null) {
+                                      final match = trees.firstWhere(
                                         (e) => e.name == _selectedNamaPohon,
-                                        orElse: () => treeGrowthProvider.items.first,
+                                        orElse: () => trees.first,
                                       );
                                       selectedGrowth = match.growthRate;
                                     }

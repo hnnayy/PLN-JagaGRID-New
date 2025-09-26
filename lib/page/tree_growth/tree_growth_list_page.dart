@@ -9,6 +9,27 @@ class TreeGrowthListPage extends StatefulWidget {
 
   @override
   State<TreeGrowthListPage> createState() => _TreeGrowthListPageState();
+
+  // Static method to get tree names from any page
+  static Future<List<String>> getTreeNames(BuildContext context) async {
+    final provider = context.read<TreeGrowthProvider>();
+    try {
+      final trees = await provider.watchAll().first; // Get current data
+      return trees.map((tree) => tree.name).toSet().toList()..sort();
+    } catch (e) {
+      return [];
+    }
+  }
+
+  // Static method to get all tree data from any page
+  static Future<List<TreeGrowth>> getTreeData(BuildContext context) async {
+    final provider = context.read<TreeGrowthProvider>();
+    try {
+      return await provider.watchAll().first; // Get current data
+    } catch (e) {
+      return [];
+    }
+  }
 }
 
 class _TreeGrowthListPageState extends State<TreeGrowthListPage> {
@@ -19,6 +40,19 @@ class _TreeGrowthListPageState extends State<TreeGrowthListPage> {
       // Load initial data and start listening to stream
       context.read<TreeGrowthProvider>().load();
     });
+  }
+
+  // Method to get tree names for add data page
+  Future<List<String>> getTreeNames() async {
+    final provider = context.read<TreeGrowthProvider>();
+    final trees = await provider.watchAll().first; // Get current data
+    return trees.map((tree) => tree.name).toSet().toList()..sort();
+  }
+
+  // Method to get all tree data for add data page
+  Future<List<TreeGrowth>> getTreeData() async {
+    final provider = context.read<TreeGrowthProvider>();
+    return await provider.watchAll().first; // Get current data
   }
 
   // Alert Dialog untuk delete success
@@ -531,7 +565,7 @@ class _TreeGrowthListPageState extends State<TreeGrowthListPage> {
                         final item = items[index];
                         return Dismissible(
                           key: Key(item.id),
-                          direction: DismissDirection.startToEnd,
+                          direction: DismissDirection.horizontal,
                           background: Container(
                             margin: const EdgeInsets.only(bottom: 16),
                             decoration: BoxDecoration(
@@ -540,6 +574,20 @@ class _TreeGrowthListPageState extends State<TreeGrowthListPage> {
                             ),
                             alignment: Alignment.centerLeft,
                             padding: const EdgeInsets.only(left: 20),
+                            child: const Icon(
+                              Icons.delete,
+                              color: Colors.white,
+                              size: 28,
+                            ),
+                          ),
+                          secondaryBackground: Container(
+                            margin: const EdgeInsets.only(bottom: 16),
+                            decoration: BoxDecoration(
+                              color: Colors.red,
+                              borderRadius: BorderRadius.circular(16),
+                            ),
+                            alignment: Alignment.centerRight,
+                            padding: const EdgeInsets.only(right: 20),
                             child: const Icon(
                               Icons.delete,
                               color: Colors.white,
