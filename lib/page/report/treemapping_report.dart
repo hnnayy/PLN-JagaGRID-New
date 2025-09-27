@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-// Removed direct cloud_firestore import (not used in this file)
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:excel/excel.dart';
 import 'package:path_provider/path_provider.dart';
@@ -16,12 +15,11 @@ import '../../services/user_service.dart';
 class TreeMappingReportPage extends StatelessWidget {
   final DataPohonService _dataPohonService = DataPohonService();
   final String? filterType;
+  final GlobalKey<ScaffoldMessengerState> _scaffoldMessengerKey = GlobalKey<ScaffoldMessengerState>();
 
   TreeMappingReportPage({this.filterType});
 
-  // In-memory cache for address lines per coordinate
   static final Map<String, List<String>> _geoLinesCache = {};
-  // In-memory cache for userId -> name
   static final Map<String, String> _userNameCache = {};
 
   Future<String> _getUserName(String id) async {
@@ -29,7 +27,6 @@ class TreeMappingReportPage extends StatelessWidget {
     final cached = _userNameCache[id];
     if (cached != null) return cached;
     try {
-      // Try persistent cache first
       final prefs = await SharedPreferences.getInstance();
       final persisted = prefs.getString('user_name_cache|' + id);
       if (persisted != null && persisted.isNotEmpty) {
@@ -55,7 +52,6 @@ class TreeMappingReportPage extends StatelessWidget {
       final cached = _geoLinesCache[key];
       if (cached != null) return cached;
 
-      // Check persistent cache
       final prefs = await SharedPreferences.getInstance();
       final persisted = prefs.getStringList('geo_lines_cache|' + key);
       if (persisted != null && persisted.isNotEmpty) {
@@ -73,21 +69,18 @@ class TreeMappingReportPage extends StatelessWidget {
       if (placemarks.isEmpty) return fallback.isNotEmpty ? [fallback] : <String>[];
 
       final p = placemarks.first;
-    // Compose ONLY two lines: subLocality (Kecamatan/Area) and locality (Kota/Kabupaten)
-    final subLocality = (p.subLocality ?? '').trim();
-    final locality = (p.locality ?? '').trim();
+      final subLocality = (p.subLocality ?? '').trim();
+      final locality = (p.locality ?? '').trim();
 
-    final lines = <String>[];
-    if (subLocality.isNotEmpty) lines.add(subLocality);
-    if (locality.isNotEmpty) lines.add(locality);
+      final lines = <String>[];
+      if (subLocality.isNotEmpty) lines.add(subLocality);
+      if (locality.isNotEmpty) lines.add(locality);
 
-    // Fallback if both empty
-    final result = lines.isNotEmpty
-      ? lines
-      : (fallback.isNotEmpty ? [fallback] : <String>[]);
+      final result = lines.isNotEmpty
+          ? lines
+          : (fallback.isNotEmpty ? [fallback] : <String>[]);
 
       _geoLinesCache[key] = result;
-      // Persist for later sessions
       await prefs.setStringList('geo_lines_cache|' + key, result);
       return result;
     } catch (_) {
@@ -96,6 +89,7 @@ class TreeMappingReportPage extends StatelessWidget {
   }
 
   Future<bool?> _showDeleteConfirmationDialog(BuildContext context, String idPohon) async {
+    print('Showing delete confirmation dialog for Pohon ID #$idPohon');
     return showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
@@ -103,16 +97,186 @@ class TreeMappingReportPage extends StatelessWidget {
         content: Text('Apakah Anda yakin ingin menghapus data pohon ID #$idPohon?'),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(context, false),
+            onPressed: () {
+              print('User cancelled deletion for Pohon ID #$idPohon');
+              Navigator.pop(context, false);
+            },
             child: const Text('Batal', style: TextStyle(color: AppColors.tealGelap)),
           ),
           TextButton(
-            onPressed: () => Navigator.pop(context, true),
+            onPressed: () {
+              print('User confirmed deletion for Pohon ID #$idPohon');
+              Navigator.pop(context, true);
+            },
             child: const Text('Hapus', style: TextStyle(color: Colors.red)),
           ),
         ],
       ),
     );
+  }
+
+  Future<void> _showSuccessAlert(BuildContext context, String idPohon) async {
+    print('Attempting to show success alert for Pohon ID #$idPohon');
+    await showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => Builder(
+        builder: (innerContext) => Dialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          child: Container(
+            padding: const EdgeInsets.all(28),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(20),
+              color: Colors.white,
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  width: 85,
+                  height: 85,
+                  decoration: const BoxDecoration(
+                    color: Color(0xFF2E5D6F),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(
+                    Icons.check_circle_rounded,
+                    size: 55,
+                    color: Colors.white,
+                  ),
+                ),
+                const SizedBox(height: 24),
+                const Text(
+                  "Berhasil!",
+                  style: TextStyle(
+                    fontSize: 26,
+                    fontWeight: FontWeight.bold,
+                    color: Color(0xFF2E5D6F),
+                  ),
+                ),
+                const SizedBox(height: 10),
+                Text(
+                  "Data pohon ID #$idPohon berhasil dihapus",
+                  style: TextStyle(
+                    fontSize: 15,
+                    color: Colors.grey.shade600,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 24),
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF2E5D6F),
+                      foregroundColor: Colors.white,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                    ),
+                    onPressed: () {
+                      print('Success alert OK button pressed for Pohon ID #$idPohon');
+                      Navigator.of(innerContext).pop();
+                    },
+                    child: const Text(
+                      "OK",
+                      style: TextStyle(
+                        fontWeight: FontWeight.w600,
+                        fontSize: 15,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+    print('Success alert displayed and closed for Pohon ID #$idPohon');
+  }
+
+  Future<void> _showErrorAlert(BuildContext context, String errorMessage) async {
+    print('Attempting to show error alert: $errorMessage');
+    await showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => Builder(
+        builder: (innerContext) => Dialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          child: Container(
+            padding: const EdgeInsets.all(28),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(20),
+              color: Colors.white,
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  width: 85,
+                  height: 85,
+                  decoration: BoxDecoration(
+                    color: Colors.red.shade600,
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(
+                    Icons.close,
+                    size: 45,
+                    color: Colors.white,
+                  ),
+                ),
+                const SizedBox(height: 24),
+                Text(
+                  "Gagal!",
+                  style: TextStyle(
+                    fontSize: 26,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.red.shade600,
+                  ),
+                ),
+                const SizedBox(height: 10),
+                Text(
+                  "Gagal menghapus data: $errorMessage",
+                  style: TextStyle(
+                    fontSize: 15,
+                    color: Colors.grey.shade600,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 24),
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.red.shade600,
+                      foregroundColor: Colors.white,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                    ),
+                    onPressed: () {
+                      print('Error alert OK button pressed');
+                      Navigator.of(innerContext).pop();
+                    },
+                    child: const Text(
+                      "OK",
+                      style: TextStyle(
+                        fontWeight: FontWeight.w600,
+                        fontSize: 15,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+    print('Error alert displayed and closed');
   }
 
   String _getPrioritasText(int prioritas) {
@@ -142,18 +306,13 @@ class TreeMappingReportPage extends StatelessWidget {
   Future<List<DataPohon>> _filterAndSortList(List<DataPohon> pohonList) async {
     List<DataPohon> filteredList = List.from(pohonList);
 
-    // Ambil level dan unit dari SharedPreferences
     final prefs = await SharedPreferences.getInstance();
     final level = prefs.getInt('session_level') ?? 2;
     final sessionUnit = prefs.getString('session_unit') ?? '';
 
-    // Filter berdasarkan level
     if (level == 2) {
-      // Ganti 'unit' dengan field yang sesuai di DataPohon
       filteredList = filteredList.where((p) => p.up3 == sessionUnit || p.ulp == sessionUnit).toList();
     }
-
-    print('Jumlah data awal sebelum filter: ${filteredList.length}');
 
     if (filterType == 'high_priority') {
       filteredList = filteredList.where((p) => p.prioritas == 3).toList();
@@ -165,31 +324,19 @@ class TreeMappingReportPage extends StatelessWidget {
       filteredList = filteredList.where((p) => p.tujuanPenjadwalan == 2).toList();
     } else if (filterType == 'tebang_pangkas') {
       filteredList = filteredList.where((p) => p.tujuanPenjadwalan == 1).toList();
-    } else if (filterType == 'total_pohon' || filterType == 'prioritas' || filterType == null) {
-      // Tampilkan semua data tanpa filter tambahan
-    } else {
-      print('FilterType tidak dikenali: $filterType');
     }
 
-    print('Jumlah data setelah filter: ${filteredList.length}');
-
-    // Terapkan sorting sesuai dengan pilihan statistik pada grid
     if (filterType == null || filterType == 'total_pohon') {
-      // Total pohon: terbaru di atas
       filteredList.sort((a, b) => b.createdDate.compareTo(a.createdDate));
     } else if (filterType == 'high_priority' ||
         filterType == 'medium_priority' ||
         filterType == 'low_priority') {
-      // Untuk prioritas spesifik, urutkan berdasarkan tanggal penjadwalan terdekat
       filteredList.sort((a, b) {
         final bySchedule = a.scheduleDate.compareTo(b.scheduleDate);
         if (bySchedule != 0) return bySchedule;
-        // Tie-breaker: terbaru di atas
         return b.createdDate.compareTo(a.createdDate);
       });
     } else if (filterType == 'tebang_habis' || filterType == 'tebang_pangkas') {
-      // Untuk tujuan penjadwalan, tampilkan prioritas lebih tinggi dulu,
-      // lalu tanggal penjadwalan terdekat
       filteredList.sort((a, b) {
         final byPriority = b.prioritas.compareTo(a.prioritas);
         if (byPriority != 0) return byPriority;
@@ -198,7 +345,6 @@ class TreeMappingReportPage extends StatelessWidget {
         return b.createdDate.compareTo(a.createdDate);
       });
     } else if (filterType == 'prioritas') {
-      // Semua prioritas: urutkan dari tinggi ke rendah, kemudian by scheduleDate
       filteredList.sort((a, b) {
         final byPriority = b.prioritas.compareTo(a.prioritas);
         if (byPriority != 0) return byPriority;
@@ -207,7 +353,6 @@ class TreeMappingReportPage extends StatelessWidget {
         return b.createdDate.compareTo(a.createdDate);
       });
     } else {
-      // Default fallback: terbaru di atas
       filteredList.sort((a, b) => b.createdDate.compareTo(a.createdDate));
     }
 
@@ -288,185 +433,196 @@ class TreeMappingReportPage extends StatelessWidget {
 
       await OpenFile.open(filePath);
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Gagal mengekspor ke Excel: $e')),
-      );
+      print('Error exporting to Excel: $e');
+      await _showErrorAlert(context, e.toString());
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        backgroundColor: AppColors.tealGelap,
-        title: FittedBox(
-          fit: BoxFit.scaleDown,
-          alignment: Alignment.centerLeft,
-          child: Text(
-            _getTitle(),
-            style: const TextStyle(
-              color: AppColors.white,
-              fontSize: 20,
-              fontWeight: FontWeight.bold,
+    return ScaffoldMessenger(
+      key: _scaffoldMessengerKey,
+      child: Builder(
+        builder: (innerContext) => Scaffold(
+          appBar: AppBar(
+            backgroundColor: AppColors.tealGelap,
+            title: FittedBox(
+              fit: BoxFit.scaleDown,
+              alignment: Alignment.centerLeft,
+              child: Text(
+                _getTitle(),
+                style: const TextStyle(
+                  color: AppColors.white,
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
             ),
+            actions: [
+              IconButton(
+                icon: const Icon(Icons.file_download, color: Color.fromARGB(255, 255, 255, 255)),
+                tooltip: 'Ekspor ke Excel',
+                onPressed: () async {
+                  print('Export to Excel triggered');
+                  final pohonList = await _dataPohonService.getAllDataPohon().first;
+                  final filteredList = await _filterAndSortList(pohonList);
+                  if (filteredList.isNotEmpty) {
+                    await _exportToExcel(innerContext, filteredList);
+                  } else {
+                    print('No data to export');
+                    await _showErrorAlert(innerContext, 'Tidak ada data untuk diekspor');
+                  }
+                },
+              ),
+            ],
           ),
-        ),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.file_download, color: Color.fromARGB(255, 255, 255, 255)),
-            tooltip: 'Ekspor ke Excel',
-            onPressed: () async {
-              final pohonList = await _dataPohonService.getAllDataPohon().first;
-              final filteredList = await _filterAndSortList(pohonList);
-              if (filteredList.isNotEmpty) {
-                await _exportToExcel(context, filteredList);
-              } else {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Tidak ada data untuk diekspor')),
-                );
-              }
-            },
-          ),
-        ],
-      ),
-      body: StreamBuilder<List<DataPohon>>(
-        stream: _dataPohonService.getAllDataPohon(),
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
-          }
-          if (snapshot.hasError) {
-            print('Error snapshot: ${snapshot.error}');
-            return Center(child: Text('Error: ${snapshot.error}'));
-          }
-          if (!snapshot.hasData || snapshot.data!.isEmpty) {
-            print('Tidak ada data atau snapshot kosong');
-            return const Center(child: Text('Tidak ada data pohon tersedia'));
-          }
-
-          return FutureBuilder<List<DataPohon>>(
-            future: _filterAndSortList(snapshot.data!),
-            builder: (context, futureSnapshot) {
-              if (futureSnapshot.connectionState == ConnectionState.waiting) {
+          body: StreamBuilder<List<DataPohon>>(
+            stream: _dataPohonService.getAllDataPohon(),
+            builder: (context, snapshot) {
+              if (snapshot.connectionState == ConnectionState.waiting) {
+                print('StreamBuilder: Waiting for data');
                 return const Center(child: CircularProgressIndicator());
               }
-              if (futureSnapshot.hasError) {
-                print('Error filter: ${futureSnapshot.error}');
-                return Center(child: Text('Error: ${futureSnapshot.error}'));
+              if (snapshot.hasError) {
+                print('StreamBuilder: Error - ${snapshot.error}');
+                return Center(child: Text('Error: ${snapshot.error}'));
               }
-              final pohonList = futureSnapshot.data ?? [];
-              if (pohonList.isEmpty) {
-                print('Data kosong setelah filter: filterType = $filterType');
-                return const Center(child: Text('Tidak ada data yang sesuai filter'));
+              if (!snapshot.hasData || snapshot.data!.isEmpty) {
+                print('StreamBuilder: No data or empty snapshot');
+                return const Center(child: Text('Tidak ada data pohon tersedia'));
               }
-              return ListView.builder(
-                itemCount: pohonList.length,
-                itemBuilder: (context, index) {
-                  final pohon = pohonList[index];
-                  return Column(
-                    children: [
-                      Dismissible(
-                        key: Key(pohon.idPohon),
-                        direction: DismissDirection.endToStart,
-                        background: Container(
-                          color: Colors.red,
-                          alignment: Alignment.centerRight,
-                          padding: const EdgeInsets.only(right: 16.0),
-                          child: const Icon(
-                            Icons.delete,
-                            color: Colors.white,
-                          ),
-                        ),
-                        confirmDismiss: (direction) async {
-                          final confirmed = await _showDeleteConfirmationDialog(context, pohon.idPohon);
-                          if (confirmed == true) {
-                            try {
-                              print('Attempting to delete document with ID: ${pohon.id}, idPohon: ${pohon.idPohon}');
-                              await _dataPohonService.deleteDataPohon(pohon.id);
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(content: Text('Pohon ID #${pohon.idPohon} berhasil dihapus')),
-                              );
-                              return true;
-                            } catch (e) {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(content: Text('Gagal menghapus data: $e')),
-                              );
+
+              return FutureBuilder<List<DataPohon>>(
+                future: _filterAndSortList(snapshot.data!),
+                builder: (context, futureSnapshot) {
+                  if (futureSnapshot.connectionState == ConnectionState.waiting) {
+                    print('FutureBuilder: Waiting for filtered data');
+                    return const Center(child: CircularProgressIndicator());
+                  }
+                  if (futureSnapshot.hasError) {
+                    print('FutureBuilder: Error - ${futureSnapshot.error}');
+                    return Center(child: Text('Error: ${futureSnapshot.error}'));
+                  }
+                  final pohonList = futureSnapshot.data ?? [];
+                  if (pohonList.isEmpty) {
+                    print('FutureBuilder: Empty data after filter, filterType = $filterType');
+                    return const Center(child: Text('Tidak ada data yang sesuai filter'));
+                  }
+                  print('Building ListView with ${pohonList.length} items');
+                  return ListView.builder(
+                    itemCount: pohonList.length,
+                    itemBuilder: (context, index) {
+                      final pohon = pohonList[index];
+                      return Column(
+                        children: [
+                          Dismissible(
+                            key: Key(pohon.idPohon),
+                            direction: DismissDirection.endToStart,
+                            background: Container(
+                              color: Colors.red,
+                              alignment: Alignment.centerRight,
+                              padding: const EdgeInsets.only(right: 16.0),
+                              child: const Icon(
+                                Icons.delete,
+                                color: Colors.white,
+                              ),
+                            ),
+                            confirmDismiss: (direction) async {
+                              print('Dismissible triggered for Pohon ID #${pohon.idPohon}');
+                              final confirmed = await _showDeleteConfirmationDialog(innerContext, pohon.idPohon);
+                              if (confirmed == true) {
+                                try {
+                                  print('Attempting to delete document with ID: ${pohon.id}, idPohon: ${pohon.idPohon}');
+                                  if (pohon.id == null || pohon.id.isEmpty) {
+                                    print('Invalid document ID: ${pohon.id}');
+                                    await _showErrorAlert(innerContext, 'ID dokumen tidak valid');
+                                    return false;
+                                  }
+                                  await _dataPohonService.deleteDataPohon(pohon.id);
+                                  print('Deletion successful for Pohon ID #${pohon.idPohon}');
+                                  await _showSuccessAlert(innerContext, pohon.idPohon);
+                                  return true;
+                                } catch (e) {
+                                  print('Error deleting Pohon ID #${pohon.idPohon}: $e');
+                                  await _showErrorAlert(innerContext, e.toString());
+                                  return false;
+                                }
+                              }
+                              print('Deletion cancelled for Pohon ID #${pohon.idPohon}');
                               return false;
-                            }
-                          }
-                          return false;
-                        },
-                        child: ListTile(
-                          leading: pohon.fotoPohon.isNotEmpty
-                              ? CachedNetworkImage(
-                                  imageUrl: pohon.fotoPohon,
-                                  width: 50,
-                                  height: 50,
-                                  fit: BoxFit.cover,
-                                  placeholder: (context, url) => Image.asset(
-                                    'assets/logo/logo.png',
-                                    width: 50,
-                                    height: 50,
-                                    fit: BoxFit.cover,
-                                  ),
-                                  errorWidget: (context, url, error) => Image.asset(
-                                    'assets/logo/logo.png',
-                                    width: 50,
-                                    height: 50,
-                                    fit: BoxFit.cover,
-                                  ),
-                                )
-                              : Image.asset(
-                                  'assets/logo/logo.png',
-                                  width: 50,
-                                  height: 50,
-                                  fit: BoxFit.cover,
+                            },
+                            child: ListTile(
+                              leading: pohon.fotoPohon.isNotEmpty
+                                  ? CachedNetworkImage(
+                                      imageUrl: pohon.fotoPohon,
+                                      width: 50,
+                                      height: 50,
+                                      fit: BoxFit.cover,
+                                      placeholder: (context, url) => Image.asset(
+                                        'assets/logo/logo.png',
+                                        width: 50,
+                                        height: 50,
+                                        fit: BoxFit.cover,
+                                      ),
+                                      errorWidget: (context, url, error) => Image.asset(
+                                        'assets/logo/logo.png',
+                                        width: 50,
+                                        height: 50,
+                                        fit: BoxFit.cover,
+                                      ),
+                                    )
+                                  : Image.asset(
+                                      'assets/logo/logo.png',
+                                      width: 50,
+                                      height: 50,
+                                      fit: BoxFit.cover,
+                                    ),
+                              title: Text(
+                                'Pohon ID #${pohon.idPohon}',
+                                style: const TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.bold,
                                 ),
-                          title: Text(
-                            'Pohon ID #${pohon.idPohon}',
-                            style: const TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.bold,
+                              ),
+                              subtitle: FutureBuilder<List<String>>(
+                                future: _getAddressLinesFromCoords(pohon.koordinat, fallback: pohon.up3),
+                                builder: (context, snap) {
+                                  final lines = (snap.data == null || snap.data!.isEmpty) ? [pohon.up3] : snap.data!;
+                                  final line1 = lines.isNotEmpty ? lines[0] : pohon.up3;
+                                  final line2 = lines.length > 1 ? lines[1] : null;
+                                  return Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text('Lokasi: $line1'),
+                                      if (line2 != null) Text(line2),
+                                    ],
+                                  );
+                                },
+                              ),
+                              trailing: const Icon(Icons.chevron_right),
+                              contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                              onTap: () {
+                                print('Navigating to detail page for Pohon ID #${pohon.idPohon}');
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (context) => TreeMappingDetailPage(pohon: pohon),
+                                  ),
+                                );
+                              },
                             ),
                           ),
-                          // Gunakan subtitle gaya "Total Pohon" untuk semua filter (kecuali Sistem Repetisi yang tidak masuk ke halaman ini)
-                          subtitle: FutureBuilder<List<String>>(
-                            future: _getAddressLinesFromCoords(pohon.koordinat, fallback: pohon.up3),
-                            builder: (context, snap) {
-                              final lines = (snap.data == null || snap.data!.isEmpty) ? [pohon.up3] : snap.data!;
-                              // Maksimal dua baris lokasi
-                              final line1 = lines.isNotEmpty ? lines[0] : pohon.up3;
-                              final line2 = lines.length > 1 ? lines[1] : null;
-                              return Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text('Lokasi: $line1'),
-                                  if (line2 != null) Text(line2),
-                                ],
-                              );
-                            },
-                          ),
-                          trailing: const Icon(Icons.chevron_right),
-                          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                          onTap: () {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (context) => TreeMappingDetailPage(pohon: pohon),
-                              ),
-                            );
-                          },
-                        ),
-                      ),
-                      if (index < pohonList.length - 1)
-                        const Divider(color: AppColors.cyan, thickness: 1),
-                    ],
+                          if (index < pohonList.length - 1)
+                            const Divider(color: AppColors.cyan, thickness: 1),
+                        ],
+                      );
+                    },
                   );
                 },
               );
             },
-          );
-        },
+          ),
+        ),
       ),
     );
   }
