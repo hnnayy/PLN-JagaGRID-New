@@ -287,6 +287,7 @@ class NotificationProvider with ChangeNotifier {
         'created_by': createdBy,
         'up3': up3,
         'ulp': ulp,
+        'created_at': FieldValue.serverTimestamp(),
       });
     }
 
@@ -465,6 +466,7 @@ class NotificationProvider with ChangeNotifier {
       'created_by': createdBy,
       'up3': up3,
       'ulp': ulp,
+      'created_at': FieldValue.serverTimestamp(),
     });
   }
 }

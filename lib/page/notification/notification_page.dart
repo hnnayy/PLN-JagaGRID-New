@@ -82,7 +82,7 @@ class NotificationPage extends StatelessWidget {
             child: StreamBuilder<QuerySnapshot>(
               stream: FirebaseFirestore.instance
                   .collection('notification')
-                  .orderBy('date', descending: true)
+          .orderBy('created_at', descending: true)
                   .snapshots(),
               builder: (context, snapshot) {
                 if (snapshot.hasError) {
@@ -112,10 +112,18 @@ class NotificationPage extends StatelessWidget {
                   itemCount: docs.length,
                   itemBuilder: (context, i) {
                     final data = docs[i].data() as Map<String, dynamic>;
+                    // Parse tanggal: gunakan created_at (Timestamp) jika ada, fallback ke 'date' string lama
+                    DateTime parsedDate = DateTime.now();
+                    final createdAt = data['created_at'];
+                    if (createdAt is Timestamp) {
+                      parsedDate = createdAt.toDate();
+                    } else {
+                      parsedDate = DateTime.tryParse(data['date'] ?? '') ?? DateTime.now();
+                    }
                     final notif = AppNotification(
                       title: data['title'] ?? '',
                       message: data['message'] ?? '',
-                      date: DateTime.tryParse(data['date'] ?? '') ?? DateTime.now(),
+                      date: parsedDate,
                       idPohon: data['id_data_pohon'] as String?, // Gunakan id_data_pohon untuk navigasi
                     );
                     return _buildNotificationItem(context, notif);
