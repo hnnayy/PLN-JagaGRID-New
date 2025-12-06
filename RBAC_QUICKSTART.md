@@ -336,5 +336,5 @@ Saat menambah fitur baru, pastikan:
 
 ---
 
-**Terakhir diupdate:** 2025-12-06
-**Versi:** 1.0
+**Version:** 1.0
+**Last Updated:** December 2024

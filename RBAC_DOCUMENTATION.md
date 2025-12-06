@@ -287,6 +287,24 @@ Service untuk CRUD operations pada collection `users` di Firestore:
 
 ## Contoh Firebase Security Rules (Rekomendasi)
 
+**⚠️ CATATAN PENTING:** 
+Rules berikut memerlukan migrasi dari custom authentication (SharedPreferences) ke Firebase Authentication terlebih dahulu. Aplikasi saat ini belum menggunakan Firebase Auth, jadi rules ini adalah panduan untuk future improvement.
+
+**Simple Rules untuk Current Implementation:**
+```javascript
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Allow read/write hanya jika authenticated (basic protection)
+    // Implementasi ini memerlukan setup Firebase Auth minimal
+    match /{document=**} {
+      allow read, write: if request.auth != null;
+    }
+  }
+}
+```
+
+**Advanced Rules dengan Level-Based Access (Future Implementation):**
 ```javascript
 rules_version = '2';
 service cloud.firestore {

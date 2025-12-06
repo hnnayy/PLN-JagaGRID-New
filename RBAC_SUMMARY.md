@@ -317,4 +317,5 @@ Saat test RBAC implementation:
 
 ---
 
-Last Updated: 2025-12-06
+**Version:** 1.0  
+**Last Updated:** December 2024

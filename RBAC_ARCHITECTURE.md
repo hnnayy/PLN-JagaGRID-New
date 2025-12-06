@@ -338,12 +338,20 @@ await prefs.remove('session_status');
 
 ### 🔒 Recommended Firebase Security Rules
 
+**⚠️ IMPORTANT NOTE:** 
+Aplikasi saat ini menggunakan custom authentication dengan SharedPreferences, BUKAN Firebase Authentication. Rules berikut adalah rekomendasi untuk migrasi ke Firebase Auth di masa depan. 
+
+Untuk implementasi saat ini, pertimbangkan untuk menambahkan simple rules yang membatasi akses berdasarkan authenticated state saja (jika sudah setup Firebase Auth minimal).
+
+**Recommended Future Implementation dengan Firebase Authentication:**
+
 ```javascript
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
     
     // Helper: Get user data
+    // NOTE: Ini memerlukan Firebase Authentication terlebih dahulu
     function getUser() {
       return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
     }
