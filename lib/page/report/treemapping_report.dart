@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
-import 'package:excel/excel.dart';
+import 'package:excel/excel.dart' hide Border;
 import 'package:path_provider/path_provider.dart';
 import 'package:open_file/open_file.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -446,13 +446,17 @@ class TreeMappingReportPage extends StatelessWidget {
         builder: (innerContext) => Scaffold(
           appBar: AppBar(
             backgroundColor: AppColors.tealGelap,
+            leading: IconButton(
+              icon: const Icon(Icons.arrow_back, color: Colors.white),
+              onPressed: () => Navigator.pop(context),
+            ),
             title: FittedBox(
               fit: BoxFit.scaleDown,
               alignment: Alignment.centerLeft,
               child: Text(
                 _getTitle(),
                 style: const TextStyle(
-                  color: AppColors.white,
+                  color: Colors.white,
                   fontSize: 20,
                   fontWeight: FontWeight.bold,
                 ),
@@ -460,7 +464,7 @@ class TreeMappingReportPage extends StatelessWidget {
             ),
             actions: [
               IconButton(
-                icon: const Icon(Icons.file_download, color: Color.fromARGB(255, 255, 255, 255)),
+                icon: const Icon(Icons.file_download, color: Colors.white),
                 tooltip: 'Ekspor ke Excel',
                 onPressed: () async {
                   print('Export to Excel triggered');

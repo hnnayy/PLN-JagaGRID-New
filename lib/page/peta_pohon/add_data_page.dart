@@ -42,7 +42,7 @@ class DropdownCoordinator {
   }
 }
 
-// CustomDropdown Widget
+// CustomDropdown Widget - DIKETIK LANGSUNG DI KOLOM BIRU (COMBOBOX STYLE)
 class CustomDropdown extends StatefulWidget {
   final String? value;
   final List<String> items;
@@ -63,23 +63,44 @@ class CustomDropdown extends StatefulWidget {
   State<CustomDropdown> createState() => _CustomDropdownState();
 }
 
-class _CustomDropdownState extends State<CustomDropdown> with SingleTickerProviderStateMixin {
+class _CustomDropdownState extends State<CustomDropdown> {
   bool isExpanded = false;
-  late AnimationController _controller;
   OverlayEntry? _overlayEntry;
   final LayerLink _layerLink = LayerLink();
   final GlobalKey _dropdownKey = GlobalKey();
   bool _overlayInserted = false;
+  
+  // Controller untuk input text di kolom biru
+  final TextEditingController _inputController = TextEditingController();
+  final FocusNode _focusNode = FocusNode();
+  List<String> _filteredItems = [];
 
   @override
   void initState() {
     super.initState();
-    _controller = AnimationController(duration: const Duration(milliseconds: 200), vsync: this);
+    _filteredItems = widget.items;
+    _inputController.text = widget.value ?? '';
+    
+    // Listen ketika user mulai mengetik
+    _focusNode.addListener(() {
+      if (_focusNode.hasFocus) {
+        _openDropdown();
+      }
+    });
+  }
+
+  @override
+  void didUpdateWidget(CustomDropdown oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.value != oldWidget.value) {
+      _inputController.text = widget.value ?? '';
+    }
   }
 
   @override
   void dispose() {
-    _controller.dispose();
+    _inputController.dispose();
+    _focusNode.dispose();
     if (_overlayInserted) {
       try { _overlayEntry?.remove(); } catch (_) {}
       _overlayInserted = false;
@@ -88,13 +109,14 @@ class _CustomDropdownState extends State<CustomDropdown> with SingleTickerProvid
     super.dispose();
   }
 
-  void _toggleDropdown() => isExpanded ? _closeDropdown() : _openDropdown();
-
   void _openDropdown() {
-    // Close any other open dropdown first and register this one as current
+    if (isExpanded) return;
+    
     DropdownCoordinator.register(_closeDropdown);
     setState(() => isExpanded = true);
-    _controller.forward();
+    
+    // Filter items based on current input
+    _filterItems(_inputController.text);
 
     final renderBox = _dropdownKey.currentContext!.findRenderObject() as RenderBox;
     _overlayEntry = OverlayEntry(
@@ -107,49 +129,55 @@ class _CustomDropdownState extends State<CustomDropdown> with SingleTickerProvid
           child: Material(
             elevation: 4,
             borderRadius: BorderRadius.circular(8),
-            child: AnimatedBuilder(
-              animation: _controller,
-              builder: (context, child) => Transform.scale(
-                scaleY: _controller.value,
-                alignment: Alignment.topCenter,
-                child: Container(
-                  constraints: const BoxConstraints(maxHeight: 200),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(8),
-                    border: Border.all(color: Colors.grey.shade300),
-                  ),
-                  child: ListView.builder(
-                    shrinkWrap: true,
-                    padding: EdgeInsets.zero,
-                    itemCount: widget.items.length,
-                    itemBuilder: (context, index) => InkWell(
-                      onTap: () {
-                        widget.onChanged(widget.items[index]);
-                        _closeDropdown();
-                      },
-                      child: Container(
-                        padding: const EdgeInsets.all(16),
-                        decoration: BoxDecoration(
-                          color: widget.value == widget.items[index] ? const Color(0xFFF0F9FF) : null,
-                        ),
-                        child: Text(
-                          widget.items[index],
-                          style: TextStyle(
-                            fontSize: 16,
-                            color: widget.value == widget.items[index]
-                                ? const Color(0xFF2E5D6F)
-                                : Colors.black87,
-                            fontWeight: widget.value == widget.items[index]
-                                ? FontWeight.w500
-                                : FontWeight.normal,
+            child: Container(
+              constraints: const BoxConstraints(maxHeight: 250),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: Colors.grey.shade300),
+              ),
+              child: _filteredItems.isEmpty
+                  ? Padding(
+                      padding: const EdgeInsets.all(16.0),
+                      child: Text(
+                        'Tidak ada hasil',
+                        style: TextStyle(color: Colors.grey.shade500),
+                        textAlign: TextAlign.center,
+                      ),
+                    )
+                  : ListView.builder(
+                      shrinkWrap: true,
+                      padding: EdgeInsets.zero,
+                      itemCount: _filteredItems.length,
+                      itemBuilder: (context, index) => InkWell(
+                        onTap: () {
+                          _inputController.text = _filteredItems[index];
+                          widget.onChanged(_filteredItems[index]);
+                          _closeDropdown();
+                          _focusNode.unfocus();
+                        },
+                        child: Container(
+                          padding: const EdgeInsets.all(16),
+                          decoration: BoxDecoration(
+                            color: widget.value == _filteredItems[index] 
+                                ? const Color(0xFFF0F9FF) 
+                                : null,
+                          ),
+                          child: Text(
+                            _filteredItems[index],
+                            style: TextStyle(
+                              fontSize: 16,
+                              color: widget.value == _filteredItems[index]
+                                  ? const Color(0xFF2E5D6F)
+                                  : Colors.black87,
+                              fontWeight: widget.value == _filteredItems[index]
+                                  ? FontWeight.w500
+                                  : FontWeight.normal,
+                            ),
                           ),
                         ),
                       ),
                     ),
-                  ),
-                ),
-              ),
             ),
           ),
         ),
@@ -161,15 +189,27 @@ class _CustomDropdownState extends State<CustomDropdown> with SingleTickerProvid
   }
 
   void _closeDropdown() {
+    if (!isExpanded) return;
     setState(() => isExpanded = false);
-    _controller.reverse().then((_) {
-      if (_overlayInserted) {
-        try { _overlayEntry?.remove(); } catch (_) {}
-        _overlayInserted = false;
+    if (_overlayInserted) {
+      try { _overlayEntry?.remove(); } catch (_) {}
+      _overlayInserted = false;
+    }
+    _overlayEntry = null;
+    DropdownCoordinator.clearIfSame(_closeDropdown);
+  }
+
+  void _filterItems(String query) {
+    setState(() {
+      if (query.isEmpty) {
+        _filteredItems = widget.items;
+      } else {
+        _filteredItems = widget.items
+            .where((item) => item.toLowerCase().contains(query.toLowerCase()))
+            .toList();
       }
-      _overlayEntry = null;
-      DropdownCoordinator.clearIfSame(_closeDropdown);
     });
+    _overlayEntry?.markNeedsBuild();
   }
 
   @override
@@ -188,34 +228,48 @@ class _CustomDropdownState extends State<CustomDropdown> with SingleTickerProvid
         const SizedBox(height: 8),
         CompositedTransformTarget(
           link: _layerLink,
-          child: GestureDetector(
+          child: Container(
             key: _dropdownKey,
-            onTap: _toggleDropdown,
-            child: Container(
-              width: double.infinity,
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: const Color(0xFFF0F9FF),
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: Text(
-                      widget.value ?? 'Pilih ${widget.labelText.toLowerCase()}',
-                      style: TextStyle(
-                        fontSize: 16,
-                        color: widget.value != null ? Colors.black87 : Colors.grey.shade500,
-                      ),
-                    ),
-                  ),
-                  AnimatedRotation(
+            decoration: BoxDecoration(
+              color: const Color(0xFFF0F9FF),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: TextField(
+              controller: _inputController,
+              focusNode: _focusNode,
+              style: const TextStyle(fontSize: 16, color: Colors.black87),
+              decoration: InputDecoration(
+                hintText: 'Pilih ${widget.labelText.toLowerCase()}',
+                hintStyle: TextStyle(color: Colors.grey.shade500),
+                border: InputBorder.none,
+                contentPadding: const EdgeInsets.all(16),
+                suffixIcon: GestureDetector(
+                  onTap: () {
+                    if (isExpanded) {
+                      _closeDropdown();
+                      _focusNode.unfocus();
+                    } else {
+                      _focusNode.requestFocus();
+                    }
+                  },
+                  child: AnimatedRotation(
                     turns: isExpanded ? 0.5 : 0,
                     duration: const Duration(milliseconds: 200),
                     child: Icon(Icons.keyboard_arrow_down, color: Colors.grey.shade600),
                   ),
-                ],
+                ),
               ),
+              onChanged: (value) {
+                _filterItems(value);
+                if (!isExpanded) {
+                  _openDropdown();
+                }
+              },
+              onTap: () {
+                if (!isExpanded) {
+                  _openDropdown();
+                }
+              },
             ),
           ),
         ),
@@ -1161,7 +1215,7 @@ class _AddDataPageState extends State<AddDataPage> {
               _buildField(
                 'Catatan',
                 _noteController,
-                validator: (value) => null, // Optional field
+                validator: (value) => null,
                 errorText: _catatanError,
               ),
               const SizedBox(height: 32),
@@ -1205,7 +1259,6 @@ class _AddDataPageState extends State<AddDataPage> {
                                     _isLoading = true;
                                   });
                                   try {
-                                    // Parse tanggal dari d-M-y ke DateTime dalam WITA
                                     final DateFormat formatter = DateFormat('d-M-y');
                                     final DateTime parsedDate = formatter.parse(_dateController.text);
                                     final DateTime scheduleDate = DateTime(
@@ -1216,7 +1269,6 @@ class _AddDataPageState extends State<AddDataPage> {
 
                                     final double initialHeight = double.parse(_initialHeightController.text);
 
-                                    // Ambil user ID dari session (SharedPreferences diset saat login)
                                     final prefs = await SharedPreferences.getInstance();
                                     final creatorId = prefs.getString('session_id') ?? '';
 
@@ -1256,7 +1308,6 @@ class _AddDataPageState extends State<AddDataPage> {
                                       notificationDate: scheduleDate.subtract(const Duration(days: 3)),
                                     );
 
-                                    // Simpan data pohon ke database
                                     final documentId = await Provider.of<DataPohonProvider>(context, listen: false)
                                         .addPohon(pohon, _fotoPohon);
 
@@ -1269,19 +1320,17 @@ class _AddDataPageState extends State<AddDataPage> {
                                       title: 'Pohon Baru Ditambahkan',
                                       message: notifMsg,
                                       date: DateTime.now(),
-                                      idPohon: _idController.text, // ID pohon untuk display
+                                      idPohon: _idController.text,
                                     );
 
                                     final notifProvider = Provider.of<NotificationProvider>(context, listen: false);
 
-                                    // 1) Notifikasi INSTAN: masuk ke page notif + kirim Telegram sesuai hak akses
                                     await notifProvider.addNotification(
                                       notification,
                                       scheduleDate: null,
                                       documentIdPohon: documentId,
                                     );
 
-                                    // 2) Notifikasi TERJADWAL Hari-H (local notif saja; Telegram untuk H-3 dikelola ReminderService)
                                     await notifProvider.addNotification(
                                       notification,
                                       scheduleDate: scheduleDate,
