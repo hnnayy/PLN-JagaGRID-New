@@ -24,7 +24,7 @@ class AppNotification {
 // Provider untuk mengelola notifikasi
 class NotificationProvider with ChangeNotifier {
   // Token bot Telegram Anda (jangan bagikan!)
-  final String _telegramBotToken = '8460425371:AAEhROYuwoKTst2LUUVDkv1zRQTSubHMN2Q';
+  final String _telegramBotToken = '8501294488:AAHJ242rgVxy-sqrS1Y5QZBdJQfYrVx0x14';
   List<String> _telegramChatIds = []; // Daftar chat ID dari database
   final List<AppNotification> _notifications = []; // Daftar notifikasi lokal
   final FlutterLocalNotificationsPlugin _flutterLocalNotificationsPlugin =
