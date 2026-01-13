@@ -1,67 +1,72 @@
-# Use Ubuntu base image
 FROM ubuntu:22.04
 
-# Install dependencies
+# =========================
+# Base dependencies
+# =========================
 RUN apt-get update && apt-get install -y \
     curl \
     git \
     unzip \
     xz-utils \
     openjdk-17-jdk \
+    ca-certificates \
     && rm -rf /var/lib/apt/lists/*
 
-# Download and install Flutter SDK
+# =========================
+# Flutter SDK
+# =========================
 RUN git clone https://github.com/flutter/flutter.git -b stable /flutter
-
-# Add Flutter to PATH
 ENV PATH="/flutter/bin:$PATH"
 
-# Install Android SDK
-RUN mkdir -p /android-sdk/cmdline-tools
-RUN curl -o android-sdk.zip https://dl.google.com/android/repository/commandlinetools-linux-11076708_latest.zip
-RUN unzip android-sdk.zip -d /android-sdk/cmdline-tools
-RUN mv /android-sdk/cmdline-tools/cmdline-tools /android-sdk/cmdline-tools/latest
+# =========================
+# Android SDK
+# =========================
 ENV ANDROID_HOME=/android-sdk
-ENV PATH="$ANDROID_HOME/cmdline-tools/latest/bin:$PATH:/flutter/bin"
 ENV JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64
-ENV GRADLE_USER_HOME=/home/builder/.gradle
+ENV PATH="$ANDROID_HOME/cmdline-tools/latest/bin:$ANDROID_HOME/platform-tools:$PATH"
+
+RUN mkdir -p /android-sdk/cmdline-tools \
+    && curl -o /tmp/android-sdk.zip https://dl.google.com/android/repository/commandlinetools-linux-11076708_latest.zip \
+    && unzip /tmp/android-sdk.zip -d /android-sdk/cmdline-tools \
+    && mv /android-sdk/cmdline-tools/cmdline-tools /android-sdk/cmdline-tools/latest \
+    && rm /tmp/android-sdk.zip
+
+RUN yes | sdkmanager --licenses
+RUN sdkmanager \
+    "platform-tools" \
+    "platforms;android-34" \
+    "build-tools;34.0.0"
+
+# =========================
+# CI optimization
+# =========================
+ENV GRADLE_USER_HOME=/root/.gradle
+ENV PUB_CACHE=/root/.pub-cache
 ENV GRADLE_OPTS="-Dorg.gradle.jvmargs=-Xmx1536m -Dorg.gradle.daemon=false"
 ENV _JAVA_OPTIONS="-Xmx1536m"
-RUN yes | sdkmanager --licenses
-RUN sdkmanager "platform-tools" "platforms;android-34" "build-tools;34.0.0"
 
-# Create a non-root user for building, and give ownership of SDKs and workspace
-RUN useradd -m -s /bin/bash builder \
-    && mkdir -p /home/builder/.gradle /app \
-    && chown -R builder:builder /home/builder /flutter /android-sdk /app
-
-USER builder
-ENV HOME=/home/builder
-
-# Pre-download Flutter binaries and enable platforms (run as non-root)
+# =========================
+# Flutter preparation
+# =========================
 RUN flutter precache
-RUN flutter config --enable-web
-RUN flutter config --enable-linux-desktop
-RUN flutter config --enable-macos-desktop
-RUN flutter config --enable-windows-desktop
 
-# Set the working directory
+# Hanya Android (penting untuk Windows CI)
+RUN flutter config --no-enable-web \
+    && flutter config --no-enable-linux-desktop \
+    && flutter config --no-enable-macos-desktop \
+    && flutter config --no-enable-windows-desktop
+
+# =========================
+# Workdir
+# =========================
 WORKDIR /app
 
-# Copy pubspec files first for better caching (set ownership to builder)
-COPY --chown=builder:builder pubspec.* ./
-
-# Get Flutter dependencies
+# Cache dependencies
+COPY pubspec.* ./
 RUN flutter pub get
 
-# Copy the rest of the application code (set ownership to builder)
-COPY --chown=builder:builder . .
+# Copy source
+COPY . .
 
-# NOTE: do NOT run `flutter build` during docker build in CI images.
-# Builds must run at container runtime in the CI pipeline so artifacts
-# are produced in the mounted workspace and caching works correctly.
-
-# Optional: Build for web or other platforms if needed
-# RUN flutter build web
-
-# The resulting APK will be in build/app/outputs/flutter-apk/app-release.apk
+# Jangan build di Dockerfile
+# Build dijalankan saat docker run di Jenkins
