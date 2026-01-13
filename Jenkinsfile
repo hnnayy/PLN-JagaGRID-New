@@ -1,5 +1,5 @@
 pipeline {
-  agent any
+  agent { label 'linux' }
   environment {
     IMAGE_NAME = "flutter-builder:ci"
     MOBSF_URL = "http://localhost:8000"
