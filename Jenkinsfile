@@ -2,8 +2,8 @@ pipeline {
   agent any
   environment {
     IMAGE_NAME = "flutter-builder:ci"
-    MOBSF_URL = "http://security-mobile:8000"
-    MOBSF_API_KEY = credentials('MOBSF_API_KEY')
+    MOBSF_URL = "http://localhost:8000"
+    MOBSF_API_KEY = '47508b132990845541115d5d5e3eb5308d08d3caba3dce99b1cdb2ea236957a3'
   }
   stages {
     stage('Checkout') {
