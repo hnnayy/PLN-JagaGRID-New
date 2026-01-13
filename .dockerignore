@@ -1,0 +1,24 @@
+# Ignore local build artifacts and editor files
+build/
+.dart_tool/
+.android/
+.gradle/
+.idea/
+.vscode/
+.DS_Store
+*.iml
+*.log
+pubspec.lock
+/local.properties
+
+# ignore system files
+Thumbs.db
+*.swp
+
+# Exclude platform-specific build directories
+linux/
+macos/
+windows/
+ios/
+web/
+.git/
