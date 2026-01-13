@@ -32,7 +32,7 @@ pipeline {
                 -v gradle-cache:/home/builder/.gradle \
                 -v flutter-pub-cache:/home/builder/.pub-cache \
                 ${IMAGE_NAME} \
-                /bin/bash -lc "chown -R builder:builder /work && su builder -c 'rm -f pubspec.lock && flutter pub get && flutter build apk --release && cp build/app/outputs/flutter-apk/app-release.apk /work/'"
+                /bin/bash -lc "rm -f pubspec.lock && flutter pub get && flutter build apk --release && cp build/app/outputs/flutter-apk/app-release.apk /work/"
             '''
           } else {
             bat "if exist pubspec.lock del /f /q pubspec.lock"
@@ -42,7 +42,7 @@ pipeline {
                 -v gradle-cache:/home/builder/.gradle ^
                 -v flutter-pub-cache:/home/builder/.pub-cache ^
                 ${IMAGE_NAME} ^
-                /bin/bash -lc "chown -R builder:builder /work && su builder -c 'flutter pub get && flutter build apk --release && cp build/app/outputs/flutter-apk/app-release.apk /work/'"
+                /bin/bash -lc "flutter pub get && flutter build apk --release && cp build/app/outputs/flutter-apk/app-release.apk /work/"
             """
           }
         }
