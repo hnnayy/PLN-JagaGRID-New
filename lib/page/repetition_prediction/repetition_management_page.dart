@@ -20,13 +20,35 @@ class RepetitionManagementPage extends StatefulWidget {
 
 class _RepetitionManagementPageState extends State<RepetitionManagementPage> {
   final Map<String, String> _idPohonCache = {};
+  // ✅ DITAMBAHKAN: ScrollController untuk scroll indicator
+  final ScrollController _scrollController = ScrollController();
+
   @override
   void initState() {
     super.initState();
-    // Load data saat halaman dibuka
     WidgetsBinding.instance.addPostFrameCallback((_) {
       context.read<GrowthPredictionProvider>().loadActivePredictions();
     });
+  }
+
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  // ✅ Sorting pakai getPriority() langsung — tidak perlu query Firestore
+  // TINGGI → paling atas, tanggal paling lama duluan
+  // SEDANG → tengah
+  // RENDAH → paling bawah, tanggal paling baru duluan
+  List<GrowthPrediction> _sortPredictions(List<GrowthPrediction> predictions) {
+    final sorted = [...predictions];
+    sorted.sort((a, b) {
+      final priorityCompare = b.getPriority().compareTo(a.getPriority());
+      if (priorityCompare != 0) return priorityCompare;
+      return a.predictedNextExecution.compareTo(b.predictedNextExecution);
+    });
+    return sorted;
   }
 
   @override
@@ -44,7 +66,7 @@ class _RepetitionManagementPageState extends State<RepetitionManagementPage> {
         ),
         backgroundColor: AppColors.tealGelap,
         elevation: 0,
-        iconTheme: const IconThemeData(color: Colors.white), // Mengatur warna ikon back arrow menjadi putih
+        iconTheme: const IconThemeData(color: Colors.white),
         flexibleSpace: Container(
           decoration: BoxDecoration(
             gradient: LinearGradient(
@@ -56,7 +78,7 @@ class _RepetitionManagementPageState extends State<RepetitionManagementPage> {
         ),
         actions: [
           IconButton(
-            icon: const Icon(Icons.analytics, color: Colors.white), // Mengatur warna ikon analytics menjadi putih
+            icon: const Icon(Icons.analytics, color: Colors.white),
             onPressed: () {
               Navigator.push(
                 context,
@@ -68,7 +90,7 @@ class _RepetitionManagementPageState extends State<RepetitionManagementPage> {
             tooltip: 'Lihat Analisis',
           ),
           IconButton(
-            icon: const Icon(Icons.search, color: Colors.white), // Mengatur warna ikon search menjadi putih
+            icon: const Icon(Icons.search, color: Colors.white),
             tooltip: 'Cari prediksi',
             onPressed: () {
               final list = context.read<GrowthPredictionProvider>().activePredictions;
@@ -81,7 +103,6 @@ class _RepetitionManagementPageState extends State<RepetitionManagementPage> {
               );
             },
           ),
-          // Auto schedule removed as per requirements
         ],
       ),
       body: Consumer<GrowthPredictionProvider>(
@@ -119,9 +140,9 @@ class _RepetitionManagementPageState extends State<RepetitionManagementPage> {
             );
           }
 
-          final predictions = provider.activePredictions;
+          final rawPredictions = provider.activePredictions;
 
-          if (predictions.isEmpty) {
+          if (rawPredictions.isEmpty) {
             return Center(
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
@@ -139,23 +160,32 @@ class _RepetitionManagementPageState extends State<RepetitionManagementPage> {
                     style: TextStyle(color: Colors.grey),
                   ),
                   const SizedBox(height: 24),
-                  // Auto Schedule button removed
                 ],
               ),
             );
           }
 
+          // ✅ Sorting langsung tanpa FutureBuilder
+          final predictions = _sortPredictions(rawPredictions);
+
           return Column(
             children: [
-              // List prediksi
               Expanded(
-                child: ListView.builder(
-                  padding: const EdgeInsets.all(16),
-                  itemCount: predictions.length,
-                  itemBuilder: (context, index) {
-                    final prediction = predictions[index];
-                    return _buildPredictionCard(prediction);
-                  },
+                // ✅ DITAMBAHKAN: Scrollbar di pinggir kanan
+                child: Scrollbar(
+                  controller: _scrollController,
+                  thumbVisibility: true,
+                  thickness: 4,
+                  radius: const Radius.circular(8),
+                  child: ListView.builder(
+                    controller: _scrollController,
+                    padding: const EdgeInsets.all(16),
+                    itemCount: predictions.length,
+                    itemBuilder: (context, index) {
+                      final prediction = predictions[index];
+                      return _buildPredictionCard(prediction);
+                    },
+                  ),
                 ),
               ),
             ],
@@ -195,7 +225,7 @@ class _RepetitionManagementPageState extends State<RepetitionManagementPage> {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Expanded(child: _buildPohonTitle(prediction.dataPohonId)),
-                _buildPriorityBadgeFromDb(prediction.dataPohonId),
+                _buildPriorityBadge(prediction),
               ],
             ),
 
@@ -265,7 +295,7 @@ class _RepetitionManagementPageState extends State<RepetitionManagementPage> {
 
             const SizedBox(height: 8),
 
-            // Ringkasan riwayat eksekusi (sinkron dengan data)
+            // Ringkasan riwayat eksekusi
             _buildExecutionSummary(prediction.dataPohonId),
 
             const SizedBox(height: 12),
@@ -323,7 +353,6 @@ class _RepetitionManagementPageState extends State<RepetitionManagementPage> {
     );
   }
 
-  // Bangun judul kartu dengan idPohon (bukan document id), dengan cache untuk mengurangi query
   Widget _buildPohonTitle(String dataPohonDocId) {
     final cached = _idPohonCache[dataPohonDocId];
     if (cached != null) {
@@ -337,7 +366,9 @@ class _RepetitionManagementPageState extends State<RepetitionManagementPage> {
       future: FirebaseFirestore.instance.collection('data_pohon').doc(dataPohonDocId).get(),
       builder: (context, snapshot) {
         String idPohon = '';
-        if (snapshot.connectionState == ConnectionState.done && snapshot.hasData && snapshot.data!.exists) {
+        if (snapshot.connectionState == ConnectionState.done &&
+            snapshot.hasData &&
+            snapshot.data!.exists) {
           idPohon = (snapshot.data!.data()?['id_pohon'] ?? '').toString();
           if (idPohon.isNotEmpty) {
             _idPohonCache[dataPohonDocId] = idPohon;
@@ -351,7 +382,6 @@ class _RepetitionManagementPageState extends State<RepetitionManagementPage> {
     );
   }
 
-  // Ambil jumlah eksekusi dan tanggal terakhir (sinkron dengan halaman Riwayat - live stream & sort createdDate desc)
   Widget _buildExecutionSummary(String dataPohonId) {
     return StreamBuilder<List<Eksekusi>>(
       stream: FirebaseFirestore.instance
@@ -377,7 +407,6 @@ class _RepetitionManagementPageState extends State<RepetitionManagementPage> {
 
         String lastDateStr = '-';
         if (eksekusiList.isNotEmpty) {
-          // Tanggal eksekusi ditampilkan sama seperti Riwayat (ambil bagian tanggal saja dari string)
           final parts = eksekusiList.first.tanggalEksekusi.split(' ');
           lastDateStr = parts.isNotEmpty ? parts[0] : '-';
         }
@@ -403,8 +432,6 @@ class _RepetitionManagementPageState extends State<RepetitionManagementPage> {
       },
     );
   }
-
-  // Parser helper removed (now using Eksekusi formatted date directly in summary)
 
   Widget _buildDetailItem(String label, String value, IconData icon) {
     return Row(
@@ -436,31 +463,17 @@ class _RepetitionManagementPageState extends State<RepetitionManagementPage> {
     );
   }
 
-  Widget _buildPriorityBadgeFromDb(String dataPohonId) {
-    return FutureBuilder<DocumentSnapshot<Map<String, dynamic>>>(
-      future: FirebaseFirestore.instance.collection('data_pohon').doc(dataPohonId).get(),
-      builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting) {
-          return const SizedBox(
-            height: 20,
-            width: 60,
-            child: Center(child: SizedBox(height: 12, width: 12, child: CircularProgressIndicator(strokeWidth: 2))),
-          );
-        }
-        if (!snapshot.hasData || !snapshot.data!.exists) {
-          return _priorityChip('RENDAH', AppColors.tealGelap);
-        }
-        final prioritas = (snapshot.data!.data()?['prioritas'] ?? 1) as int;
-        switch (prioritas) {
-          case 3:
-            return _priorityChip('TINGGI', Colors.red);
-          case 2:
-            return _priorityChip('SEDANG', Colors.orange);
-          default:
-            return _priorityChip('RENDAH', AppColors.tealGelap);
-        }
-      },
-    );
+  // ✅ Badge prioritas pakai getPriority() langsung
+  Widget _buildPriorityBadge(GrowthPrediction prediction) {
+    final priority = prediction.getPriority();
+    switch (priority) {
+      case 3:
+        return _priorityChip('TINGGI', Colors.red);
+      case 2:
+        return _priorityChip('SEDANG', Colors.orange);
+      default:
+        return _priorityChip('RENDAH', AppColors.tealGelap);
+    }
   }
 
   Widget _priorityChip(String text, Color color) {
@@ -481,11 +494,12 @@ class _RepetitionManagementPageState extends State<RepetitionManagementPage> {
     );
   }
 
-  // Auto schedule feature removed
-
   Future<void> _goToEksekusiPage(String dataPohonId) async {
     try {
-      final doc = await FirebaseFirestore.instance.collection('data_pohon').doc(dataPohonId).get();
+      final doc = await FirebaseFirestore.instance
+          .collection('data_pohon')
+          .doc(dataPohonId)
+          .get();
       if (!doc.exists) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Data pohon tidak ditemukan')),
@@ -511,7 +525,10 @@ class _RepetitionManagementPageState extends State<RepetitionManagementPage> {
 
   Future<void> _goToRiwayatEksekusi(String dataPohonId) async {
     try {
-      final doc = await FirebaseFirestore.instance.collection('data_pohon').doc(dataPohonId).get();
+      final doc = await FirebaseFirestore.instance
+          .collection('data_pohon')
+          .doc(dataPohonId)
+          .get();
       if (!doc.exists) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Data pohon tidak ditemukan')),
@@ -575,16 +592,22 @@ class _PredictionSearchDelegate extends SearchDelegate<void> {
         return ListTile(
           leading: const Icon(Icons.eco_outlined),
           title: FutureBuilder<DocumentSnapshot<Map<String, dynamic>>>(
-            future: FirebaseFirestore.instance.collection('data_pohon').doc(p.dataPohonId).get(),
+            future: FirebaseFirestore.instance
+                .collection('data_pohon')
+                .doc(p.dataPohonId)
+                .get(),
             builder: (context, snap) {
               String idp = p.dataPohonId;
-              if (snap.connectionState == ConnectionState.done && snap.hasData && snap.data!.exists) {
+              if (snap.connectionState == ConnectionState.done &&
+                  snap.hasData &&
+                  snap.data!.exists) {
                 idp = (snap.data!.data()?['id_pohon'] ?? idp).toString();
               }
               return Text('Pohon $idp');
             },
           ),
-          subtitle: Text('Siklus ${p.repetitionCycle} • Prediksi ${DateFormat('dd/MM/yyyy').format(p.predictedNextExecution)}'),
+          subtitle: Text(
+              'Siklus ${p.repetitionCycle} • Prediksi ${DateFormat('dd/MM/yyyy').format(p.predictedNextExecution)}'),
           trailing: IconButton(
             icon: const Icon(Icons.build_circle_outlined),
             tooltip: 'Eksekusi',
@@ -604,7 +627,6 @@ class _PredictionSearchDelegate extends SearchDelegate<void> {
 
   @override
   Widget buildResults(BuildContext context) {
-    // Use the same UI as suggestions for simplicity
     return buildSuggestions(context);
   }
 

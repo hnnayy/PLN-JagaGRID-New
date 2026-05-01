@@ -30,7 +30,10 @@ class _RepetitionAnalyticsPageState extends State<RepetitionAnalyticsPage> {
     if (cached != null && cached.isNotEmpty) return cached;
 
     try {
-      final doc = await FirebaseFirestore.instance.collection('data_pohon').doc(dataPohonId).get();
+      final doc = await FirebaseFirestore.instance
+          .collection('data_pohon')
+          .doc(dataPohonId)
+          .get();
       String idPohon = '';
       if (doc.exists) {
         final data = doc.data();
@@ -42,7 +45,6 @@ class _RepetitionAnalyticsPageState extends State<RepetitionAnalyticsPage> {
       _idPohonCache[dataPohonId] = idPohon;
       return idPohon;
     } catch (e) {
-      // Jika gagal, gunakan fallback
       return dataPohonId;
     }
   }
@@ -124,22 +126,12 @@ class _RepetitionAnalyticsPageState extends State<RepetitionAnalyticsPage> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Growth Rate Analysis
                 _buildGrowthRateSection(predictions),
-
                 const SizedBox(height: 24),
-
-                // Confidence Analysis
                 _buildConfidenceSection(predictions),
-
                 const SizedBox(height: 24),
-
-                // Cycle Analysis
                 _buildCycleAnalysisSection(predictions),
-
                 const SizedBox(height: 24),
-
-                // Risk Assessment
                 _buildRiskAssessmentSection(predictions),
               ],
             ),
@@ -149,6 +141,9 @@ class _RepetitionAnalyticsPageState extends State<RepetitionAnalyticsPage> {
     );
   }
 
+  // ─────────────────────────────────────────────
+  // SECTION 1: Growth Rate
+  // ─────────────────────────────────────────────
   Widget _buildGrowthRateSection(List<GrowthPrediction> predictions) {
     final growthRates = predictions.map((p) => p.growthRate).toList();
     final avgGrowthRate = growthRates.reduce((a, b) => a + b) / growthRates.length;
@@ -160,10 +155,7 @@ class _RepetitionAnalyticsPageState extends State<RepetitionAnalyticsPage> {
       children: [
         const Text(
           'Analisis Growth Rate',
-          style: TextStyle(
-            fontSize: 20,
-            fontWeight: FontWeight.bold,
-          ),
+          style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
         ),
         const SizedBox(height: 16),
         Card(
@@ -175,6 +167,7 @@ class _RepetitionAnalyticsPageState extends State<RepetitionAnalyticsPage> {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceAround,
                   children: [
+                    // FIX: pakai toStringAsFixed(1) agar nilai kecil tidak jadi 0
                     _buildGrowthMetric('Rata-rata', avgGrowthRate, Colors.blue),
                     _buildGrowthMetric('Maksimal', maxGrowthRate, Colors.red),
                     _buildGrowthMetric('Minimal', minGrowthRate, Colors.green),
@@ -194,7 +187,8 @@ class _RepetitionAnalyticsPageState extends State<RepetitionAnalyticsPage> {
     return Column(
       children: [
         Text(
-          '${value.round()} cm/tahun',
+          // FIX: gunakan toStringAsFixed(1) agar nilai seperti 0.5 tidak tampil sebagai 0
+          '${value.toStringAsFixed(1)} cm/tahun',
           style: TextStyle(
             fontSize: 18,
             fontWeight: FontWeight.bold,
@@ -203,33 +197,30 @@ class _RepetitionAnalyticsPageState extends State<RepetitionAnalyticsPage> {
         ),
         Text(
           label,
-          style: TextStyle(
-            fontSize: 12,
-            color: color,
-          ),
+          style: TextStyle(fontSize: 12, color: color),
         ),
       ],
     );
   }
 
   Widget _buildGrowthRateChart(List<GrowthPrediction> predictions) {
-    // Simple bar chart representation
     final sortedPredictions = predictions.toList()
       ..sort((a, b) => b.growthRate.compareTo(a.growthRate));
+
+    final total = sortedPredictions.length;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text(
-          'Top 5 Growth Rate Tertinggi',
-          style: TextStyle(
-            fontSize: 16,
-            fontWeight: FontWeight.w500,
-          ),
+        // FIX: tampilkan total pohon agar user tahu berapa yang tidak ditampilkan
+        Text(
+          'Top 5 Growth Rate Tertinggi (dari $total pohon)',
+          style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
         ),
         const SizedBox(height: 8),
         ...sortedPredictions.take(5).map((prediction) {
-          final percentage = (prediction.growthRate / sortedPredictions.first.growthRate) * 100;
+          final percentage =
+              (prediction.growthRate / sortedPredictions.first.growthRate) * 100;
           return Padding(
             padding: const EdgeInsets.symmetric(vertical: 4),
             child: Row(
@@ -244,12 +235,13 @@ class _RepetitionAnalyticsPageState extends State<RepetitionAnalyticsPage> {
                   child: LinearProgressIndicator(
                     value: percentage / 100,
                     backgroundColor: Colors.grey.shade200,
-                    valueColor: AlwaysStoppedAnimation<Color>(Colors.green),
+                    valueColor:
+                        const AlwaysStoppedAnimation<Color>(Colors.green),
                   ),
                 ),
                 const SizedBox(width: 8),
                 Text(
-                  '${prediction.growthRate.round()} cm',
+                  '${prediction.growthRate.toStringAsFixed(1)} cm',
                   style: const TextStyle(fontSize: 12),
                 ),
               ],
@@ -260,23 +252,28 @@ class _RepetitionAnalyticsPageState extends State<RepetitionAnalyticsPage> {
     );
   }
 
+  // ─────────────────────────────────────────────
+  // SECTION 2: Confidence Level
+  // ─────────────────────────────────────────────
   Widget _buildConfidenceSection(List<GrowthPrediction> predictions) {
     final confidenceLevels = predictions.map((p) => p.confidenceLevel).toList();
-    final avgConfidence = confidenceLevels.reduce((a, b) => a + b) / confidenceLevels.length;
+    final avgConfidence =
+        confidenceLevels.reduce((a, b) => a + b) / confidenceLevels.length;
 
-    final highConfidence = predictions.where((p) => p.confidenceLevel >= 0.8).length;
-    final mediumConfidence = predictions.where((p) => p.confidenceLevel >= 0.6 && p.confidenceLevel < 0.8).length;
-    final lowConfidence = predictions.where((p) => p.confidenceLevel < 0.6).length;
+    final highConfidence =
+        predictions.where((p) => p.confidenceLevel >= 0.8).length;
+    final mediumConfidence = predictions
+        .where((p) => p.confidenceLevel >= 0.6 && p.confidenceLevel < 0.8)
+        .length;
+    final lowConfidence =
+        predictions.where((p) => p.confidenceLevel < 0.6).length;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         const Text(
           'Analisis Confidence Level',
-          style: TextStyle(
-            fontSize: 20,
-            fontWeight: FontWeight.bold,
-          ),
+          style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
         ),
         const SizedBox(height: 16),
         Card(
@@ -288,17 +285,18 @@ class _RepetitionAnalyticsPageState extends State<RepetitionAnalyticsPage> {
                 Text(
                   'Rata-rata Confidence: ${(avgConfidence * 100).round()}%',
                   style: const TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                  ),
+                      fontSize: 18, fontWeight: FontWeight.bold),
                 ),
                 const SizedBox(height: 16),
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceAround,
                   children: [
-                    _buildConfidenceMetric('Tinggi (≥80%)', highConfidence, Colors.green),
-                    _buildConfidenceMetric('Sedang (60-79%)', mediumConfidence, Colors.orange),
-                    _buildConfidenceMetric('Rendah (<60%)', lowConfidence, Colors.red),
+                    _buildConfidenceMetric(
+                        'Tinggi (>=80%)', highConfidence, Colors.green),
+                    _buildConfidenceMetric(
+                        'Sedang (60-79%)', mediumConfidence, Colors.orange),
+                    _buildConfidenceMetric(
+                        'Rendah (<60%)', lowConfidence, Colors.red),
                   ],
                 ),
                 const SizedBox(height: 16),
@@ -317,17 +315,11 @@ class _RepetitionAnalyticsPageState extends State<RepetitionAnalyticsPage> {
         Text(
           count.toString(),
           style: TextStyle(
-            fontSize: 24,
-            fontWeight: FontWeight.bold,
-            color: color,
-          ),
+              fontSize: 24, fontWeight: FontWeight.bold, color: color),
         ),
         Text(
           label,
-          style: TextStyle(
-            fontSize: 12,
-            color: color,
-          ),
+          style: TextStyle(fontSize: 12, color: color),
           textAlign: TextAlign.center,
         ),
       ],
@@ -335,15 +327,15 @@ class _RepetitionAnalyticsPageState extends State<RepetitionAnalyticsPage> {
   }
 
   Widget _buildConfidenceDistribution(List<GrowthPrediction> predictions) {
+    final total = predictions.length;
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text(
-          'Distribusi Confidence',
-          style: TextStyle(
-            fontSize: 16,
-            fontWeight: FontWeight.w500,
-          ),
+        // FIX: tampilkan total agar user tahu berapa yang tidak ditampilkan
+        Text(
+          'Distribusi Confidence (menampilkan 10 dari $total pohon)',
+          style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
         ),
         const SizedBox(height: 8),
         ...predictions.take(10).map((prediction) {
@@ -362,8 +354,11 @@ class _RepetitionAnalyticsPageState extends State<RepetitionAnalyticsPage> {
                     value: prediction.confidenceLevel,
                     backgroundColor: Colors.grey.shade200,
                     valueColor: AlwaysStoppedAnimation<Color>(
-                      prediction.confidenceLevel >= 0.8 ? Colors.green :
-                      prediction.confidenceLevel >= 0.6 ? Colors.orange : Colors.red,
+                      prediction.confidenceLevel >= 0.8
+                          ? Colors.green
+                          : prediction.confidenceLevel >= 0.6
+                              ? Colors.orange
+                              : Colors.red,
                     ),
                   ),
                 ),
@@ -380,24 +375,27 @@ class _RepetitionAnalyticsPageState extends State<RepetitionAnalyticsPage> {
     );
   }
 
+  // ─────────────────────────────────────────────
+  // SECTION 3: Cycle Analysis
+  // ─────────────────────────────────────────────
   Widget _buildCycleAnalysisSection(List<GrowthPrediction> predictions) {
     final cycleCounts = <int, int>{};
     for (final prediction in predictions) {
-      cycleCounts[prediction.repetitionCycle] = (cycleCounts[prediction.repetitionCycle] ?? 0) + 1;
+      cycleCounts[prediction.repetitionCycle] =
+          (cycleCounts[prediction.repetitionCycle] ?? 0) + 1;
     }
 
     final maxCycle = cycleCounts.keys.reduce((a, b) => a > b ? a : b);
-    final avgCycle = predictions.map((p) => p.repetitionCycle).reduce((a, b) => a + b) / predictions.length;
+    final avgCycle =
+        predictions.map((p) => p.repetitionCycle).reduce((a, b) => a + b) /
+            predictions.length;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         const Text(
           'Analisis Siklus Repetisi',
-          style: TextStyle(
-            fontSize: 20,
-            fontWeight: FontWeight.bold,
-          ),
+          style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
         ),
         const SizedBox(height: 16),
         Card(
@@ -409,9 +407,12 @@ class _RepetitionAnalyticsPageState extends State<RepetitionAnalyticsPage> {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceAround,
                   children: [
-                    _buildCycleMetric('Rata-rata Siklus', avgCycle.round(), Colors.blue),
-                    _buildCycleMetric('Siklus Maksimal', maxCycle, Colors.purple),
-                    _buildCycleMetric('Total Siklus', cycleCounts.length, Colors.teal),
+                    _buildCycleMetric(
+                        'Rata-rata Siklus', avgCycle.round(), Colors.blue),
+                    _buildCycleMetric(
+                        'Siklus Maksimal', maxCycle, Colors.purple),
+                    _buildCycleMetric(
+                        'Total Variasi', cycleCounts.length, Colors.teal),
                   ],
                 ),
                 const SizedBox(height: 16),
@@ -430,17 +431,11 @@ class _RepetitionAnalyticsPageState extends State<RepetitionAnalyticsPage> {
         Text(
           value.toString(),
           style: TextStyle(
-            fontSize: 24,
-            fontWeight: FontWeight.bold,
-            color: color,
-          ),
+              fontSize: 24, fontWeight: FontWeight.bold, color: color),
         ),
         Text(
           label,
-          style: TextStyle(
-            fontSize: 12,
-            color: color,
-          ),
+          style: TextStyle(fontSize: 12, color: color),
           textAlign: TextAlign.center,
         ),
       ],
@@ -451,15 +446,15 @@ class _RepetitionAnalyticsPageState extends State<RepetitionAnalyticsPage> {
     final sortedCycles = cycleCounts.entries.toList()
       ..sort((a, b) => a.key.compareTo(b.key));
 
+    final maxCount =
+        sortedCycles.map((e) => e.value).reduce((a, b) => a > b ? a : b);
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         const Text(
           'Distribusi Siklus',
-          style: TextStyle(
-            fontSize: 16,
-            fontWeight: FontWeight.w500,
-          ),
+          style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
         ),
         const SizedBox(height: 8),
         ...sortedCycles.map((entry) {
@@ -477,9 +472,10 @@ class _RepetitionAnalyticsPageState extends State<RepetitionAnalyticsPage> {
                 const SizedBox(width: 8),
                 Expanded(
                   child: LinearProgressIndicator(
-                    value: entry.value / sortedCycles.map((e) => e.value).reduce((a, b) => a > b ? a : b),
+                    value: entry.value / maxCount,
                     backgroundColor: Colors.grey.shade200,
-                    valueColor: const AlwaysStoppedAnimation<Color>(Colors.blue),
+                    valueColor:
+                        const AlwaysStoppedAnimation<Color>(Colors.blue),
                   ),
                 ),
                 const SizedBox(width: 8),
@@ -495,22 +491,38 @@ class _RepetitionAnalyticsPageState extends State<RepetitionAnalyticsPage> {
     );
   }
 
+  // ─────────────────────────────────────────────
+  // SECTION 4: Risk Assessment
+  // FIX: gunakan pohon UNIK yang berisiko (OR), bukan penjumlahan
+  // sehingga riskScore dijamin 0.0 - 1.0 (tidak bisa > 100%)
+  // ─────────────────────────────────────────────
   Widget _buildRiskAssessmentSection(List<GrowthPrediction> predictions) {
-    final overduePredictions = predictions.where((p) => p.isDueForExecution()).length;
-    final highRiskPredictions = predictions.where((p) => p.getPriority() == 3).length;
-    final lowConfidencePredictions = predictions.where((p) => p.confidenceLevel < 0.6).length;
+    // Hitung masing-masing untuk ditampilkan di UI
+    final overduePredictions =
+        predictions.where((p) => p.isDueForExecution()).length;
+    final highRiskPredictions =
+        predictions.where((p) => p.getPriority() == 3).length;
+    final lowConfidencePredictions =
+        predictions.where((p) => p.confidenceLevel < 0.6).length;
 
-    final riskScore = (overduePredictions + highRiskPredictions + lowConfidencePredictions) / predictions.length;
+    // FIX: hitung pohon UNIK yang memenuhi minimal satu kondisi berisiko
+    // Rumus: R = N_unik / N_total x 100%
+    // Di mana N_unik = |{pohon : overdue ATAU highRisk ATAU lowConf}|
+    final riskyCount = predictions
+        .where((p) =>
+            p.isDueForExecution() ||
+            p.getPriority() == 3 ||
+            p.confidenceLevel < 0.6)
+        .length;
+
+    final riskScore = riskyCount / predictions.length;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         const Text(
           'Penilaian Risiko',
-          style: TextStyle(
-            fontSize: 20,
-            fontWeight: FontWeight.bold,
-          ),
+          style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
         ),
         const SizedBox(height: 16),
         Card(
@@ -524,16 +536,29 @@ class _RepetitionAnalyticsPageState extends State<RepetitionAnalyticsPage> {
                   style: TextStyle(
                     fontSize: 18,
                     fontWeight: FontWeight.bold,
-                    color: riskScore > 0.5 ? Colors.red : riskScore > 0.3 ? Colors.orange : Colors.green,
+                    color: riskScore > 0.5
+                        ? Colors.red
+                        : riskScore > 0.3
+                            ? Colors.orange
+                            : Colors.green,
                   ),
                 ),
+                const SizedBox(height: 4),
+                // Tambahan: tampilkan jumlah pohon berisiko dari total
+                Text(
+                  '$riskyCount dari ${predictions.length} pohon berisiko',
+                  style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
+                ),
                 const SizedBox(height: 16),
+                // Tiga komponen ditampilkan secara informatif
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceAround,
                   children: [
                     _buildRiskMetric('Overdue', overduePredictions, Colors.red),
-                    _buildRiskMetric('High Risk', highRiskPredictions, Colors.orange),
-                    _buildRiskMetric('Low Confidence', lowConfidencePredictions, Colors.yellow),
+                    _buildRiskMetric(
+                        'High Risk', highRiskPredictions, Colors.orange),
+                    _buildRiskMetric('Low Confidence',
+                        lowConfidencePredictions, Colors.yellow.shade700),
                   ],
                 ),
                 const SizedBox(height: 16),
@@ -552,17 +577,11 @@ class _RepetitionAnalyticsPageState extends State<RepetitionAnalyticsPage> {
         Text(
           count.toString(),
           style: TextStyle(
-            fontSize: 24,
-            fontWeight: FontWeight.bold,
-            color: color,
-          ),
+              fontSize: 24, fontWeight: FontWeight.bold, color: color),
         ),
         Text(
           label,
-          style: TextStyle(
-            fontSize: 12,
-            color: color,
-          ),
+          style: TextStyle(fontSize: 12, color: color),
           textAlign: TextAlign.center,
         ),
       ],
@@ -574,13 +593,16 @@ class _RepetitionAnalyticsPageState extends State<RepetitionAnalyticsPage> {
     Color color;
 
     if (riskScore > 0.5) {
-      recommendation = 'Risiko tinggi! Perlu tindakan segera untuk pohon-pohon yang overdue dan prioritas tinggi.';
+      recommendation =
+          'Risiko tinggi! Perlu tindakan segera untuk pohon-pohon yang overdue dan prioritas tinggi.';
       color = Colors.red;
     } else if (riskScore > 0.3) {
-      recommendation = 'Risiko sedang. Perlu monitoring lebih intensif untuk pohon-pohon dengan confidence rendah.';
+      recommendation =
+          'Risiko sedang. Perlu monitoring lebih intensif untuk pohon-pohon dengan confidence rendah.';
       color = Colors.orange;
     } else {
-      recommendation = 'Risiko rendah. Sistem berjalan dengan baik, tetap lakukan monitoring rutin.';
+      recommendation =
+          'Risiko rendah. Sistem berjalan dengan baik, tetap lakukan monitoring rutin.';
       color = Colors.green;
     }
 
@@ -593,10 +615,7 @@ class _RepetitionAnalyticsPageState extends State<RepetitionAnalyticsPage> {
       ),
       child: Text(
         recommendation,
-        style: TextStyle(
-          color: color,
-          fontSize: 14,
-        ),
+        style: TextStyle(color: color, fontSize: 14),
         textAlign: TextAlign.center,
       ),
     );

@@ -31,15 +31,44 @@ class GrowthPredictionService {
     required int repetitionCycle,
   }) async {
     try {
-      // Hitung prediksi berikutnya
+      // ✅ Nonaktifkan semua prediksi lama pohon ini sebelum buat baru
+      // Cegah pohon muncul duplikat di Manajemen Repetisi
+      await _deactivateOldPredictions(dataPohonId, lastExecution.statusEksekusi);
+
+      // Jika Tebang Habis (statusEksekusi == 2) → tidak perlu buat prediksi baru
+      // Pohon sudah tidak ada, tidak akan tumbuh lagi
+      if (lastExecution.statusEksekusi == 2) {
+        print('✅ Tebang Habis: prediksi lama dinonaktifkan, tidak membuat prediksi baru');
+        return GrowthPrediction(
+          id: '',
+          dataPohonId: dataPohonId,
+          lastExecutionDate: DateTime.now(),
+          lastHeight: 0,
+          growthRate: 0,
+          safeDistance: 3.0,
+          predictedNextExecution: DateTime.now(),
+          predictionReason: 'Pohon telah ditebang habis',
+          confidenceLevel: 1.0,
+          repetitionCycle: repetitionCycle,
+          createdDate: DateTime.now(),
+          status: 2,
+          executionType: 2,
+        );
+      }
+
+      // ✅ DIPERBAIKI: konversi tinggiPohon dari meter → cm
+      // tinggiPohon di Eksekusi satuannya meter, tapi calculateNextExecution butuh cm
+      final tinggiPohonCm = lastExecution.tinggiPohon * 100;
+
+      // Hitung prediksi berikutnya (hanya untuk Tebang Pangkas)
       final prediction = GrowthPrediction.calculateNextExecution(
         dataPohonId: dataPohonId,
         lastExecutionDate: _parseExecutionDate(lastExecution.tanggalEksekusi),
-        lastHeight: lastExecution.tinggiPohon,
-        growthRate: pohonData.growthRate,
+        lastHeight: tinggiPohonCm, // ✅ sudah dalam cm
+        growthRate: pohonData.growthRate, // sudah dalam cm/tahun
         repetitionCycle: repetitionCycle,
         safeDistance: 3.0, // 3 meter untuk PLN
-        executionType: lastExecution.statusEksekusi, // pass through actual execution type
+        executionType: lastExecution.statusEksekusi,
       );
 
       // Simpan ke Firestore
@@ -54,6 +83,31 @@ class GrowthPredictionService {
     } catch (e) {
       print('❌ Error creating growth prediction: $e');
       rethrow;
+    }
+  }
+
+  // ✅ Nonaktifkan semua prediksi aktif lama untuk pohon tertentu
+  Future<void> _deactivateOldPredictions(String dataPohonId, int executionType) async {
+    try {
+      final snapshot = await _db
+          .collection(_collectionName)
+          .where('data_pohon_id', isEqualTo: dataPohonId)
+          .where('status', isEqualTo: 1)
+          .get();
+
+      if (snapshot.docs.isEmpty) return;
+
+      // Batch update untuk efisiensi
+      final batch = _db.batch();
+      for (final doc in snapshot.docs) {
+        batch.update(doc.reference, {'status': 2}); // 2 = completed/selesai
+      }
+      await batch.commit();
+
+      print('✅ Nonaktifkan ${snapshot.docs.length} prediksi lama untuk pohon $dataPohonId');
+    } catch (e) {
+      print('⚠️ Gagal menonaktifkan prediksi lama: $e');
+      // Tidak rethrow — jangan sampai gagal ini menghentikan proses eksekusi
     }
   }
 
@@ -112,7 +166,8 @@ class GrowthPredictionService {
 
       // Filter di aplikasi berdasarkan tanggal
       final duePredictions = predictions
-          .where((p) => p.predictedNextExecution.isBefore(now) || p.predictedNextExecution.isAtSameMomentAs(now))
+          .where((p) => p.predictedNextExecution.isBefore(now) ||
+              p.predictedNextExecution.isAtSameMomentAs(now))
           .toList();
 
       return duePredictions;
@@ -177,7 +232,6 @@ class GrowthPredictionService {
     }
   }
 
-  // Method untuk menghitung statistik repetisi
   // Update status prediksi
   Future<void> updatePredictionStatus(String predictionId, int status) async {
     try {
@@ -195,7 +249,7 @@ class GrowthPredictionService {
   Future<void> updatePredictionExecutionDetails(
     String predictionId,
     int executionType,
-    String executionNotes
+    String executionNotes,
   ) async {
     try {
       await _db.collection(_collectionName).doc(predictionId).update({
@@ -224,7 +278,10 @@ class GrowthPredictionService {
       // Hitung rata-rata confidence level
       final avgConfidence = activePredictions.isEmpty
           ? 0.0
-          : activePredictions.map((p) => p.confidenceLevel).reduce((a, b) => a + b) / activePredictions.length;
+          : activePredictions
+                  .map((p) => p.confidenceLevel)
+                  .reduce((a, b) => a + b) /
+              activePredictions.length;
 
       return {
         'total_predictions': predictions.length,

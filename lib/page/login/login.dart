@@ -17,15 +17,14 @@ class _LoginPageState extends State<LoginPage> {
   bool _isLoading = false;
   String? _errorMessage;
 
-  // Modern color scheme
-  static const Color primaryColor = Color(0xFF125E72); // Indigo
-  static const Color primaryDark = Color(0xFF14A2B9); // Darker indigo
-  static const Color backgroundColor = Color(0xFFF8FAFC); // Light gray
+  static const Color primaryColor = Color(0xFF125E72);
+  static const Color primaryDark = Color(0xFF14A2B9);
+  static const Color backgroundColor = Color(0xFFF8FAFC);
   static const Color cardColor = Colors.white;
-  static const Color accentColor = Color(0xFF10B981); // Emerald
-  static const Color textPrimary = Color(0xFF1E293B); // Dark gray
-  static const Color textSecondary = Color(0xFF64748B); // Medium gray
-  static const Color inputFill = Color(0xFFF1F5F9); // Light blue gray
+  static const Color accentColor = Color(0xFF10B981);
+  static const Color textPrimary = Color(0xFF1E293B);
+  static const Color textSecondary = Color(0xFF64748B);
+  static const Color inputFill = Color(0xFFF1F5F9);
 
   @override
   Widget build(BuildContext context) {
@@ -49,7 +48,6 @@ class _LoginPageState extends State<LoginPage> {
               child: Column(
                 children: [
                   const SizedBox(height: 0),
-                  // Logo/Icon Section
                   Container(
                     width: 200,
                     height: 200,
@@ -60,8 +58,7 @@ class _LoginPageState extends State<LoginPage> {
                     ),
                   ),
                   const SizedBox(height: 0),
-                  
-                  // Welcome Text
+
                   const Text(
                     'Selamat Datang',
                     style: TextStyle(
@@ -75,14 +72,13 @@ class _LoginPageState extends State<LoginPage> {
                   Text(
                     'Masuk ke akun Anda untuk melanjutkan',
                     style: TextStyle(
-                      fontSize: 16, 
+                      fontSize: 16,
                       color: textSecondary,
                       height: 1.4,
                     ),
                   ),
                   const SizedBox(height: 40),
-                  
-                  // Login Form Card
+
                   Container(
                     width: double.infinity,
                     margin: const EdgeInsets.symmetric(horizontal: 24),
@@ -106,7 +102,6 @@ class _LoginPageState extends State<LoginPage> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        // Username Field
                         Text(
                           'Username',
                           style: TextStyle(
@@ -124,8 +119,7 @@ class _LoginPageState extends State<LoginPage> {
                           ),
                         ),
                         const SizedBox(height: 24),
-                        
-                        // Password Field
+
                         Text(
                           'Password',
                           style: TextStyle(
@@ -143,7 +137,9 @@ class _LoginPageState extends State<LoginPage> {
                             prefixIcon: Icons.lock_outline,
                             suffixIcon: IconButton(
                               icon: Icon(
-                                _obscureText ? Icons.visibility_off_outlined : Icons.visibility_outlined,
+                                _obscureText
+                                    ? Icons.visibility_off_outlined
+                                    : Icons.visibility_outlined,
                                 color: textSecondary,
                                 size: 20,
                               ),
@@ -155,8 +151,7 @@ class _LoginPageState extends State<LoginPage> {
                             ),
                           ),
                         ),
-                        
-                        // Error Message
+
                         if (_errorMessage != null) ...[
                           const SizedBox(height: 16),
                           Container(
@@ -169,22 +164,24 @@ class _LoginPageState extends State<LoginPage> {
                             ),
                             child: Row(
                               children: [
-                                Icon(Icons.error_outline, color: Colors.red.shade600, size: 20),
+                                Icon(Icons.error_outline,
+                                    color: Colors.red.shade600, size: 20),
                                 const SizedBox(width: 8),
                                 Expanded(
                                   child: Text(
                                     _errorMessage!,
-                                    style: TextStyle(color: Colors.red.shade700, fontSize: 14),
+                                    style: TextStyle(
+                                        color: Colors.red.shade700,
+                                        fontSize: 14),
                                   ),
                                 ),
                               ],
                             ),
                           ),
                         ],
-                        
+
                         const SizedBox(height: 32),
-                        
-                        // Login Button
+
                         SizedBox(
                           width: double.infinity,
                           height: 56,
@@ -198,7 +195,8 @@ class _LoginPageState extends State<LoginPage> {
                               elevation: 0,
                               shadowColor: Colors.transparent,
                             ).copyWith(
-                              backgroundColor: MaterialStateProperty.resolveWith((states) {
+                              backgroundColor:
+                                  MaterialStateProperty.resolveWith((states) {
                                 if (states.contains(MaterialState.pressed)) {
                                   return primaryDark;
                                 }
@@ -210,7 +208,7 @@ class _LoginPageState extends State<LoginPage> {
                             ),
                             onPressed: _isLoading ? null : _login,
                             child: _isLoading
-                                ? SizedBox(
+                                ? const SizedBox(
                                     height: 20,
                                     width: 20,
                                     child: CircularProgressIndicator(
@@ -231,7 +229,7 @@ class _LoginPageState extends State<LoginPage> {
                       ],
                     ),
                   ),
-                  
+
                   const SizedBox(height: 40),
                 ],
               ),
@@ -250,7 +248,8 @@ class _LoginPageState extends State<LoginPage> {
     return InputDecoration(
       filled: true,
       fillColor: inputFill,
-      contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+      contentPadding:
+          const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
       hintText: hintText,
       hintStyle: TextStyle(
         color: textSecondary,
@@ -296,22 +295,23 @@ class _LoginPageState extends State<LoginPage> {
           .collection('users')
           .where('username', isEqualTo: username)
           .where('password', isEqualTo: password)
+          .where('status', isEqualTo: 1) // ← hanya user aktif
           .get();
 
       if (query.docs.isNotEmpty) {
-        // Login success, navigate to home (NavigationMenu)
-        // Simpan semua data ke SharedPreferences
         final userData = query.docs.first.data() as Map<String, dynamic>;
         final prefs = await SharedPreferences.getInstance();
+
+        await prefs.setString('session_id', query.docs.first.id);
         await prefs.setString('session_username', userData['username'] ?? '');
         await prefs.setString('session_name', userData['name'] ?? '');
         await prefs.setString('session_unit', userData['unit'] ?? '');
+        await prefs.setString('session_kode_unit', userData['kode_unit'] ?? ''); // ← TAMBAHAN BARU
         await prefs.setInt('session_level', userData['level'] ?? 2);
         await prefs.setString('session_added', userData['added'] ?? '');
         await prefs.setString('session_username_telegram', userData['username_telegram'] ?? '');
         await prefs.setString('session_chat_id_telegram', userData['chat_id_telegram'] ?? '');
         await prefs.setInt('session_status', userData['status'] ?? 1);
-        await prefs.setString('session_id', query.docs.first.id);
 
         if (mounted) {
           Navigator.pushReplacement(
@@ -321,12 +321,14 @@ class _LoginPageState extends State<LoginPage> {
         }
       } else {
         setState(() {
-          _errorMessage = 'Username atau password tidak valid. Silakan coba lagi.';
+          _errorMessage =
+              'Username atau password tidak valid. Silakan coba lagi.';
         });
       }
     } catch (e) {
       setState(() {
-        _errorMessage = 'Terjadi kesalahan jaringan. Pastikan koneksi internet Anda stabil.';
+        _errorMessage =
+            'Terjadi kesalahan jaringan. Pastikan koneksi internet Anda stabil.';
       });
     } finally {
       setState(() {

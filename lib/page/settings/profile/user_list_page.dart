@@ -3,6 +3,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'dart:async';
 import 'edit_user_page.dart';
 import 'form_add_user_page.dart';
+import '../../../services/user_service.dart';
 
 class UserListPage extends StatefulWidget {
   const UserListPage({super.key});
@@ -13,6 +14,7 @@ class UserListPage extends StatefulWidget {
 
 class _UserListPageState extends State<UserListPage> {
   final TextEditingController searchController = TextEditingController();
+  final UserService _userService = UserService();
   String searchQuery = "";
 
   void _addNewUser() async {
@@ -21,26 +23,29 @@ class _UserListPageState extends State<UserListPage> {
       MaterialPageRoute(builder: (context) => const FormAddUserPage()),
     );
     if (newUser != null && mounted) {
-      _showSnackBar("User ${newUser["name"] ?? "baru"} berhasil ditambahkan", Colors.green, Icons.check_circle);
+      _showSnackBar("User ${newUser["name"] ?? "baru"} berhasil ditambahkan",
+          Colors.green, Icons.check_circle);
     }
   }
 
   void _editUser(Map<String, dynamic> user, String docId) async {
     final updatedUser = await Navigator.push(
       context,
-      MaterialPageRoute(builder: (context) => EditUserPage(user: user, docId: docId)),
+      MaterialPageRoute(
+          builder: (context) => EditUserPage(user: user, docId: docId)),
     );
     if (updatedUser != null && mounted) {
-      _showSnackBar("${updatedUser["name"]} berhasil diupdate", const Color(0xFF125E72), Icons.edit);
+      _showSnackBar("${updatedUser["name"]} berhasil diupdate",
+          const Color(0xFF125E72), Icons.edit);
     }
   }
 
-  // PERBAIKAN 1: Ubah fungsi delete jadi soft delete
   void _deleteUser(String docId, String name) {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        shape:
+            RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
         title: Row(
           children: [
             Icon(Icons.warning_amber_rounded, color: Colors.orange[700]),
@@ -57,13 +62,11 @@ class _UserListPageState extends State<UserListPage> {
           ElevatedButton(
             onPressed: () async {
               Navigator.pop(context);
-              // SOFT DELETE: Update status jadi 0, bukan delete document
-              await FirebaseFirestore.instance.collection("users").doc(docId).update({
-                'status': 0
-              });
+              await _userService.softDeleteUser(docId);
               _showSuccessDialog(name);
             },
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.red, foregroundColor: Colors.white),
+            style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.red, foregroundColor: Colors.white),
             child: const Text('Hapus'),
           ),
         ],
@@ -83,7 +86,8 @@ class _UserListPageState extends State<UserListPage> {
         ),
         backgroundColor: color,
         behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+        shape:
+            RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
       ),
     );
   }
@@ -93,35 +97,41 @@ class _UserListPageState extends State<UserListPage> {
       context: context,
       barrierDismissible: true,
       builder: (context) => Dialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        shape:
+            RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
         child: Container(
           padding: const EdgeInsets.all(28),
-          decoration: BoxDecoration(borderRadius: BorderRadius.circular(20), color: Colors.white),
+          decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(20), color: Colors.white),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
               Container(
                 width: 85,
                 height: 85,
-                decoration: const BoxDecoration(color: Color(0xFF2E5D6F), shape: BoxShape.circle),
-                child: const Icon(Icons.check_circle_rounded, size: 55, color: Colors.white),
+                decoration: const BoxDecoration(
+                    color: Color(0xFF2E5D6F), shape: BoxShape.circle),
+                child: const Icon(Icons.check_circle_rounded,
+                    size: 55, color: Colors.white),
               ),
               const SizedBox(height: 24),
-              const Text("Berhasil!", style: TextStyle(fontSize: 26, fontWeight: FontWeight.bold, color: Color(0xFF2E5D6F))),
+              const Text("Berhasil!",
+                  style: TextStyle(
+                      fontSize: 26,
+                      fontWeight: FontWeight.bold,
+                      color: Color(0xFF2E5D6F))),
               const SizedBox(height: 10),
-              Text("User $name berhasil dihapus", style: TextStyle(fontSize: 15, color: Colors.grey.shade600), textAlign: TextAlign.center),
+              Text("User $name berhasil dihapus",
+                  style: TextStyle(fontSize: 15, color: Colors.grey.shade600),
+                  textAlign: TextAlign.center),
               const SizedBox(height: 28),
-              // Button removed to match the provided image
             ],
           ),
         ),
       ),
     ).then((_) {
-      // Auto close after 2 seconds
       Timer(const Duration(seconds: 2), () {
-        if (mounted) {
-          Navigator.of(context).pop();
-        }
+        if (mounted) Navigator.of(context).pop();
       });
     });
   }
@@ -132,7 +142,7 @@ class _UserListPageState extends State<UserListPage> {
       backgroundColor: const Color.fromARGB(255, 243, 243, 243),
       body: Column(
         children: [
-          // Extended AppBar Background
+          // ── AppBar ──
           Container(
             decoration: const BoxDecoration(color: Color(0xFF125E72)),
             child: SafeArea(
@@ -140,49 +150,62 @@ class _UserListPageState extends State<UserListPage> {
               child: Column(
                 children: [
                   Container(
-                    height: 56, // Standard AppBar height
+                    height: 56,
                     padding: const EdgeInsets.symmetric(horizontal: 4),
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         IconButton(
-                          icon: const Icon(Icons.arrow_back, color: Colors.white, size: 28),
+                          icon: const Icon(Icons.arrow_back,
+                              color: Colors.white, size: 28),
                           onPressed: () => Navigator.pop(context),
                         ),
                         const Text(
                           "Daftar User",
-                          style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white, fontSize: 23),
+                          style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              color: Colors.white,
+                              fontSize: 23),
                         ),
                         IconButton(
-                          icon: const Icon(Icons.person_add, color: Colors.white, size: 34),
+                          icon: const Icon(Icons.person_add,
+                              color: Colors.white, size: 34),
                           onPressed: _addNewUser,
                           tooltip: "Tambah User",
                         ),
                       ],
                     ),
                   ),
-                  const SizedBox(height: 30), // Extended background height
+                  const SizedBox(height: 30),
                 ],
               ),
             ),
           ),
-          // Search Bar
+
+          // ── Search Bar ──
           Container(
             margin: const EdgeInsets.all(20),
             decoration: BoxDecoration(
               color: Colors.white,
               borderRadius: BorderRadius.circular(16),
-              boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.08), blurRadius: 10, offset: const Offset(0, 4))],
+              boxShadow: [
+                BoxShadow(
+                    color: Colors.black.withOpacity(0.08),
+                    blurRadius: 10,
+                    offset: const Offset(0, 4))
+              ],
             ),
             child: TextField(
               controller: searchController,
               decoration: InputDecoration(
                 hintText: "Cari",
                 hintStyle: TextStyle(color: Colors.grey[500], fontSize: 14),
-                prefixIcon: Icon(Icons.search, color: Colors.grey[400], size: 20),
+                prefixIcon:
+                    Icon(Icons.search, color: Colors.grey[400], size: 20),
                 suffixIcon: searchQuery.isNotEmpty
                     ? IconButton(
-                        icon: Icon(Icons.clear, color: Colors.grey[400], size: 20),
+                        icon:
+                            Icon(Icons.clear, color: Colors.grey[400], size: 20),
                         onPressed: () => setState(() {
                           searchController.clear();
                           searchQuery = "";
@@ -190,12 +213,14 @@ class _UserListPageState extends State<UserListPage> {
                       )
                     : null,
                 border: InputBorder.none,
-                contentPadding: const EdgeInsets.symmetric(vertical: 16, horizontal: 4),
+                contentPadding:
+                    const EdgeInsets.symmetric(vertical: 16, horizontal: 4),
               ),
               onChanged: (value) => setState(() => searchQuery = value),
             ),
           ),
-          // User Count - Tetap seperti semula
+
+          // ── Total User Aktif ──
           if (searchQuery.isEmpty)
             Container(
               margin: const EdgeInsets.symmetric(horizontal: 20),
@@ -209,9 +234,10 @@ class _UserListPageState extends State<UserListPage> {
                 borderRadius: BorderRadius.circular(12),
               ),
               child: StreamBuilder<QuerySnapshot>(
-                stream: FirebaseFirestore.instance.collection("users").snapshots(),
+                stream: FirebaseFirestore.instance
+                    .collection("users")
+                    .snapshots(),
                 builder: (context, snapshot) {
-                  // Filter manual untuk menghitung user aktif
                   int totalActiveUsers = 0;
                   if (snapshot.hasData) {
                     totalActiveUsers = snapshot.data!.docs.where((doc) {
@@ -225,18 +251,24 @@ class _UserListPageState extends State<UserListPage> {
                       const SizedBox(width: 12),
                       Text(
                         "Total $totalActiveUsers User Aktif",
-                        style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.w600),
+                        style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 16,
+                            fontWeight: FontWeight.w600),
                       ),
                     ],
                   );
                 },
               ),
             ),
+
           const SizedBox(height: 20),
-          // User List - Filter manual untuk menampilkan user aktif
+
+          // ── User List ──
           Expanded(
             child: StreamBuilder<QuerySnapshot>(
-              stream: FirebaseFirestore.instance.collection("users")
+              stream: FirebaseFirestore.instance
+                  .collection("users")
                   .orderBy("added", descending: true)
                   .snapshots(),
               builder: (context, snapshot) {
@@ -245,37 +277,51 @@ class _UserListPageState extends State<UserListPage> {
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        Icon(Icons.error_outline, size: 64, color: Colors.red[300]),
+                        Icon(Icons.error_outline,
+                            size: 64, color: Colors.red[300]),
                         const SizedBox(height: 16),
-                        const Text("Terjadi kesalahan", style: TextStyle(color: Colors.red)),
+                        const Text("Terjadi kesalahan",
+                            style: TextStyle(color: Colors.red)),
                       ],
                     ),
                   );
                 }
                 if (snapshot.connectionState == ConnectionState.waiting) {
                   return const Center(
-                    child: CircularProgressIndicator(valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF14A2B9))),
+                    child: CircularProgressIndicator(
+                        valueColor: AlwaysStoppedAnimation<Color>(
+                            Color(0xFF14A2B9))),
                   );
                 }
 
-                // Filter manual: hanya tampilkan user aktif (status = 1)
                 final activeDocs = snapshot.data!.docs.where((doc) {
                   final data = doc.data() as Map<String, dynamic>;
-                  return (data['status'] ?? 1) == 1; // Default 1 jika status tidak ada
+                  return (data['status'] ?? 1) == 1;
                 }).toList();
 
                 final docs = activeDocs.where((doc) {
                   final data = doc.data() as Map<String, dynamic>;
                   final query = searchQuery.toLowerCase();
-                  return data["name"].toString().toLowerCase().contains(query) ||
-                      data["username"].toString().toLowerCase().contains(query) ||
+                  return data["name"]
+                          .toString()
+                          .toLowerCase()
+                          .contains(query) ||
+                      data["username"]
+                          .toString()
+                          .toLowerCase()
+                          .contains(query) ||
                       data["unit"].toString().toLowerCase().contains(query) ||
-                      (data["username_telegram"] ?? "").toString().toLowerCase().contains(query);
+                      (data["kode_unit"] ?? "")
+                          .toString()
+                          .toLowerCase()
+                          .contains(query) ||
+                      (data["username_telegram"] ?? "")
+                          .toString()
+                          .toLowerCase()
+                          .contains(query);
                 }).toList();
 
-                if (docs.isEmpty) {
-                  return _buildEmptyState();
-                }
+                if (docs.isEmpty) return _buildEmptyState();
 
                 return ListView.builder(
                   padding: const EdgeInsets.symmetric(horizontal: 20),
@@ -301,9 +347,12 @@ class _UserListPageState extends State<UserListPage> {
         children: [
           Container(
             padding: const EdgeInsets.all(24),
-            decoration: const BoxDecoration(color: Colors.white, shape: BoxShape.circle),
+            decoration: const BoxDecoration(
+                color: Colors.white, shape: BoxShape.circle),
             child: Icon(
-              searchQuery.isNotEmpty ? Icons.search_off : Icons.people_outline,
+              searchQuery.isNotEmpty
+                  ? Icons.search_off
+                  : Icons.people_outline,
               size: 48,
               color: Colors.grey[400],
             ),
@@ -311,7 +360,10 @@ class _UserListPageState extends State<UserListPage> {
           const SizedBox(height: 24),
           Text(
             searchQuery.isNotEmpty ? "Tidak ditemukan" : "Belum ada user",
-            style: TextStyle(color: Colors.grey[600], fontSize: 18, fontWeight: FontWeight.w600),
+            style: TextStyle(
+                color: Colors.grey[600],
+                fontSize: 18,
+                fontWeight: FontWeight.w600),
           ),
           const SizedBox(height: 8),
           Text(
@@ -333,7 +385,8 @@ class _UserListPageState extends State<UserListPage> {
               style: ElevatedButton.styleFrom(
                 backgroundColor: const Color(0xFF125E72),
                 foregroundColor: Colors.white,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10)),
               ),
             ),
           ],
@@ -343,28 +396,43 @@ class _UserListPageState extends State<UserListPage> {
   }
 
   Widget _buildUserCard(Map<String, dynamic> data, String docId) {
+    final kodeUnit = (data["kode_unit"] ?? "").toString();
+
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
-        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.06), blurRadius: 10, offset: const Offset(0, 4))],
+        boxShadow: [
+          BoxShadow(
+              color: Colors.black.withOpacity(0.06),
+              blurRadius: 10,
+              offset: const Offset(0, 4))
+        ],
       ),
       child: Padding(
         padding: const EdgeInsets.all(20),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            // ── Header: Avatar + Nama + Tombol ──
             Row(
               children: [
                 Container(
                   width: 56,
                   height: 56,
-                  decoration: const BoxDecoration(color: Color(0xFF125E72), shape: BoxShape.circle),
+                  decoration: const BoxDecoration(
+                      color: Color(0xFF125E72), shape: BoxShape.circle),
                   child: Center(
                     child: Text(
-                      (data["name"] ?? "U").toString().substring(0, 1).toUpperCase(),
-                      style: const TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold),
+                      (data["name"] ?? "U")
+                          .toString()
+                          .substring(0, 1)
+                          .toUpperCase(),
+                      style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 20,
+                          fontWeight: FontWeight.bold),
                     ),
                   ),
                 ),
@@ -375,19 +443,25 @@ class _UserListPageState extends State<UserListPage> {
                     children: [
                       Text(
                         data["name"] ?? "-",
-                        style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: Color(0xFF125E72)),
+                        style: const TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 18,
+                            color: Color(0xFF125E72)),
                         overflow: TextOverflow.ellipsis,
                       ),
                       const SizedBox(height: 4),
                       Text(
                         data["username"] ?? "-",
-                        style: TextStyle(color: Colors.grey[600], fontSize: 14),
+                        style:
+                            TextStyle(color: Colors.grey[600], fontSize: 14),
                       ),
                     ],
                   ),
                 ),
                 Container(
-                  decoration: BoxDecoration(color: Colors.grey[50], borderRadius: BorderRadius.circular(12)),
+                  decoration: BoxDecoration(
+                      color: Colors.grey[50],
+                      borderRadius: BorderRadius.circular(12)),
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
@@ -397,11 +471,13 @@ class _UserListPageState extends State<UserListPage> {
                         onPressed: () => _editUser(data, docId),
                         tooltip: "Edit User",
                       ),
-                      Container(width: 1, height: 24, color: Colors.grey[300]),
+                      Container(
+                          width: 1, height: 24, color: Colors.grey[300]),
                       IconButton(
                         icon: const Icon(Icons.delete_outline),
                         color: Colors.red,
-                        onPressed: () => _deleteUser(docId, data["name"] ?? ""),
+                        onPressed: () =>
+                            _deleteUser(docId, data["name"] ?? ""),
                         tooltip: "Hapus User",
                       ),
                     ],
@@ -409,20 +485,34 @@ class _UserListPageState extends State<UserListPage> {
                 ),
               ],
             ),
+
             const SizedBox(height: 16),
             Divider(color: Colors.grey[200], height: 1),
             const SizedBox(height: 16),
-            // Info rows
+
+            // ── Info: Unit | Kode Unit | Level ──
             Row(
               children: [
                 Expanded(
-                  flex: 2,
+                  flex: 3,
                   child: _buildInfoRow("Unit", data["unit"] ?? "-"),
                 ),
-                const SizedBox(width: 20),
+                const SizedBox(width: 12),
                 Expanded(
-                  flex: 1,
-                  child: _buildInfoRow("Level", data["level"] == 1 ? "Unit Induk" : "Unit Layanan"),
+                  flex: 2,
+                  child: _buildInfoRow(
+                    "Kode Unit",
+                    kodeUnit.isNotEmpty ? kodeUnit : "-",
+                    highlight: kodeUnit.isNotEmpty,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  flex: 2,
+                  child: _buildInfoRow(
+                    "Level",
+                    data["level"] == 1 ? "Unit Induk" : "Unit Layanan",
+                  ),
                 ),
               ],
             ),
@@ -432,21 +522,45 @@ class _UserListPageState extends State<UserListPage> {
     );
   }
 
-  Widget _buildInfoRow(String label, String value) {
+  Widget _buildInfoRow(String label, String value, {bool highlight = false}) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
           label,
-          style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.grey[600], letterSpacing: 0.5),
+          style: TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.bold,
+              color: Colors.grey[600],
+              letterSpacing: 0.5),
         ),
-        const SizedBox(height: 2),
-        Text(
-          value,
-          style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500, color: Colors.black),
-          maxLines: null,
-          softWrap: true,
-        ),
+        const SizedBox(height: 4),
+        highlight
+            ? Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF125E72).withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(6),
+                ),
+                child: Text(
+                  value,
+                  style: const TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.bold,
+                      color: Color(0xFF125E72),
+                      letterSpacing: 1),
+                ),
+              )
+            : Text(
+                value,
+                style: const TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w500,
+                    color: Colors.black),
+                maxLines: 2,
+                softWrap: true,
+              ),
       ],
     );
   }

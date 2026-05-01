@@ -3,30 +3,30 @@ import 'package:intl/intl.dart';
 
 class DataPohon {
   final String id;
-  final String idPohon; // UNIQUE constraint
-  final String up3; // Tambah dari form
-  final String ulp; // Tambah dari form
-  final String penyulang; // Tambah dari form
-  final String zonaProteksi; // Tambah dari form
-  final String section; // Tambah dari form
-  final String kmsAset; // Tambah dari form
-  final String vendor; // Tambah dari form
-  final int asetJtmId; // Refer aset_jtm.id
+  final String idPohon;
+  final String up3;
+  final String ulp;
+  final String penyulang;
+  final String zonaProteksi;
+  final String section;
+  final String kmsAset;
+  final String vendor;
+  final int asetJtmId;
   final DateTime scheduleDate;
   final int prioritas; // 1=Rendah, 2=Sedang, 3=Tinggi
   final String namaPohon;
-  final String fotoPohon; // Filepath/URL
+  final String fotoPohon;
   final String koordinat;
   final int tujuanPenjadwalan; // 1=Tebang Pangkas, 2=Tebang Habis
   final String catatan;
   final String createdBy;
   final DateTime createdDate;
-  final double growthRate; // cm/tahun, dari lookup table
+  final double growthRate; // cm/tahun, dari master pertumbuhan pohon
   final double initialHeight; // meter, dari input manual
   final DateTime notificationDate; // 3 hari sebelum scheduleDate
-  final int status; // 1 = aktif, 0 = delete
-
-  // Growth rates sekarang dikelola dari Master Pertumbuhan pohon (Firestore: tree_growth)
+  final int status; // 1 = aktif, 0 = deleted, 2 = mati sendiri
+  final DateTime? deadAt; // waktu pohon ditemukan mati (null jika tidak mati)
+  final String deadNotes; // penyebab kematian pohon (opsional)
 
   DataPohon({
     required this.id,
@@ -51,16 +51,21 @@ class DataPohon {
     required this.growthRate,
     required this.initialHeight,
     required this.notificationDate,
-    this.status = 1, // Default status adalah aktif (1)
+    this.status = 1,
+    this.deadAt,
+    this.deadNotes = '',
   });
 
+  // Helper
+  bool get isAktif => status == 1;
+  bool get isDeleted => status == 0;
+  bool get isMati => status == 2;
+
   Map<String, dynamic> toMap() {
-    // Format scheduleDate as a date-only string (M-d-y)
     final dateFormatter = DateFormat('d-M-y');
     final scheduleDateString = dateFormatter.format(scheduleDate);
-
-    // Convert WITA DateTime to UTC for Firestore for other date fields
-    final notificationDateUtc = notificationDate.subtract(const Duration(hours: 8));
+    final notificationDateUtc =
+        notificationDate.subtract(const Duration(hours: 8));
     final createdDateUtc = createdDate.subtract(const Duration(hours: 8));
 
     return {
@@ -74,65 +79,72 @@ class DataPohon {
       'kms_aset': kmsAset,
       'vendor': vendor,
       'aset_jtm_id': asetJtmId,
-      'schedule_date': scheduleDateString, // Store as string in M-d-y format
+      'schedule_date': scheduleDateString,
       'prioritas': prioritas,
       'nama_pohon': namaPohon,
       'foto_pohon': fotoPohon,
       'koordinat': koordinat,
       'tujuan_penjadwalan': tujuanPenjadwalan,
       'catatan': catatan,
-  'createdby': createdBy,
+      'createdby': createdBy,
       'createddate': Timestamp.fromDate(createdDateUtc),
       'growth_rate': growthRate,
       'initial_height': initialHeight,
       'notification_date': Timestamp.fromDate(notificationDateUtc),
       'status': status,
+      'dead_at': deadAt != null ? Timestamp.fromDate(deadAt!) : null,
+      'dead_notes': deadNotes,
     };
   }
 
   factory DataPohon.fromMap(Map<String, dynamic> map) {
-    // Handle schedule_date as a string in M-d-y, yyyy-MM-dd, or Timestamp
     DateTime parseDate(dynamic value, {bool isScheduleDate = false}) {
       if (isScheduleDate) {
         if (value is String) {
           try {
             final dateFormatter = DateFormat('d-M-y');
-            // Try parsing as M-d-y first
             try {
-              return dateFormatter.parse(value).add(const Duration(hours: 8)); // Parse to WITA
+              return dateFormatter.parse(value).add(const Duration(hours: 8));
             } catch (e) {
-              // Fallback to yyyy-MM-dd for backward compatibility
               final fallbackFormatter = DateFormat('yyyy-MM-dd');
-              return fallbackFormatter.parse(value).add(const Duration(hours: 8)); // Parse to WITA
+              return fallbackFormatter
+                  .parse(value)
+                  .add(const Duration(hours: 8));
             }
           } catch (e) {
             print('Error parsing schedule_date string: $value, error: $e');
-            return DateTime.now(); // Fallback to current date
+            return DateTime.now();
           }
         }
-        // Fallback for existing Timestamp data (for backward compatibility)
         if (value is Timestamp) {
           final date = value.toDate();
-          return DateTime(date.year, date.month, date.day).add(const Duration(hours: 8)); // Date-only in WITA
+          return DateTime(date.year, date.month, date.day)
+              .add(const Duration(hours: 8));
         }
       } else {
         if (value is Timestamp) {
-          return value.toDate().add(const Duration(hours: 8)); // Full datetime in WITA
+          return value.toDate().add(const Duration(hours: 8));
         } else if (value is String) {
           try {
-            return DateTime.parse(value).add(const Duration(hours: 8)); // Parse string and convert to WITA
+            return DateTime.parse(value).add(const Duration(hours: 8));
           } catch (e) {
             print('Error parsing date string: $value, error: $e');
-            return DateTime.now(); // Fallback to current time
+            return DateTime.now();
           }
         }
       }
-      return DateTime.now(); // Fallback if value is null or invalid
+      return DateTime.now();
     }
 
     final scheduleDate = parseDate(map['schedule_date'], isScheduleDate: true);
     final createdDate = parseDate(map['createddate']);
     final notificationDate = parseDate(map['notification_date']);
+
+    // Parse deadAt jika ada
+    DateTime? deadAt;
+    if (map['dead_at'] != null && map['dead_at'] is Timestamp) {
+      deadAt = (map['dead_at'] as Timestamp).toDate();
+    }
 
     return DataPohon(
       id: map['id'] ?? '',
@@ -152,12 +164,14 @@ class DataPohon {
       koordinat: map['koordinat'] ?? '',
       tujuanPenjadwalan: map['tujuan_penjadwalan'] ?? 1,
       catatan: map['catatan'] ?? '',
-  createdBy: (map['createdby']?.toString() ?? ''),
+      createdBy: (map['createdby']?.toString() ?? ''),
       createdDate: createdDate,
       growthRate: (map['growth_rate'] as num?)?.toDouble() ?? 0.0,
       initialHeight: (map['initial_height'] as num?)?.toDouble() ?? 0.0,
       notificationDate: notificationDate,
       status: map['status'] ?? 1,
+      deadAt: deadAt,
+      deadNotes: map['dead_notes'] ?? '',
     );
   }
 }

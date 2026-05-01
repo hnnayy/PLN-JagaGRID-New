@@ -33,7 +33,6 @@ class _TreeGrowthFormPageState extends State<TreeGrowthFormPage> {
     super.dispose();
   }
 
-  // Alert Dialog untuk Berhasil
   Future<void> _showSuccessDialog({bool isEdit = false}) async {
     await showDialog<void>(
       context: context,
@@ -51,7 +50,6 @@ class _TreeGrowthFormPageState extends State<TreeGrowthFormPage> {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                // Icon Success (circular check)
                 Container(
                   width: 88,
                   height: 88,
@@ -60,26 +58,19 @@ class _TreeGrowthFormPageState extends State<TreeGrowthFormPage> {
                     shape: BoxShape.circle,
                   ),
                   child: const Center(
-                    child: Icon(
-                      Icons.check,
-                      color: Colors.white,
-                      size: 48,
-                    ),
+                    child: Icon(Icons.check, color: Colors.white, size: 48),
                   ),
                 ),
                 const SizedBox(height: 16),
                 const Text(
                   'Berhasil!',
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                  ),
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  isEdit 
-                    ? 'Data pertumbuhan pohon berhasil diperbarui'
-                    : 'Data pertumbuhan pohon berhasil ditambahkan',
+                  isEdit
+                      ? 'Data pertumbuhan pohon berhasil diperbarui'
+                      : 'Data pertumbuhan pohon berhasil ditambahkan',
                   textAlign: TextAlign.center,
                 ),
                 const SizedBox(height: 20),
@@ -90,7 +81,8 @@ class _TreeGrowthFormPageState extends State<TreeGrowthFormPage> {
                     style: ElevatedButton.styleFrom(
                       backgroundColor: const Color(0xFF256D78),
                       foregroundColor: Colors.white,
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(25)),
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(25)),
                     ),
                     onPressed: () => Navigator.of(context).pop(),
                     child: const Text(
@@ -107,9 +99,7 @@ class _TreeGrowthFormPageState extends State<TreeGrowthFormPage> {
     );
   }
 
-  // Alert Dialog untuk Gagal
   void _showFailureDialog() {
-    final isEdit = widget.item != null;
     showDialog(
       context: context,
       barrierDismissible: false,
@@ -126,7 +116,6 @@ class _TreeGrowthFormPageState extends State<TreeGrowthFormPage> {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                // Icon Error
                 Container(
                   width: 80,
                   height: 80,
@@ -134,14 +123,9 @@ class _TreeGrowthFormPageState extends State<TreeGrowthFormPage> {
                     color: Colors.red.shade600,
                     shape: BoxShape.circle,
                   ),
-                  child: const Icon(
-                    Icons.close,
-                    color: Colors.white,
-                    size: 40,
-                  ),
+                  child: const Icon(Icons.close, color: Colors.white, size: 40),
                 ),
                 const SizedBox(height: 24),
-                // Title
                 Text(
                   'Gagal!',
                   style: TextStyle(
@@ -151,18 +135,12 @@ class _TreeGrowthFormPageState extends State<TreeGrowthFormPage> {
                   ),
                 ),
                 const SizedBox(height: 12),
-                // Message
                 Text(
                   'Gagal menyimpan, perbaiki kesalahan',
                   textAlign: TextAlign.center,
-                  style: TextStyle(
-                    fontSize: 16,
-                    color: Colors.grey.shade600,
-                    height: 1.4,
-                  ),
+                  style: TextStyle(fontSize: 16, color: Colors.grey.shade600),
                 ),
                 const SizedBox(height: 32),
-                // Button
                 SizedBox(
                   width: double.infinity,
                   height: 45,
@@ -170,11 +148,10 @@ class _TreeGrowthFormPageState extends State<TreeGrowthFormPage> {
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Colors.red.shade600,
                       foregroundColor: Colors.white,
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(25)),
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(25)),
                     ),
-                    onPressed: () {
-                      Navigator.of(context).pop(); // Close alert only
-                    },
+                    onPressed: () => Navigator.of(context).pop(),
                     child: const Text(
                       'OK',
                       style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
@@ -189,102 +166,35 @@ class _TreeGrowthFormPageState extends State<TreeGrowthFormPage> {
     );
   }
 
-  // Helper method untuk detail row
-  Widget _buildDetailRow(String label, String value, {bool isError = false}) {
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        SizedBox(
-          width: 90,
-          child: Text(
-            label,
-            style: TextStyle(
-              fontSize: 12,
-              fontWeight: FontWeight.w500,
-              color: isError ? Colors.grey.shade600 : Colors.grey.shade600,
-            ),
-          ),
-        ),
-        const SizedBox(width: 8),
-        Expanded(
-          child: Text(
-            value,
-            style: TextStyle(
-              fontSize: 12,
-              fontWeight: FontWeight.w600,
-              color: isError ? Colors.grey.shade800 : const Color(0xFF2E5D6F),
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-
-  // Validasi dan pembersihan input data
   String _cleanString(String input) {
-    return input
-        .replaceAll(RegExp(r'[^\w\s\-\.\,\(\)\/]'), '')
-        .trim();
+    return input.replaceAll(RegExp(r'[^\w\s\-\.\,\(\)\/]'), '').trim();
   }
 
-  // Validasi data sebelum disimpan
   bool _validateData() {
     final cleanName = _cleanString(_nameController.text);
     final rateText = _rateController.text.trim();
-    
-    if (cleanName.isEmpty || cleanName.length < 2) {
-      return false;
-    }
-    
+
+    if (cleanName.isEmpty || cleanName.length < 2) return false;
+
     final rate = double.tryParse(rateText);
-    if (rate == null || rate <= 0 || rate > 1000) {
-      return false;
-    }
-    
+    if (rate == null || rate <= 0 || rate > 300) return false;
+
     _nameController.text = cleanName;
     return true;
   }
 
-  // Format tanggal
-  String _formatDate(DateTime date) {
-    final months = [
-      'Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun',
-      'Jul', 'Ags', 'Sep', 'Okt', 'Nov', 'Des'
-    ];
-    return '${date.day} ${months[date.month - 1]} ${date.year} WITA';
-  }
-
-  // Reset form
-  void _resetForm() {
-    _nameController.clear();
-    _rateController.clear();
-    setState(() {});
-  }
-
-  // Save data to database
   Future<void> _saveData() async {
-    if (!_formKey.currentState!.validate()) {
-      // Form validation akan menampilkan pesan error di field
-      // Tidak perlu alert "Gagal!" tambahan
-      return;
-    }
-    
-    if (!_validateData()) {
-      // Custom validation juga tidak perlu alert "Gagal!"
-      return;
-    }
-    
-    setState(() {
-      _isLoading = true;
-    });
+    if (!_formKey.currentState!.validate()) return;
+    if (!_validateData()) return;
+
+    setState(() => _isLoading = true);
 
     try {
       final provider = context.read<TreeGrowthProvider>();
       final name = _nameController.text.trim();
       final rate = double.parse(_rateController.text.trim());
-      
+
       if (widget.item != null) {
-        // Update existing item
         final updatedItem = TreeGrowth(
           id: widget.item!.id,
           name: name,
@@ -293,26 +203,20 @@ class _TreeGrowthFormPageState extends State<TreeGrowthFormPage> {
           status: widget.item!.status,
           deletedAt: widget.item!.deletedAt,
         );
-        
+
         final success = await provider.update(updatedItem);
         if (success && mounted) {
-          // Show success dialog, then return updated item
           await _showSuccessDialog(isEdit: true);
-          if (mounted) {
-            Navigator.of(context).pop(updatedItem);
-          }
+          if (mounted) Navigator.of(context).pop(updatedItem);
           return;
         }
       } else {
-        // Create new item
         final success = await provider.add(name, rate);
         if (success && mounted) {
-          // Show success dialog first
           await _showSuccessDialog(isEdit: false);
           if (mounted) {
-            // Get the newly created item from provider
             final newItem = TreeGrowth(
-              id: '', // Will be set by service
+              id: '',
               name: name,
               growthRate: rate,
               createdAt: DateTime.now(),
@@ -323,25 +227,14 @@ class _TreeGrowthFormPageState extends State<TreeGrowthFormPage> {
           return;
         }
       }
-      
-      // If we get here, something went wrong
-      if (mounted) {
-        _showFailureDialog();
-      }
+
+      if (mounted) _showFailureDialog();
     } catch (e) {
-      if (mounted) {
-        _showFailureDialog();
-      }
+      if (mounted) _showFailureDialog();
     } finally {
-      if (mounted) {
-        setState(() {
-          _isLoading = false;
-        });
-      }
+      if (mounted) setState(() => _isLoading = false);
     }
   }
-
-  // ...existing code...
 
   @override
   Widget build(BuildContext context) {
@@ -358,7 +251,11 @@ class _TreeGrowthFormPageState extends State<TreeGrowthFormPage> {
         ),
         title: Text(
           isEdit ? 'Edit Pertumbuhan Pohon' : 'Tambah Pertumbuhan Pohon',
-          style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.white, fontSize: 18),
+          style: const TextStyle(
+            fontWeight: FontWeight.bold,
+            color: Colors.white,
+            fontSize: 18,
+          ),
         ),
       ),
       body: Container(
@@ -387,7 +284,6 @@ class _TreeGrowthFormPageState extends State<TreeGrowthFormPage> {
                 },
               ),
               const SizedBox(height: 20),
-              
               _buildField(
                 label: 'Pertumbuhan pohon (cm/tahun)',
                 controller: _rateController,
@@ -399,13 +295,13 @@ class _TreeGrowthFormPageState extends State<TreeGrowthFormPage> {
                   }
                   final d = double.tryParse(v);
                   if (d == null || d <= 0) return 'Masukkan nilai > 0';
-                  if (d > 1000) return 'Maksimal 1000 cm/tahun';
+                  // FIX 7: Maksimal 300 cm/tahun (bukan 1000)
+                  // Tidak ada pohon yang realistis tumbuh >300 cm/tahun
+                  if (d > 300) return 'Maksimal 300 cm/tahun';
                   return null;
                 },
               ),
               const SizedBox(height: 32),
-              
-              // Buttons
               Row(
                 children: [
                   Expanded(
@@ -415,13 +311,18 @@ class _TreeGrowthFormPageState extends State<TreeGrowthFormPage> {
                         style: OutlinedButton.styleFrom(
                           backgroundColor: Colors.white,
                           foregroundColor: const Color(0xFF2E5D6F),
-                          side: const BorderSide(color: Color(0xFF2E5D6F), width: 2),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(25)),
+                          side: const BorderSide(
+                              color: Color(0xFF2E5D6F), width: 2),
+                          shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(25)),
                         ),
-                        onPressed: _isLoading ? null : () => Navigator.of(context).pop(),
+                        onPressed: _isLoading
+                            ? null
+                            : () => Navigator.of(context).pop(),
                         child: const Text(
                           'Batal',
-                          style: TextStyle(fontWeight: FontWeight.w600, fontSize: 16),
+                          style: TextStyle(
+                              fontWeight: FontWeight.w600, fontSize: 16),
                         ),
                       ),
                     ),
@@ -434,7 +335,8 @@ class _TreeGrowthFormPageState extends State<TreeGrowthFormPage> {
                         style: ElevatedButton.styleFrom(
                           backgroundColor: const Color(0xFF2E5D6F),
                           foregroundColor: Colors.white,
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(25)),
+                          shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(25)),
                         ),
                         onPressed: _isLoading ? null : _saveData,
                         child: _isLoading
@@ -443,17 +345,14 @@ class _TreeGrowthFormPageState extends State<TreeGrowthFormPage> {
                                 height: 20,
                                 child: CircularProgressIndicator(
                                   strokeWidth: 2,
-                                  valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                                  valueColor: AlwaysStoppedAnimation<Color>(
+                                      Colors.white),
                                 ),
                               )
-                            : Row(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  Text(
-                                    isEdit ? 'Perbarui' : 'Simpan',
-                                    style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 16),
-                                  ),
-                                ],
+                            : Text(
+                                isEdit ? 'Perbarui' : 'Simpan',
+                                style: const TextStyle(
+                                    fontWeight: FontWeight.w600, fontSize: 16),
                               ),
                       ),
                     ),
@@ -499,7 +398,7 @@ class _TreeGrowthFormPageState extends State<TreeGrowthFormPage> {
               borderRadius: BorderRadius.all(Radius.circular(8)),
             ),
             contentPadding: EdgeInsets.all(16),
-            ),
+          ),
         ),
       ],
     );

@@ -7,7 +7,6 @@ import 'package:intl/intl.dart';
 import '../../models/data_pohon.dart';
 import '../../models/eksekusi.dart';
 import '../../providers/eksekusi_provider.dart';
-// import '../../constants/colors.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../models/growth_prediction.dart';
 
@@ -23,6 +22,7 @@ class EksekusiPage extends StatefulWidget {
 class _EksekusiPageState extends State<EksekusiPage> {
   final _formKey = GlobalKey<FormState>();
   String _selectedAction = 'Tebang Pangkas';
+  // FIX: Pre-fill dikosongkan — teknisi wajib input tinggi setelah dipangkas
   final TextEditingController _heightController = TextEditingController();
   final TextEditingController _diameterController = TextEditingController(text: '200');
   final TextEditingController _dateController = TextEditingController();
@@ -36,14 +36,13 @@ class _EksekusiPageState extends State<EksekusiPage> {
   @override
   void initState() {
     super.initState();
-    // Set default _selectedAction based on DataPohon.tujuanPenjadwalan
     _selectedAction = widget.pohon.tujuanPenjadwalan == 1
         ? 'Tebang Pangkas'
         : widget.pohon.tujuanPenjadwalan == 2
             ? 'Tebang Habis'
-            : 'Tebang Pangkas'; // Default to Tebang Pangkas if tujuanPenjadwalan is not 1 or 2
-    _heightController.text = widget.pohon.initialHeight.toStringAsFixed(1);
-    // Prefill with latest predicted schedule date (fallback to tree's original scheduleDate)
+            : 'Tebang Pangkas';
+    // FIX: Tidak pre-fill tinggi dari initialHeight
+    // Teknisi harus input sendiri tinggi pohon setelah dipangkas
     _prefillExecutionDate();
     _checkAccess();
   }
@@ -70,7 +69,6 @@ class _EksekusiPageState extends State<EksekusiPage> {
         _accessChecked = true;
       });
       if (!allowed && mounted) {
-        // Tampilkan info dan kembali
         WidgetsBinding.instance.addPostFrameCallback((_) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(content: Text('Akses ditolak: pohon bukan dalam unit Anda')),
@@ -80,7 +78,7 @@ class _EksekusiPageState extends State<EksekusiPage> {
       }
     } catch (_) {
       setState(() {
-        _isAllowed = true; // fallback aman
+        _isAllowed = true;
         _accessChecked = true;
       });
     }
@@ -131,9 +129,7 @@ class _EksekusiPageState extends State<EksekusiPage> {
                   Navigator.of(context).pop();
                   final XFile? image = await _picker.pickImage(source: ImageSource.camera);
                   if (image != null) {
-                    setState(() {
-                      _selectedImage = File(image.path);
-                    });
+                    setState(() => _selectedImage = File(image.path));
                   }
                 },
               ),
@@ -144,9 +140,7 @@ class _EksekusiPageState extends State<EksekusiPage> {
                   Navigator.of(context).pop();
                   final XFile? image = await _picker.pickImage(source: ImageSource.gallery);
                   if (image != null) {
-                    setState(() {
-                      _selectedImage = File(image.path);
-                    });
+                    setState(() => _selectedImage = File(image.path));
                   }
                 },
               ),
@@ -157,12 +151,9 @@ class _EksekusiPageState extends State<EksekusiPage> {
     );
   }
 
-
   Future<void> _saveEksekusi() async {
-    if (!_formKey.currentState!.validate()) {
-      return;
-    }
-    // Require image for both Tebang Pangkas and Tebang Habis
+    if (!_formKey.currentState!.validate()) return;
+
     if (_selectedImage == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Foto setelah eksekusi wajib diisi')),
@@ -170,12 +161,9 @@ class _EksekusiPageState extends State<EksekusiPage> {
       return;
     }
 
-    setState(() {
-      _isLoading = true;
-    });
+    setState(() => _isLoading = true);
 
     try {
-      // Use the selected date from the field (editable), default time 09:00 WITA
       final rawInput = _dateController.text.trim();
       DateTime? selectedDate;
       try {
@@ -187,20 +175,19 @@ class _EksekusiPageState extends State<EksekusiPage> {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Tanggal eksekusi tidak valid. Gunakan format DD/MM/YYYY.')),
         );
-        setState(() { _isLoading = false; });
+        setState(() => _isLoading = false);
         return;
       }
       final formattedTanggalEksekusi = '${_formatDate(selectedDate)} 09:00 WITA';
 
-      // Ambil user doc ID dari session untuk createdBy
       final prefs = await SharedPreferences.getInstance();
       final creatorId = prefs.getString('session_id') ?? '';
 
       final eksekusi = Eksekusi(
         id: '',
-        dataPohonId: widget.pohon.id, // References DataPohon.id
-        statusEksekusi: _selectedAction == 'Tebang Pangkas' ? 1 : 2, // Maps to 1=Tebang Pangkas, 2=Tebang Habis
-        tanggalEksekusi: formattedTanggalEksekusi, // Store as string
+        dataPohonId: widget.pohon.id,
+        statusEksekusi: _selectedAction == 'Tebang Pangkas' ? 1 : 2,
+        tanggalEksekusi: formattedTanggalEksekusi,
         fotoSetelah: null,
         createdBy: creatorId,
         createdDate: Timestamp.now(),
@@ -209,7 +196,8 @@ class _EksekusiPageState extends State<EksekusiPage> {
         diameterPohon: double.tryParse(_diameterController.text) ?? 0.0,
       );
 
-      await Provider.of<EksekusiProvider>(context, listen: false).addEksekusi(eksekusi, _selectedImage!); // Use non-nullable File
+      await Provider.of<EksekusiProvider>(context, listen: false)
+          .addEksekusi(eksekusi, _selectedImage!);
       if (!mounted) return;
 
       showDialog(
@@ -245,25 +233,17 @@ class _EksekusiPageState extends State<EksekusiPage> {
         ),
       );
     } finally {
-      if (mounted) {
-        setState(() {
-          _isLoading = false;
-        });
-      }
+      if (mounted) setState(() => _isLoading = false);
     }
   }
 
   @override
   Widget build(BuildContext context) {
     if (!_accessChecked) {
-      return const Scaffold(
-        body: Center(child: CircularProgressIndicator()),
-      );
+      return const Scaffold(body: Center(child: CircularProgressIndicator()));
     }
     if (!_isAllowed) {
-      return const Scaffold(
-        body: Center(child: Text('Akses ditolak untuk pohon ini')),
-      );
+      return const Scaffold(body: Center(child: Text('Akses ditolak untuk pohon ini')));
     }
     final screenWidth = MediaQuery.of(context).size.width;
     final screenHeight = MediaQuery.of(context).size.height;
@@ -283,7 +263,6 @@ class _EksekusiPageState extends State<EksekusiPage> {
             fontWeight: FontWeight.bold,
           ),
         ),
-        actions: const [],
       ),
       body: Stack(
         children: [
@@ -314,7 +293,8 @@ class _EksekusiPageState extends State<EksekusiPage> {
                             padding: const EdgeInsets.all(16.0),
                             child: Center(
                               child: Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 12, vertical: 4),
                                 decoration: BoxDecoration(
                                   color: widget.pohon.prioritas == 1
                                       ? Colors.green
@@ -330,405 +310,58 @@ class _EksekusiPageState extends State<EksekusiPage> {
                                     color: Colors.black,
                                     fontWeight: FontWeight.bold,
                                   ),
-                                  textAlign: TextAlign.center,
                                 ),
                               ),
                             ),
                           ),
-                          Padding(
-                            padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
-                            child: Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  'ID Pohon',
-                                  style: TextStyle(
-                                    fontSize: screenWidth * 0.04,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                                Flexible(
-                                  child: Text(
-                                    widget.pohon.idPohon.isNotEmpty ? widget.pohon.idPohon : 'P023',
-                                    style: TextStyle(
-                                      fontSize: screenWidth * 0.04,
-                                    ),
-                                    softWrap: true,
-                                    textAlign: TextAlign.end,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                          Padding(
-                            padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
-                            child: Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  'UP3',
-                                  style: TextStyle(
-                                    fontSize: screenWidth * 0.04,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                                Flexible(
-                                  child: Text(
-                                    widget.pohon.up3.isNotEmpty ? widget.pohon.up3 : '-',
-                                    style: TextStyle(
-                                      fontSize: screenWidth * 0.04,
-                                    ),
-                                    softWrap: true,
-                                    textAlign: TextAlign.end,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                          Padding(
-                            padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
-                            child: Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  'ULP',
-                                  style: TextStyle(
-                                    fontSize: screenWidth * 0.04,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                                Flexible(
-                                  child: Text(
-                                    widget.pohon.ulp.isNotEmpty ? widget.pohon.ulp : '-',
-                                    style: TextStyle(
-                                      fontSize: screenWidth * 0.04,
-                                    ),
-                                    softWrap: true,
-                                    textAlign: TextAlign.end,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                          Padding(
-                            padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
-                            child: Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  'Penyulang',
-                                  style: TextStyle(
-                                    fontSize: screenWidth * 0.04,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                                Flexible(
-                                  child: Text(
-                                    widget.pohon.penyulang.isNotEmpty ? widget.pohon.penyulang : 'Tidak tersedia',
-                                    style: TextStyle(
-                                      fontSize: screenWidth * 0.04,
-                                    ),
-                                    softWrap: true,
-                                    textAlign: TextAlign.end,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                          Padding(
-                            padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
-                            child: Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  'Zona Proteksi',
-                                  style: TextStyle(
-                                    fontSize: screenWidth * 0.04,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                                Flexible(
-                                  child: Text(
-                                    widget.pohon.zonaProteksi.isNotEmpty ? widget.pohon.zonaProteksi : '-',
-                                    style: TextStyle(
-                                      fontSize: screenWidth * 0.04,
-                                    ),
-                                    softWrap: true,
-                                    textAlign: TextAlign.end,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                          Padding(
-                            padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
-                            child: Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  'Section',
-                                  style: TextStyle(
-                                    fontSize: screenWidth * 0.04,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                                Flexible(
-                                  child: Text(
-                                    widget.pohon.section.isNotEmpty ? widget.pohon.section : '-',
-                                    style: TextStyle(
-                                      fontSize: screenWidth * 0.04,
-                                    ),
-                                    softWrap: true,
-                                    textAlign: TextAlign.end,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                          Padding(
-                            padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
-                            child: Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  'KMS Aset',
-                                  style: TextStyle(
-                                    fontSize: screenWidth * 0.04,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                                Flexible(
-                                  child: Text(
-                                    widget.pohon.kmsAset.isNotEmpty ? widget.pohon.kmsAset : '-',
-                                    style: TextStyle(
-                                      fontSize: screenWidth * 0.04,
-                                    ),
-                                    softWrap: true,
-                                    textAlign: TextAlign.end,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                          Padding(
-                            padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
-                            child: Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  'Vendor',
-                                  style: TextStyle(
-                                    fontSize: screenWidth * 0.04,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                                Flexible(
-                                  child: Text(
-                                    widget.pohon.vendor.isNotEmpty ? widget.pohon.vendor : '-',
-                                    style: TextStyle(
-                                      fontSize: screenWidth * 0.04,
-                                    ),
-                                    softWrap: true,
-                                    textAlign: TextAlign.end,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                          Padding(
-                            padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
-                            child: Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  'Koordinat',
-                                  style: TextStyle(
-                                    fontSize: screenWidth * 0.04,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                                Flexible(
-                                  child: Text(
-                                    widget.pohon.koordinat.isNotEmpty ? widget.pohon.koordinat : '-',
-                                    style: TextStyle(
-                                      fontSize: screenWidth * 0.04,
-                                    ),
-                                    softWrap: true,
-                                    textAlign: TextAlign.end,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                          Padding(
-                            padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
-                            child: Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  'Tanggal Penjadwalan',
-                                  style: TextStyle(
-                                    fontSize: screenWidth * 0.04,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                                Flexible(
-                                  child: Text(
-                                    _formatDate((_latestPlannedDate ?? widget.pohon.scheduleDate)),
-                                    style: TextStyle(
-                                      fontSize: screenWidth * 0.04,
-                                    ),
-                                    softWrap: true,
-                                    textAlign: TextAlign.end,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                          Padding(
-                            padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
-                            child: Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  'Tujuan Penjadwalan',
-                                  style: TextStyle(
-                                    fontSize: screenWidth * 0.04,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                                Flexible(
-                                  child: Text(
-                  widget.pohon.tujuanPenjadwalan == 1
-                    ? 'Tebang Pangkas'
-                    : widget.pohon.tujuanPenjadwalan == 2
-                      ? 'Tebang Habis'
-                      : 'Tidak diketahui',
-                                    style: TextStyle(
-                                      fontSize: screenWidth * 0.04,
-                                    ),
-                                    softWrap: true,
-                                    textAlign: TextAlign.end,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                          Padding(
-                            padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
-                            child: Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  'Laju Pertumbuhan',
-                                  style: TextStyle(
-                                    fontSize: screenWidth * 0.04,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                                Flexible(
-                                  child: Text(
-                                    '${widget.pohon.growthRate} cm/tahun',
-                                    style: TextStyle(
-                                      fontSize: screenWidth * 0.04,
-                                    ),
-                                    softWrap: true,
-                                    textAlign: TextAlign.end,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                          Padding(
-                            padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
-                            child: Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  'Tinggi Awal',
-                                  style: TextStyle(
-                                    fontSize: screenWidth * 0.04,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                                Flexible(
-                                  child: Text(
-                                    '${widget.pohon.initialHeight} m',
-                                    style: TextStyle(
-                                      fontSize: screenWidth * 0.04,
-                                    ),
-                                    softWrap: true,
-                                    textAlign: TextAlign.end,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                          Padding(
-                            padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
-                            child: Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  'Catatan',
-                                  style: TextStyle(
-                                    fontSize: screenWidth * 0.04,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                                Flexible(
-                                  child: Text(
-                                    widget.pohon.catatan.isNotEmpty ? widget.pohon.catatan : '-',
-                                    style: TextStyle(
-                                      fontSize: screenWidth * 0.04,
-                                    ),
-                                    softWrap: true,
-                                    textAlign: TextAlign.end,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                          Padding(
-                            padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
-                            child: Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  'Nama Pohon',
-                                  style: TextStyle(
-                                    fontSize: screenWidth * 0.04,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                                Flexible(
-                                  child: Text(
-                                    widget.pohon.namaPohon.isNotEmpty ? widget.pohon.namaPohon : 'Tidak tersedia',
-                                    style: TextStyle(
-                                      fontSize: screenWidth * 0.04,
-                                    ),
-                                    softWrap: true,
-                                    textAlign: TextAlign.end,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
+                          _infoRow('ID Pohon',
+                              widget.pohon.idPohon.isNotEmpty ? widget.pohon.idPohon : 'P023',
+                              screenWidth),
+                          _infoRow('UP3',
+                              widget.pohon.up3.isNotEmpty ? widget.pohon.up3 : '-',
+                              screenWidth),
+                          _infoRow('ULP',
+                              widget.pohon.ulp.isNotEmpty ? widget.pohon.ulp : '-',
+                              screenWidth),
+                          _infoRow('Penyulang',
+                              widget.pohon.penyulang.isNotEmpty ? widget.pohon.penyulang : '-',
+                              screenWidth),
+                          _infoRow('Zona Proteksi',
+                              widget.pohon.zonaProteksi.isNotEmpty ? widget.pohon.zonaProteksi : '-',
+                              screenWidth),
+                          _infoRow('Section',
+                              widget.pohon.section.isNotEmpty ? widget.pohon.section : '-',
+                              screenWidth),
+                          _infoRow('KMS Aset',
+                              widget.pohon.kmsAset.isNotEmpty ? widget.pohon.kmsAset : '-',
+                              screenWidth),
+                          _infoRow('Vendor',
+                              widget.pohon.vendor.isNotEmpty ? widget.pohon.vendor : '-',
+                              screenWidth),
+                          _infoRow('Koordinat',
+                              widget.pohon.koordinat.isNotEmpty ? widget.pohon.koordinat : '-',
+                              screenWidth),
+                          _infoRow('Tanggal Penjadwalan',
+                              _formatDate(_latestPlannedDate ?? widget.pohon.scheduleDate),
+                              screenWidth),
+                          _infoRow(
+                              'Tujuan Penjadwalan',
+                              widget.pohon.tujuanPenjadwalan == 1
+                                  ? 'Tebang Pangkas'
+                                  : widget.pohon.tujuanPenjadwalan == 2
+                                      ? 'Tebang Habis'
+                                      : 'Tidak diketahui',
+                              screenWidth),
+                          _infoRow('Laju Pertumbuhan',
+                              '${widget.pohon.growthRate} cm/tahun', screenWidth),
+                          _infoRow('Tinggi Awal',
+                              '${widget.pohon.initialHeight} m', screenWidth),
+                          _infoRow('Catatan',
+                              widget.pohon.catatan.isNotEmpty ? widget.pohon.catatan : '-',
+                              screenWidth),
+                          _infoRow('Nama Pohon',
+                              widget.pohon.namaPohon.isNotEmpty ? widget.pohon.namaPohon : '-',
+                              screenWidth),
                         ],
                       ),
                     ),
@@ -750,11 +383,13 @@ class _EksekusiPageState extends State<EksekusiPage> {
                             ),
                           ),
                           const SizedBox(height: 10),
+                          // FIX: Label diubah menjadi "Tinggi Pohon Setelah Dipangkas"
+                          // Pre-fill dikosongkan — teknisi wajib input sendiri
                           Row(
                             children: [
                               const Icon(Icons.height, size: 20),
                               const SizedBox(width: 5),
-                              const Text('Tinggi Pohon'),
+                              const Text('Tinggi Pohon Setelah Dipangkas'),
                               const SizedBox(width: 10),
                               SizedBox(
                                 width: screenWidth * 0.2,
@@ -762,16 +397,17 @@ class _EksekusiPageState extends State<EksekusiPage> {
                                   controller: _heightController,
                                   decoration: const InputDecoration(
                                     border: OutlineInputBorder(),
-                                    hintText: 'Masukkan tinggi',
+                                    hintText: 'Contoh: 4.5',
                                   ),
                                   keyboardType: TextInputType.number,
                                   validator: (value) {
                                     if (value == null || value.isEmpty) {
-                                      return 'Tinggi wajib diisi';
+                                      return 'Wajib diisi';
                                     }
-                                    if (double.tryParse(value) == null) {
-                                      return 'Masukkan angka valid';
-                                    }
+                                    final h = double.tryParse(value);
+                                    if (h == null) return 'Angka tidak valid';
+                                    if (h <= 0) return 'Harus > 0';
+                                    if (h > 10) return 'Maks 10 m';
                                     return null;
                                   },
                                 ),
@@ -824,7 +460,6 @@ class _EksekusiPageState extends State<EksekusiPage> {
                                     border: OutlineInputBorder(),
                                     hintText: 'DD/MM/YYYY',
                                   ),
-                                  // editable per request
                                   validator: (value) {
                                     if (value == null || value.isEmpty) {
                                       return 'Tanggal wajib diisi';
@@ -873,7 +508,8 @@ class _EksekusiPageState extends State<EksekusiPage> {
                           const SizedBox(height: 6),
                           _ActionDropdown(
                             value: _selectedAction,
-                            onChanged: (val) => setState(() => _selectedAction = val ?? _selectedAction),
+                            onChanged: (val) =>
+                                setState(() => _selectedAction = val ?? _selectedAction),
                           ),
                         ],
                       ),
@@ -936,9 +572,35 @@ class _EksekusiPageState extends State<EksekusiPage> {
       ),
     );
   }
+
+  Widget _infoRow(String label, String value, double screenWidth) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            label,
+            style: TextStyle(
+              fontSize: screenWidth * 0.04,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          Flexible(
+            child: Text(
+              value,
+              style: TextStyle(fontSize: screenWidth * 0.04),
+              softWrap: true,
+              textAlign: TextAlign.end,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 }
 
-/// Local action dropdown mimicking Add Data's CustomDropdown behavior
 class _ActionDropdown extends StatefulWidget {
   final String? value;
   final ValueChanged<String?> onChanged;
@@ -949,7 +611,8 @@ class _ActionDropdown extends StatefulWidget {
   State<_ActionDropdown> createState() => _ActionDropdownState();
 }
 
-class _ActionDropdownState extends State<_ActionDropdown> with SingleTickerProviderStateMixin {
+class _ActionDropdownState extends State<_ActionDropdown>
+    with SingleTickerProviderStateMixin {
   bool isExpanded = false;
   late AnimationController _controller;
   OverlayEntry? _overlayEntry;
@@ -960,7 +623,8 @@ class _ActionDropdownState extends State<_ActionDropdown> with SingleTickerProvi
   @override
   void initState() {
     super.initState();
-    _controller = AnimationController(duration: const Duration(milliseconds: 200), vsync: this);
+    _controller = AnimationController(
+        duration: const Duration(milliseconds: 200), vsync: this);
   }
 
   @override
@@ -976,7 +640,8 @@ class _ActionDropdownState extends State<_ActionDropdown> with SingleTickerProvi
     setState(() => isExpanded = true);
     _controller.forward();
 
-    final renderBox = _dropdownKey.currentContext!.findRenderObject() as RenderBox;
+    final renderBox =
+        _dropdownKey.currentContext!.findRenderObject() as RenderBox;
     _overlayEntry = OverlayEntry(
       builder: (context) => Positioned(
         width: renderBox.size.width,
@@ -1011,7 +676,9 @@ class _ActionDropdownState extends State<_ActionDropdown> with SingleTickerProvi
                       child: Container(
                         padding: const EdgeInsets.all(16),
                         decoration: BoxDecoration(
-                          color: widget.value == _items[index] ? const Color(0xFFF0F9FF) : null,
+                          color: widget.value == _items[index]
+                              ? const Color(0xFFF0F9FF)
+                              : null,
                         ),
                         child: Text(
                           _items[index],
@@ -1076,14 +743,17 @@ class _ActionDropdownState extends State<_ActionDropdown> with SingleTickerProvi
                       widget.value ?? 'Pilih aksi',
                       style: TextStyle(
                         fontSize: 16,
-                        color: widget.value != null ? Colors.black87 : Colors.grey.shade500,
+                        color: widget.value != null
+                            ? Colors.black87
+                            : Colors.grey.shade500,
                       ),
                     ),
                   ),
                   AnimatedRotation(
                     turns: isExpanded ? 0.5 : 0,
                     duration: const Duration(milliseconds: 200),
-                    child: Icon(Icons.keyboard_arrow_down, color: Colors.grey.shade600),
+                    child: Icon(Icons.keyboard_arrow_down,
+                        color: Colors.grey.shade600),
                   ),
                 ],
               ),

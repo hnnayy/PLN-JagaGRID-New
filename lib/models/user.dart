@@ -1,34 +1,36 @@
 class UserModel {
-  final String? id; // Firestore document ID
+  final String? id;
   final String name;
   final String username;
   final String unit;
-  final int level; // Field baru: 1 = unit induk, 2 = unit layanan
+  final String kodeUnit; // ← field baru: kode unit otomatis dari UnitModel
+  final int level; // 1 = unit induk, 2 = unit layanan
   final String added;
   final String password;
-  final String usernameTelegram; // Perbaikan nama field
-  final String chatIdTelegram; // Perbaikan nama field
-  final int status; // Field baru: 1 = aktif, 0 = terhapus
+  final String usernameTelegram;
+  final String chatIdTelegram;
+  final int status; // 1 = aktif, 0 = terhapus (soft delete)
 
   UserModel({
     this.id,
     required this.name,
     required this.username,
     required this.unit,
+    this.kodeUnit = '',
     required this.level,
     required this.added,
     required this.password,
     required this.usernameTelegram,
     required this.chatIdTelegram,
-    this.status = 1, // Default aktif
+    this.status = 1,
   });
 
-  /// Buat copy data dengan nilai baru
   UserModel copyWith({
     String? id,
     String? name,
     String? username,
     String? unit,
+    String? kodeUnit,
     int? level,
     String? added,
     String? password,
@@ -41,6 +43,7 @@ class UserModel {
       name: name ?? this.name,
       username: username ?? this.username,
       unit: unit ?? this.unit,
+      kodeUnit: kodeUnit ?? this.kodeUnit,
       level: level ?? this.level,
       added: added ?? this.added,
       password: password ?? this.password,
@@ -57,13 +60,13 @@ class UserModel {
       name: map['name'] ?? '',
       username: map['username'] ?? '',
       unit: map['unit'] ?? '',
-      level: map['level'] ?? 2, // Default level 2 jika tidak ada
+      kodeUnit: map['kode_unit'] ?? '',
+      level: map['level'] ?? 2,
       added: map['added'] ?? '',
       password: map['password'] ?? '',
-      // Perbaikan: gunakan field name yang konsisten dengan database
       usernameTelegram: map['username_telegram'] ?? '',
       chatIdTelegram: map['chat_id_telegram'] ?? '',
-      status: map['status'] ?? 1, // Default aktif jika tidak ada
+      status: map['status'] ?? 1,
     );
   }
 
@@ -73,23 +76,23 @@ class UserModel {
       'name': name,
       'username': username,
       'unit': unit,
+      'kode_unit': kodeUnit,
       'level': level,
       'added': added,
       'password': password,
-      // Perbaikan: simpan dengan field name yang konsisten
       'username_telegram': usernameTelegram,
       'chat_id_telegram': chatIdTelegram,
       'status': status,
     };
   }
 
-  /// Convert dari JSON (misalnya API → App)
   factory UserModel.fromJson(Map<String, dynamic> json) {
     return UserModel(
       id: json['id'],
       name: json['name'] ?? '',
       username: json['username'] ?? '',
       unit: json['unit'] ?? '',
+      kodeUnit: json['kode_unit'] ?? '',
       level: json['level'] ?? 2,
       added: json['added'] ?? '',
       password: json['password'] ?? '',
@@ -99,13 +102,13 @@ class UserModel {
     );
   }
 
-  /// Convert ke JSON (App → API / simpan lokal)
   Map<String, dynamic> toJson() {
     return {
       'id': id,
       'name': name,
       'username': username,
       'unit': unit,
+      'kode_unit': kodeUnit,
       'level': level,
       'added': added,
       'password': password,
@@ -115,23 +118,17 @@ class UserModel {
     };
   }
 
-  /// Helper methods untuk status
   bool get isActive => status == 1;
   bool get isDeleted => status == 0;
-
-  /// Helper methods untuk level
   bool get isInduk => level == 1;
   bool get isLayanan => level == 2;
 
-  /// Method untuk soft delete
   UserModel markAsDeleted() => copyWith(status: 0);
-  
-  /// Method untuk restore
   UserModel markAsActive() => copyWith(status: 1);
 
   @override
   String toString() {
-    return 'UserModel(id: $id, name: $name, username: $username, unit: $unit, level: $level, status: $status)';
+    return 'UserModel(id: $id, name: $name, username: $username, unit: $unit, kodeUnit: $kodeUnit, level: $level, status: $status)';
   }
 
   @override
@@ -142,6 +139,7 @@ class UserModel {
         other.name == name &&
         other.username == username &&
         other.unit == unit &&
+        other.kodeUnit == kodeUnit &&
         other.level == level &&
         other.added == added &&
         other.password == password &&
@@ -153,16 +151,9 @@ class UserModel {
   @override
   int get hashCode {
     return Object.hash(
-      id,
-      name,
-      username,
-      unit,
-      level,
-      added,
-      password,
-      usernameTelegram,
-      chatIdTelegram,
-      status,
+      id, name, username, unit, kodeUnit,
+      level, added, password, usernameTelegram,
+      chatIdTelegram, status,
     );
   }
 }
