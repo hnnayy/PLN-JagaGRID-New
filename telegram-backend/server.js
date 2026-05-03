@@ -5,19 +5,38 @@ const admin = require("firebase-admin");
 const app = express();
 app.use(express.json());
 
-// 🔴 ISI TOKEN BOT KAMU DI SINI
-const TELEGRAM_TOKEN = "ISI_TOKEN_KAMU";
+// 🔐 Ambil dari Railway Variables
+const TELEGRAM_TOKEN = process.env.TELEGRAM_TOKEN;
 
-// 🔴 SETUP FIREBASE
-const serviceAccount = require("./serviceAccountKey.json");
+console.log("🔥 STARTING APP...");
+console.log("TOKEN ADA:", TELEGRAM_TOKEN ? "YA" : "TIDAK");
+console.log("FIREBASE_KEY ADA:", process.env.FIREBASE_KEY ? "YA" : "TIDAK");
 
-admin.initializeApp({
-  credential: admin.credential.cert(serviceAccount),
-});
+// 🔐 SAFE PARSE FIREBASE KEY (ANTI CRASH)
+let serviceAccount;
+try {
+  serviceAccount = JSON.parse(process.env.FIREBASE_KEY);
+} catch (e) {
+  console.error("❌ FIREBASE_KEY ERROR:", e.message);
+}
+
+// 🔴 INIT FIREBASE (cek dulu sebelum init)
+if (serviceAccount) {
+  admin.initializeApp({
+    credential: admin.credential.cert(serviceAccount),
+  });
+} else {
+  console.error("❌ Firebase tidak diinisialisasi");
+}
 
 const db = admin.firestore();
 
-// ✅ WEBHOOK ENDPOINT
+// ✅ TEST ENDPOINT
+app.get("/webhook", (req, res) => {
+  res.send("Webhook aktif ✅");
+});
+
+// ✅ WEBHOOK TELEGRAM
 app.post("/webhook", async (req, res) => {
   try {
     const message = req.body.message;
@@ -30,14 +49,23 @@ app.post("/webhook", async (req, res) => {
 
     console.log("📩 Message:", text);
 
-    // ✅ SIMPAN KE FIRESTORE
-    await db.collection("telegram_users").doc(chatId.toString()).set({
-      chat_id: chatId.toString(),
-      username: username,
-      created_at: admin.firestore.FieldValue.serverTimestamp(),
-    });
+    // ✅ SIMPAN KE FIRESTORE (cek dulu)
+    if (db) {
+      await db.collection("telegram_users").doc(chatId.toString()).set({
+        chat_id: chatId.toString(),
+        username,
+        created_at: admin.firestore.FieldValue.serverTimestamp(),
+      });
+    } else {
+      console.log("⚠️ Firestore tidak aktif");
+    }
 
-    // ✅ BALAS KE USER
+    // ✅ BALAS KE TELEGRAM
+    if (!TELEGRAM_TOKEN) {
+      console.error("❌ TOKEN KOSONG");
+      return res.send("token error");
+    }
+
     await fetch(`https://api.telegram.org/bot${TELEGRAM_TOKEN}/sendMessage`, {
       method: "POST",
       headers: {
@@ -51,12 +79,13 @@ app.post("/webhook", async (req, res) => {
 
     res.send("ok");
   } catch (err) {
-    console.error(err);
+    console.error("❌ Error:", err);
     res.status(500).send("error");
   }
 });
 
-// RUN SERVER
-app.listen(3000, () => {
-  console.log("🚀 Server jalan di port 3000");
+// ✅ WAJIB untuk Railway
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => {
+  console.log("🚀 Server jalan di port", PORT);
 });

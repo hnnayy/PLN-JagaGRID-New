@@ -1,12 +1,13 @@
 # Node
 node_modules/
-telegram-backend/node_modules/
-functions/node_modules/
+**/node_modules/
 
 # Flutter / Dart
 build/
 .dart_tool/
 .packages
+.pub/
+.pub-cache/
 
 # Flutter generated
 **/generated_plugin_registrant.*
@@ -19,3 +20,7 @@ build/
 # Env (SECRET!)
 .env
 serviceAccountKey.json
+
+# OS files
+.DS_Store
+Thumbs.db
