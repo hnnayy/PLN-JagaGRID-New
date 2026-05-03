@@ -1,6 +1,6 @@
 const express = require("express");
 const fetch = require("node-fetch");
-const admin = require("firebase-admin");
+// const admin = require("firebase-admin"); ❌ dimatiin dulu
 
 const app = express();
 app.use(express.json());
@@ -10,9 +10,9 @@ const TELEGRAM_TOKEN = process.env.TELEGRAM_TOKEN;
 
 console.log("🔥 STARTING APP...");
 console.log("TOKEN ADA:", TELEGRAM_TOKEN ? "YA" : "TIDAK");
-console.log("FIREBASE_KEY ADA:", process.env.FIREBASE_KEY ? "YA" : "TIDAK");
 
-// 🔐 SAFE PARSE FIREBASE KEY (ANTI CRASH)
+// ❌ MATIKAN SEMUA FIREBASE DULU
+/*
 let serviceAccount;
 try {
   serviceAccount = JSON.parse(process.env.FIREBASE_KEY);
@@ -20,7 +20,6 @@ try {
   console.error("❌ FIREBASE_KEY ERROR:", e.message);
 }
 
-// 🔴 INIT FIREBASE (cek dulu sebelum init)
 if (serviceAccount) {
   admin.initializeApp({
     credential: admin.credential.cert(serviceAccount),
@@ -30,6 +29,7 @@ if (serviceAccount) {
 }
 
 const db = admin.firestore();
+*/
 
 // ✅ TEST ENDPOINT
 app.get("/webhook", (req, res) => {
@@ -49,16 +49,7 @@ app.post("/webhook", async (req, res) => {
 
     console.log("📩 Message:", text);
 
-    // ✅ SIMPAN KE FIRESTORE (cek dulu)
-    if (db) {
-      await db.collection("telegram_users").doc(chatId.toString()).set({
-        chat_id: chatId.toString(),
-        username,
-        created_at: admin.firestore.FieldValue.serverTimestamp(),
-      });
-    } else {
-      console.log("⚠️ Firestore tidak aktif");
-    }
+    // ❌ SIMPAN FIRESTORE DIMATIKAN DULU
 
     // ✅ BALAS KE TELEGRAM
     if (!TELEGRAM_TOKEN) {
