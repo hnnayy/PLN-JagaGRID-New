@@ -1,35 +1,27 @@
 const express = require("express");
 const fetch = require("node-fetch");
-// const admin = require("firebase-admin"); ❌ dimatiin dulu
+const admin = require("firebase-admin");
 
 const app = express();
 app.use(express.json());
 
-// 🔐 Ambil dari Railway Variables
 const TELEGRAM_TOKEN = process.env.TELEGRAM_TOKEN;
 
 console.log("🔥 STARTING APP...");
 console.log("TOKEN ADA:", TELEGRAM_TOKEN ? "YA" : "TIDAK");
 
-// ❌ MATIKAN SEMUA FIREBASE DULU
-/*
-let serviceAccount;
+// ✅ Firebase Init
+let db;
 try {
-  serviceAccount = JSON.parse(process.env.FIREBASE_KEY);
-} catch (e) {
-  console.error("❌ FIREBASE_KEY ERROR:", e.message);
-}
-
-if (serviceAccount) {
+  const serviceAccount = JSON.parse(process.env.FIREBASE_KEY);
   admin.initializeApp({
     credential: admin.credential.cert(serviceAccount),
   });
-} else {
-  console.error("❌ Firebase tidak diinisialisasi");
+  db = admin.firestore();
+  console.log("✅ Firebase connected");
+} catch (e) {
+  console.error("❌ FIREBASE_KEY ERROR:", e.message);
 }
-
-const db = admin.firestore();
-*/
 
 // ✅ TEST ENDPOINT
 app.get("/webhook", (req, res) => {
@@ -40,28 +32,29 @@ app.get("/webhook", (req, res) => {
 app.post("/webhook", async (req, res) => {
   try {
     const message = req.body.message;
-
     if (!message) return res.send("ok");
 
-    const chatId = message.chat.id;
+    const chatId = String(message.chat.id);
     const username = message.from.username || "";
     const text = message.text;
 
-    console.log("📩 Message:", text);
+    console.log("📩 Message:", text, "dari:", username);
 
-    // ❌ SIMPAN FIRESTORE DIMATIKAN DULU
-
-    // ✅ BALAS KE TELEGRAM
-    if (!TELEGRAM_TOKEN) {
-      console.error("❌ TOKEN KOSONG");
-      return res.send("token error");
+    // ✅ Simpan ke Firestore
+    if (db && username) {
+      await db.collection("telegram_users").doc(username).set({
+        username_telegram: username,
+        chat_id: chatId,
+        last_message: text,
+        updated_at: admin.firestore.FieldValue.serverTimestamp(),
+      }, { merge: true });
+      console.log("✅ Tersimpan:", username, chatId);
     }
 
+    // ✅ Balas ke Telegram
     await fetch(`https://api.telegram.org/bot${TELEGRAM_TOKEN}/sendMessage`, {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         chat_id: chatId,
         text: "✅ Kamu sudah terhubung ke PLN JagaGRID!",
@@ -75,7 +68,6 @@ app.post("/webhook", async (req, res) => {
   }
 });
 
-// ✅ WAJIB untuk Railway
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
   console.log("🚀 Server jalan di port", PORT);
