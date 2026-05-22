@@ -47,7 +47,6 @@ function formatTanggalIndo(date) {
 
 // ─────────────────────────────────────────
 // HELPER: Kirim Telegram ke user sesuai ULP
-// Support inline button Maps
 // ─────────────────────────────────────────
 async function sendTelegramToUlp({ up3, ulp, message, koordinat }) {
   try {
@@ -59,7 +58,6 @@ async function sendTelegramToUlp({ up3, ulp, message, koordinat }) {
     const nUp3 = norm(up3);
     const nUlp = norm(ulp);
 
-    // Buat inline button Maps jika ada koordinat
     let replyMarkup = null;
     if (koordinat) {
       const parts = koordinat.split(",");
@@ -81,18 +79,16 @@ async function sendTelegramToUlp({ up3, ulp, message, koordinat }) {
       const user = userDoc.data();
       const chatId = (user.chat_id_telegram || "").toString().trim();
 
-      // Validasi chat ID numeric
       if (!chatId || !/^-?\d{8,20}$/.test(chatId)) continue;
 
       const level = parseInt(user.level || 2);
       const nUnit = norm(user.unit);
 
-      // Level 2 → hanya unit sendiri | Level 1 → semua
       if (level === 2 && nUnit !== nUp3 && nUnit !== nUlp) continue;
 
       try {
         const body = {
-          chat_id: chatId,
+          chat_id: parseInt(chatId), // ✅ FIX: selalu integer ke Telegram API
           text: message,
           parse_mode: "Markdown",
         };
@@ -189,7 +185,6 @@ Jadwal     : ${scheduleStr}
 Segera lakukan persiapan eksekusi.
 _PLN JagaGRID_`;
 
-      // Notif app — ringkas tanpa Markdown
       const appTitle = `Pengingat H-3 — ${data.nama_pohon || "-"}`;
       const appMessage = `${data.id_pohon || "-"} • ${ulpFormatted} • Jadwal: ${scheduleStr}`;
 
@@ -233,12 +228,10 @@ _PLN JagaGRID_`;
       } catch (_) {}
       if (!nextExecDate) continue;
 
-      // Cek apakah H-3 sudah tiba
       const h3Date = new Date(nextExecDate);
       h3Date.setDate(h3Date.getDate() - 3);
       if (h3Date > now) continue;
 
-      // Ambil data pohon
       let pohonData = null;
       try {
         const pohonDoc = await db.collection("data_pohon")
@@ -263,7 +256,6 @@ Siklus     : ${pred.repetition_cycle || "-"}
 Segera lakukan persiapan eksekusi.
 _PLN JagaGRID_`;
 
-      // Notif app — ringkas
       const appTitle = `Pengingat H-3 — ${pohonData.nama_pohon || "-"}`;
       const appMessage = `${pohonData.id_pohon || "-"} • ${ulpFormatted} • Jadwal: ${scheduleStr}`;
 
@@ -301,8 +293,7 @@ cron.schedule("0 23 * * *", async () => {
 }, { timezone: "UTC" });
 
 // ─────────────────────────────────────────
-// ENDPOINT: Manual trigger untuk testing
-// GET /trigger-h3
+// ENDPOINT: Manual trigger
 // ─────────────────────────────────────────
 app.get("/trigger-h3", async (req, res) => {
   console.log("🔧 Manual trigger H-3...");
@@ -311,7 +302,7 @@ app.get("/trigger-h3", async (req, res) => {
 });
 
 // ─────────────────────────────────────────
-// WEBHOOK TELEGRAM (tetap ada)
+// WEBHOOK TELEGRAM
 // ─────────────────────────────────────────
 app.get("/webhook", (req, res) => {
   res.send("Webhook aktif ✅");
@@ -322,7 +313,8 @@ app.post("/webhook", async (req, res) => {
     const message = req.body.message;
     if (!message) return res.send("ok");
 
-    const chatId = String(message.chat.id);
+    // ✅ FIX: simpan integer bukan string
+    const chatId = message.chat.id; // ✅ integer langsung dari Telegram
     const username = message.from.username || "";
     const text = message.text;
 
@@ -331,7 +323,7 @@ app.post("/webhook", async (req, res) => {
     if (db && username) {
       await db.collection("telegram_users").doc(username).set({
         username_telegram: username,
-        chat_id: chatId,
+        chat_id: chatId, // ✅ integer
         last_message: text,
         updated_at: admin.firestore.FieldValue.serverTimestamp(),
       }, { merge: true });
@@ -342,7 +334,7 @@ app.post("/webhook", async (req, res) => {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        chat_id: chatId,
+        chat_id: chatId, // ✅ integer
         text: "✅ Kamu sudah terhubung ke PLN JagaGRID!",
       }),
     });
