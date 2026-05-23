@@ -3,13 +3,13 @@ class UserModel {
   final String name;
   final String username;
   final String unit;
-  final String kodeUnit; // ← field baru: kode unit otomatis dari UnitModel
-  final int level; // 1 = unit induk, 2 = unit layanan
+  final String kodeUnit;
+  final int level;
   final String added;
   final String password;
   final String usernameTelegram;
   final String chatIdTelegram;
-  final int status; // 1 = aktif, 0 = terhapus (soft delete)
+  final int status;
 
   UserModel({
     this.id,
@@ -53,7 +53,6 @@ class UserModel {
     );
   }
 
-  /// Convert dari Map (Firestore → App)
   factory UserModel.fromMap(Map<String, dynamic> map, String id) {
     return UserModel(
       id: id,
@@ -65,12 +64,11 @@ class UserModel {
       added: map['added'] ?? '',
       password: map['password'] ?? '',
       usernameTelegram: map['username_telegram'] ?? '',
-      chatIdTelegram: map['chat_id_telegram'] ?? '',
+      chatIdTelegram: map['chat_id_telegram']?.toString() ?? '', // ✅ FIX: apapun tipenya di Firestore, convert ke string
       status: map['status'] ?? 1,
     );
   }
 
-  /// Convert ke Map (App → Firestore)
   Map<String, dynamic> toMap() {
     return {
       'name': name,
@@ -81,7 +79,7 @@ class UserModel {
       'added': added,
       'password': password,
       'username_telegram': usernameTelegram,
-      'chat_id_telegram': chatIdTelegram,
+      'chat_id_telegram': int.tryParse(chatIdTelegram) ?? chatIdTelegram, // ✅ FIX: simpan sebagai int
       'status': status,
     };
   }
@@ -97,7 +95,7 @@ class UserModel {
       added: json['added'] ?? '',
       password: json['password'] ?? '',
       usernameTelegram: json['username_telegram'] ?? '',
-      chatIdTelegram: json['chat_id_telegram'] ?? '',
+      chatIdTelegram: json['chat_id_telegram']?.toString() ?? '', // ✅ FIX: sama seperti fromMap
       status: json['status'] ?? 1,
     );
   }
@@ -113,7 +111,7 @@ class UserModel {
       'added': added,
       'password': password,
       'username_telegram': usernameTelegram,
-      'chat_id_telegram': chatIdTelegram,
+      'chat_id_telegram': int.tryParse(chatIdTelegram) ?? chatIdTelegram, // ✅ FIX: simpan sebagai int
       'status': status,
     };
   }

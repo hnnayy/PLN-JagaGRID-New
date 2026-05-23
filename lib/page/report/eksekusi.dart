@@ -7,6 +7,7 @@ import 'package:intl/intl.dart';
 import '../../models/data_pohon.dart';
 import '../../models/eksekusi.dart';
 import '../../providers/eksekusi_provider.dart';
+import '../../providers/notification_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../models/growth_prediction.dart';
 
@@ -22,9 +23,9 @@ class EksekusiPage extends StatefulWidget {
 class _EksekusiPageState extends State<EksekusiPage> {
   final _formKey = GlobalKey<FormState>();
   String _selectedAction = 'Tebang Pangkas';
-  // FIX: Pre-fill dikosongkan — teknisi wajib input tinggi setelah dipangkas
   final TextEditingController _heightController = TextEditingController();
-  final TextEditingController _diameterController = TextEditingController(text: '200');
+  final TextEditingController _diameterController =
+      TextEditingController(text: '200');
   final TextEditingController _dateController = TextEditingController();
   File? _selectedImage;
   final ImagePicker _picker = ImagePicker();
@@ -41,8 +42,6 @@ class _EksekusiPageState extends State<EksekusiPage> {
         : widget.pohon.tujuanPenjadwalan == 2
             ? 'Tebang Habis'
             : 'Tebang Pangkas';
-    // FIX: Tidak pre-fill tinggi dari initialHeight
-    // Teknisi harus input sendiri tinggi pohon setelah dipangkas
     _prefillExecutionDate();
     _checkAccess();
   }
@@ -59,10 +58,12 @@ class _EksekusiPageState extends State<EksekusiPage> {
     try {
       final prefs = await SharedPreferences.getInstance();
       final level = prefs.getInt('session_level') ?? 2;
-      final sessionUnit = prefs.getString('session_unit') ?? '';
+      final sessionUnit =
+          (prefs.getString('session_unit') ?? '').trim().toUpperCase();
       bool allowed = true;
       if (level == 2) {
-        allowed = (widget.pohon.up3 == sessionUnit || widget.pohon.ulp == sessionUnit);
+        allowed = (widget.pohon.up3.trim().toUpperCase() == sessionUnit ||
+            widget.pohon.ulp.trim().toUpperCase() == sessionUnit);
       }
       setState(() {
         _isAllowed = allowed;
@@ -71,7 +72,8 @@ class _EksekusiPageState extends State<EksekusiPage> {
       if (!allowed && mounted) {
         WidgetsBinding.instance.addPostFrameCallback((_) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Akses ditolak: pohon bukan dalam unit Anda')),
+            const SnackBar(
+                content: Text('Akses ditolak: pohon bukan dalam unit Anda')),
           );
           Navigator.of(context).maybePop();
         });
@@ -118,27 +120,34 @@ class _EksekusiPageState extends State<EksekusiPage> {
       context: context,
       builder: (BuildContext context) {
         return AlertDialog(
-          title: const Text('Pilih Sumber Foto'),
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          title: const Text('Pilih Sumber Foto',
+              style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
           content: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
               ListTile(
-                leading: const Icon(Icons.camera_alt),
+                leading:
+                    const Icon(Icons.camera_alt, color: Color(0xFF125E72)),
                 title: const Text('Ambil Foto'),
                 onTap: () async {
                   Navigator.of(context).pop();
-                  final XFile? image = await _picker.pickImage(source: ImageSource.camera);
+                  final XFile? image =
+                      await _picker.pickImage(source: ImageSource.camera);
                   if (image != null) {
                     setState(() => _selectedImage = File(image.path));
                   }
                 },
               ),
               ListTile(
-                leading: const Icon(Icons.photo_library),
+                leading: const Icon(Icons.photo_library,
+                    color: Color(0xFF125E72)),
                 title: const Text('Pilih dari Galeri'),
                 onTap: () async {
                   Navigator.of(context).pop();
-                  final XFile? image = await _picker.pickImage(source: ImageSource.gallery);
+                  final XFile? image =
+                      await _picker.pickImage(source: ImageSource.gallery);
                   if (image != null) {
                     setState(() => _selectedImage = File(image.path));
                   }
@@ -173,12 +182,15 @@ class _EksekusiPageState extends State<EksekusiPage> {
       }
       if (selectedDate == null) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Tanggal eksekusi tidak valid. Gunakan format DD/MM/YYYY.')),
+          const SnackBar(
+              content: Text(
+                  'Tanggal eksekusi tidak valid. Gunakan format DD/MM/YYYY.')),
         );
         setState(() => _isLoading = false);
         return;
       }
-      final formattedTanggalEksekusi = '${_formatDate(selectedDate)} 09:00 WITA';
+      final formattedTanggalEksekusi =
+          '${_formatDate(selectedDate)} 09:00 WITA';
 
       final prefs = await SharedPreferences.getInstance();
       final creatorId = prefs.getString('session_id') ?? '';
@@ -196,40 +208,125 @@ class _EksekusiPageState extends State<EksekusiPage> {
         diameterPohon: double.tryParse(_diameterController.text) ?? 0.0,
       );
 
-      await Provider.of<EksekusiProvider>(context, listen: false)
-          .addEksekusi(eksekusi, _selectedImage!);
+      await Provider.of<EksekusiProvider>(context, listen: false).addEksekusi(
+        eksekusi,
+        _selectedImage!,
+        Provider.of<NotificationProvider>(context, listen: false),
+      );
+
       if (!mounted) return;
 
+      // ── Alert Sukses ──
       showDialog(
         context: context,
+        barrierDismissible: false,
         builder: (ctx) => AlertDialog(
-          icon: const Icon(Icons.check_circle, color: Colors.green, size: 48),
-          title: const Text('Sukses!', style: TextStyle(color: Colors.green)),
-          content: const Text('Data eksekusi berhasil disimpan.'),
-          actions: [
-            TextButton(
-              onPressed: () {
-                Navigator.of(ctx).pop();
-                Navigator.of(context).pop();
-              },
-              child: const Text('OK'),
-            ),
-          ],
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          contentPadding: const EdgeInsets.fromLTRB(24, 28, 24, 20),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: const Color.fromARGB(255, 37, 95, 116).withOpacity(0.1),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(Icons.check_circle_rounded,
+                    color: Color.fromARGB(255, 18, 52, 53), size: 52),
+              ),
+              const SizedBox(height: 16),
+              const Text(
+                'Berhasil!',
+                style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.black87),
+              ),
+              const SizedBox(height: 8),
+              const Text(
+                'Data eksekusi berhasil disimpan.',
+                textAlign: TextAlign.center,
+                style: TextStyle(fontSize: 13, color: Colors.black54),
+              ),
+              const SizedBox(height: 24),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  onPressed: () {
+                    Navigator.of(ctx).pop();
+                    Navigator.of(context).pop();
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color.fromARGB(255, 34, 72, 87),
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8)),
+                  ),
+                  child: const Text('OK',
+                      style: TextStyle(fontWeight: FontWeight.w600)),
+                ),
+              ),
+            ],
+          ),
         ),
       );
     } catch (e) {
       if (!mounted) return;
+
+      // ── Alert Gagal ──
       showDialog(
         context: context,
         builder: (ctx) => AlertDialog(
-          title: const Text('Gagal!', style: TextStyle(color: Colors.red)),
-          content: Text('Terjadi kesalahan saat menyimpan data:\n${e.toString()}'),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(ctx).pop(),
-              child: const Text('OK'),
-            ),
-          ],
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          contentPadding: const EdgeInsets.fromLTRB(24, 28, 24, 20),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: Colors.red.withOpacity(0.1),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(Icons.cancel_rounded,
+                    color: Colors.red, size: 52),
+              ),
+              const SizedBox(height: 16),
+              const Text(
+                'Gagal!',
+                style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.black87),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'Terjadi kesalahan saat menyimpan data:\n${e.toString()}',
+                textAlign: TextAlign.center,
+                style: const TextStyle(fontSize: 13, color: Colors.black54),
+              ),
+              const SizedBox(height: 24),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  onPressed: () => Navigator.of(ctx).pop(),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.red,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8)),
+                  ),
+                  child: const Text('Tutup',
+                      style: TextStyle(fontWeight: FontWeight.w600)),
+                ),
+              ),
+            ],
+          ),
         ),
       );
     } finally {
@@ -240,10 +337,12 @@ class _EksekusiPageState extends State<EksekusiPage> {
   @override
   Widget build(BuildContext context) {
     if (!_accessChecked) {
-      return const Scaffold(body: Center(child: CircularProgressIndicator()));
+      return const Scaffold(
+          body: Center(child: CircularProgressIndicator()));
     }
     if (!_isAllowed) {
-      return const Scaffold(body: Center(child: Text('Akses ditolak untuk pohon ini')));
+      return const Scaffold(
+          body: Center(child: Text('Akses ditolak untuk pohon ini')));
     }
     final screenWidth = MediaQuery.of(context).size.width;
     final screenHeight = MediaQuery.of(context).size.height;
@@ -273,8 +372,11 @@ class _EksekusiPageState extends State<EksekusiPage> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
+                  // ── Info Pohon ──
                   Card(
                     elevation: 4,
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12)),
                     child: Padding(
                       padding: EdgeInsets.all(screenWidth * 0.03),
                       child: Column(
@@ -289,86 +391,57 @@ class _EksekusiPageState extends State<EksekusiPage> {
                             ),
                           ),
                           const SizedBox(height: 10),
-                          Padding(
-                            padding: const EdgeInsets.all(16.0),
-                            child: Center(
-                              child: Container(
-                                padding: const EdgeInsets.symmetric(
-                                    horizontal: 12, vertical: 4),
-                                decoration: BoxDecoration(
-                                  color: widget.pohon.prioritas == 1
-                                      ? Colors.green
-                                      : widget.pohon.prioritas == 2
-                                          ? const Color(0xFFFFD700)
-                                          : Colors.red,
-                                  borderRadius: BorderRadius.circular(8),
-                                ),
-                                child: Text(
-                                  'Prioritas: ${widget.pohon.prioritas == 1 ? "Rendah" : widget.pohon.prioritas == 2 ? "Sedang" : "Tinggi"}',
-                                  style: TextStyle(
-                                    fontSize: screenWidth * 0.04,
-                                    color: Colors.black,
-                                    fontWeight: FontWeight.bold,
-                                  ),
+                          Center(
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 12, vertical: 4),
+                              decoration: BoxDecoration(
+                                color: widget.pohon.prioritas == 1
+                                    ? Colors.green
+                                    : widget.pohon.prioritas == 2
+                                        ? const Color(0xFFFFD700)
+                                        : Colors.red,
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: Text(
+                                'Prioritas: ${widget.pohon.prioritas == 1 ? "Rendah" : widget.pohon.prioritas == 2 ? "Sedang" : "Tinggi"}',
+                                style: TextStyle(
+                                  fontSize: screenWidth * 0.04,
+                                  color: Colors.black,
+                                  fontWeight: FontWeight.bold,
                                 ),
                               ),
                             ),
                           ),
-                          _infoRow('ID Pohon',
-                              widget.pohon.idPohon.isNotEmpty ? widget.pohon.idPohon : 'P023',
+                          const SizedBox(height: 8),
+                          _infoRow('ID Pohon', widget.pohon.idPohon.isNotEmpty ? widget.pohon.idPohon : 'P023', screenWidth),
+                          _infoRow('UP3', widget.pohon.up3.isNotEmpty ? widget.pohon.up3 : '-', screenWidth),
+                          _infoRow('ULP', widget.pohon.ulp.isNotEmpty ? widget.pohon.ulp : '-', screenWidth),
+                          _infoRow('Penyulang', widget.pohon.penyulang.isNotEmpty ? widget.pohon.penyulang : '-', screenWidth),
+                          _infoRow('Zona Proteksi', widget.pohon.zonaProteksi.isNotEmpty ? widget.pohon.zonaProteksi : '-', screenWidth),
+                          _infoRow('Section', widget.pohon.section.isNotEmpty ? widget.pohon.section : '-', screenWidth),
+                          _infoRow('KMS Aset', widget.pohon.kmsAset.isNotEmpty ? widget.pohon.kmsAset : '-', screenWidth),
+                          _infoRow('Vendor', widget.pohon.vendor.isNotEmpty ? widget.pohon.vendor : '-', screenWidth),
+                          _infoRow('Koordinat', widget.pohon.koordinat.isNotEmpty ? widget.pohon.koordinat : '-', screenWidth),
+                          _infoRow('Tanggal Penjadwalan', _formatDate(_latestPlannedDate ?? widget.pohon.scheduleDate), screenWidth),
+                          _infoRow('Tujuan Penjadwalan',
+                              widget.pohon.tujuanPenjadwalan == 1 ? 'Tebang Pangkas' : widget.pohon.tujuanPenjadwalan == 2 ? 'Tebang Habis' : 'Tidak diketahui',
                               screenWidth),
-                          _infoRow('UP3',
-                              widget.pohon.up3.isNotEmpty ? widget.pohon.up3 : '-',
-                              screenWidth),
-                          _infoRow('ULP',
-                              widget.pohon.ulp.isNotEmpty ? widget.pohon.ulp : '-',
-                              screenWidth),
-                          _infoRow('Penyulang',
-                              widget.pohon.penyulang.isNotEmpty ? widget.pohon.penyulang : '-',
-                              screenWidth),
-                          _infoRow('Zona Proteksi',
-                              widget.pohon.zonaProteksi.isNotEmpty ? widget.pohon.zonaProteksi : '-',
-                              screenWidth),
-                          _infoRow('Section',
-                              widget.pohon.section.isNotEmpty ? widget.pohon.section : '-',
-                              screenWidth),
-                          _infoRow('KMS Aset',
-                              widget.pohon.kmsAset.isNotEmpty ? widget.pohon.kmsAset : '-',
-                              screenWidth),
-                          _infoRow('Vendor',
-                              widget.pohon.vendor.isNotEmpty ? widget.pohon.vendor : '-',
-                              screenWidth),
-                          _infoRow('Koordinat',
-                              widget.pohon.koordinat.isNotEmpty ? widget.pohon.koordinat : '-',
-                              screenWidth),
-                          _infoRow('Tanggal Penjadwalan',
-                              _formatDate(_latestPlannedDate ?? widget.pohon.scheduleDate),
-                              screenWidth),
-                          _infoRow(
-                              'Tujuan Penjadwalan',
-                              widget.pohon.tujuanPenjadwalan == 1
-                                  ? 'Tebang Pangkas'
-                                  : widget.pohon.tujuanPenjadwalan == 2
-                                      ? 'Tebang Habis'
-                                      : 'Tidak diketahui',
-                              screenWidth),
-                          _infoRow('Laju Pertumbuhan',
-                              '${widget.pohon.growthRate} cm/tahun', screenWidth),
-                          _infoRow('Tinggi Awal',
-                              '${widget.pohon.initialHeight} m', screenWidth),
-                          _infoRow('Catatan',
-                              widget.pohon.catatan.isNotEmpty ? widget.pohon.catatan : '-',
-                              screenWidth),
-                          _infoRow('Nama Pohon',
-                              widget.pohon.namaPohon.isNotEmpty ? widget.pohon.namaPohon : '-',
-                              screenWidth),
+                          _infoRow('Laju Pertumbuhan', '${widget.pohon.growthRate} cm/tahun', screenWidth),
+                          _infoRow('Tinggi Awal', '${widget.pohon.initialHeight} m', screenWidth),
+                          _infoRow('Catatan', widget.pohon.catatan.isNotEmpty ? widget.pohon.catatan : '-', screenWidth),
+                          _infoRow('Nama Pohon', widget.pohon.namaPohon.isNotEmpty ? widget.pohon.namaPohon : '-', screenWidth),
                         ],
                       ),
                     ),
                   ),
                   const SizedBox(height: 20),
+
+                  // ── Form Eksekusi ──
                   Card(
                     elevation: 4,
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12)),
                     child: Padding(
                       padding: EdgeInsets.all(screenWidth * 0.03),
                       child: Column(
@@ -382,140 +455,101 @@ class _EksekusiPageState extends State<EksekusiPage> {
                               color: const Color(0xFF125E72),
                             ),
                           ),
-                          const SizedBox(height: 10),
-                          // FIX: Label diubah menjadi "Tinggi Pohon Setelah Dipangkas"
-                          // Pre-fill dikosongkan — teknisi wajib input sendiri
-                          Row(
+                          const SizedBox(height: 16),
+                          _inputField(
+                            label: 'Tinggi Pohon Setelah Dipangkas',
+                            icon: Icons.height,
+                            suffix: 'm',
+                            controller: _heightController,
+                            hintText: 'Contoh: 4.5',
+                            validator: (value) {
+                              if (value == null || value.isEmpty) return 'Wajib diisi';
+                              final h = double.tryParse(value);
+                              if (h == null) return 'Angka tidak valid';
+                              if (h <= 0) return 'Harus > 0';
+                              if (h > 10) return 'Maks 10 m';
+                              return null;
+                            },
+                          ),
+                          const SizedBox(height: 12),
+                          _inputField(
+                            label: 'Diameter Pohon',
+                            icon: Icons.aspect_ratio,
+                            suffix: 'cm',
+                            controller: _diameterController,
+                            hintText: 'Masukkan diameter',
+                            validator: (value) {
+                              if (value == null || value.isEmpty) return 'Diameter wajib diisi';
+                              if (double.tryParse(value) == null) return 'Masukkan angka valid';
+                              return null;
+                            },
+                          ),
+                          const SizedBox(height: 12),
+                          _inputField(
+                            label: 'Tanggal Eksekusi',
+                            icon: Icons.calendar_today,
+                            controller: _dateController,
+                            hintText: 'DD/MM/YYYY',
+                            validator: (value) {
+                              if (value == null || value.isEmpty) return 'Tanggal wajib diisi';
+                              return null;
+                            },
+                          ),
+                          const SizedBox(height: 12),
+                          Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              const Icon(Icons.height, size: 20),
-                              const SizedBox(width: 5),
-                              const Text('Tinggi Pohon Setelah Dipangkas'),
-                              const SizedBox(width: 10),
+                              Row(
+                                children: [
+                                  const Icon(Icons.camera_alt, size: 18, color: Color(0xFF125E72)),
+                                  const SizedBox(width: 6),
+                                  const Text(
+                                    'Foto Setelah Eksekusi',
+                                    style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 8),
                               SizedBox(
-                                width: screenWidth * 0.2,
-                                child: TextFormField(
-                                  controller: _heightController,
-                                  decoration: const InputDecoration(
-                                    border: OutlineInputBorder(),
-                                    hintText: 'Contoh: 4.5',
-                                  ),
-                                  keyboardType: TextInputType.number,
-                                  validator: (value) {
-                                    if (value == null || value.isEmpty) {
-                                      return 'Wajib diisi';
-                                    }
-                                    final h = double.tryParse(value);
-                                    if (h == null) return 'Angka tidak valid';
-                                    if (h <= 0) return 'Harus > 0';
-                                    if (h > 10) return 'Maks 10 m';
-                                    return null;
-                                  },
-                                ),
-                              ),
-                              const Text(' m'),
-                            ],
-                          ),
-                          const SizedBox(height: 10),
-                          Row(
-                            children: [
-                              const Icon(Icons.aspect_ratio, size: 20),
-                              const SizedBox(width: 5),
-                              const Text('Diameter Pohon'),
-                              const SizedBox(width: 10),
-                              SizedBox(
-                                width: screenWidth * 0.2,
-                                child: TextFormField(
-                                  controller: _diameterController,
-                                  decoration: const InputDecoration(
-                                    border: OutlineInputBorder(),
-                                    hintText: 'Masukkan diameter',
-                                  ),
-                                  keyboardType: TextInputType.number,
-                                  validator: (value) {
-                                    if (value == null || value.isEmpty) {
-                                      return 'Diameter wajib diisi';
-                                    }
-                                    if (double.tryParse(value) == null) {
-                                      return 'Masukkan angka valid';
-                                    }
-                                    return null;
-                                  },
-                                ),
-                              ),
-                              const Text(' cm'),
-                            ],
-                          ),
-                          const SizedBox(height: 10),
-                          Row(
-                            children: [
-                              const Icon(Icons.calendar_today, size: 20),
-                              const SizedBox(width: 5),
-                              const Text('Tanggal Eksekusi'),
-                              const SizedBox(width: 10),
-                              SizedBox(
-                                width: screenWidth * 0.3,
-                                child: TextFormField(
-                                  controller: _dateController,
-                                  decoration: const InputDecoration(
-                                    border: OutlineInputBorder(),
-                                    hintText: 'DD/MM/YYYY',
-                                  ),
-                                  validator: (value) {
-                                    if (value == null || value.isEmpty) {
-                                      return 'Tanggal wajib diisi';
-                                    }
-                                    return null;
-                                  },
-                                ),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 10),
-                          Row(
-                            children: [
-                              const Icon(Icons.camera_alt, size: 20),
-                              const SizedBox(width: 5),
-                              const Text('Foto Setelah Eksekusi'),
-                              const SizedBox(width: 10),
-                              ElevatedButton(
-                                onPressed: _pickImage,
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: const Color(0xFF125E72),
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(10),
-                                  ),
-                                ),
-                                child: Text(
-                                  _selectedImage == null ? 'Pilih Foto' : 'Ganti Foto',
-                                  style: TextStyle(
-                                    fontSize: screenWidth * 0.035,
-                                    color: Colors.white,
+                                width: double.infinity,
+                                child: OutlinedButton.icon(
+                                  onPressed: _pickImage,
+                                  icon: Icon(_selectedImage == null ? Icons.add_a_photo : Icons.edit, size: 18),
+                                  label: Text(_selectedImage == null ? 'Pilih Foto' : 'Ganti Foto'),
+                                  style: OutlinedButton.styleFrom(
+                                    foregroundColor: const Color(0xFF125E72),
+                                    side: const BorderSide(color: Color(0xFF125E72)),
+                                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                                    padding: const EdgeInsets.symmetric(vertical: 12),
                                   ),
                                 ),
                               ),
+                              if (_selectedImage != null) ...[
+                                const SizedBox(height: 10),
+                                ClipRRect(
+                                  borderRadius: BorderRadius.circular(8),
+                                  child: Image.file(
+                                    _selectedImage!,
+                                    height: screenHeight * 0.22,
+                                    width: double.infinity,
+                                    fit: BoxFit.cover,
+                                  ),
+                                ),
+                              ],
                             ],
                           ),
-                          if (_selectedImage != null) ...[
-                            const SizedBox(height: 10),
-                            Image.file(
-                              _selectedImage!,
-                              height: screenHeight * 0.2,
-                              width: screenWidth * 0.4,
-                              fit: BoxFit.cover,
-                            ),
-                          ],
-                          const SizedBox(height: 10),
-                          const SizedBox(height: 6),
+                          const SizedBox(height: 12),
                           _ActionDropdown(
                             value: _selectedAction,
-                            onChanged: (val) =>
-                                setState(() => _selectedAction = val ?? _selectedAction),
+                            onChanged: (val) => setState(() => _selectedAction = val ?? _selectedAction),
                           ),
                         ],
                       ),
                     ),
                   ),
                   const SizedBox(height: 24),
+
+                  // ── Tombol ──
                   Row(
                     children: [
                       Expanded(
@@ -524,11 +558,9 @@ class _EksekusiPageState extends State<EksekusiPage> {
                           style: OutlinedButton.styleFrom(
                             padding: const EdgeInsets.symmetric(vertical: 16),
                             side: const BorderSide(color: Color(0xFF125E72)),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                           ),
-                          child: const Text(
-                            'Batal',
-                            style: TextStyle(color: Color(0xFF125E72)),
-                          ),
+                          child: const Text('Batal', style: TextStyle(color: Color(0xFF125E72))),
                         ),
                       ),
                       const SizedBox(width: 16),
@@ -539,15 +571,13 @@ class _EksekusiPageState extends State<EksekusiPage> {
                             backgroundColor: const Color(0xFF125E72),
                             foregroundColor: Colors.white,
                             padding: const EdgeInsets.symmetric(vertical: 16),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                           ),
                           child: _isLoading
                               ? const SizedBox(
                                   height: 20,
                                   width: 20,
-                                  child: CircularProgressIndicator(
-                                    color: Colors.white,
-                                    strokeWidth: 2,
-                                  ),
+                                  child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
                                 )
                               : const Text('Simpan Eksekusi'),
                         ),
@@ -573,24 +603,56 @@ class _EksekusiPageState extends State<EksekusiPage> {
     );
   }
 
+  Widget _inputField({
+    required String label,
+    required IconData icon,
+    required TextEditingController controller,
+    required String hintText,
+    String? suffix,
+    String? Function(String?)? validator,
+  }) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Icon(icon, size: 18, color: const Color(0xFF125E72)),
+            const SizedBox(width: 6),
+            Text(label, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
+          ],
+        ),
+        const SizedBox(height: 6),
+        TextFormField(
+          controller: controller,
+          decoration: InputDecoration(
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+            hintText: hintText,
+            suffixText: suffix,
+            contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+          ),
+          keyboardType: TextInputType.number,
+          validator: validator,
+        ),
+      ],
+    );
+  }
+
   Widget _infoRow(String label, String value, double screenWidth) {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
+      padding: const EdgeInsets.fromLTRB(0, 6, 0, 6),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
             label,
-            style: TextStyle(
-              fontSize: screenWidth * 0.04,
-              fontWeight: FontWeight.bold,
-            ),
+            style: TextStyle(fontSize: screenWidth * 0.035, fontWeight: FontWeight.bold),
           ),
+          const SizedBox(width: 12),
           Flexible(
             child: Text(
               value,
-              style: TextStyle(fontSize: screenWidth * 0.04),
+              style: TextStyle(fontSize: screenWidth * 0.035),
               softWrap: true,
               textAlign: TextAlign.end,
             ),
@@ -639,9 +701,7 @@ class _ActionDropdownState extends State<_ActionDropdown>
   void _openDropdown() {
     setState(() => isExpanded = true);
     _controller.forward();
-
-    final renderBox =
-        _dropdownKey.currentContext!.findRenderObject() as RenderBox;
+    final renderBox = _dropdownKey.currentContext!.findRenderObject() as RenderBox;
     _overlayEntry = OverlayEntry(
       builder: (context) => Positioned(
         width: renderBox.size.width,
@@ -676,20 +736,14 @@ class _ActionDropdownState extends State<_ActionDropdown>
                       child: Container(
                         padding: const EdgeInsets.all(16),
                         decoration: BoxDecoration(
-                          color: widget.value == _items[index]
-                              ? const Color(0xFFF0F9FF)
-                              : null,
+                          color: widget.value == _items[index] ? const Color(0xFFF0F9FF) : null,
                         ),
                         child: Text(
                           _items[index],
                           style: TextStyle(
                             fontSize: 16,
-                            color: widget.value == _items[index]
-                                ? const Color(0xFF2E5D6F)
-                                : Colors.black87,
-                            fontWeight: widget.value == _items[index]
-                                ? FontWeight.w500
-                                : FontWeight.normal,
+                            color: widget.value == _items[index] ? const Color(0xFF2E5D6F) : Colors.black87,
+                            fontWeight: widget.value == _items[index] ? FontWeight.w500 : FontWeight.normal,
                           ),
                         ),
                       ),
@@ -717,11 +771,7 @@ class _ActionDropdownState extends State<_ActionDropdown>
       children: [
         Text(
           'Aksi',
-          style: TextStyle(
-            fontSize: 12,
-            color: Colors.grey.shade600,
-            fontWeight: FontWeight.w500,
-          ),
+          style: TextStyle(fontSize: 12, color: Colors.grey.shade600, fontWeight: FontWeight.w500),
         ),
         const SizedBox(height: 8),
         CompositedTransformTarget(
@@ -743,17 +793,14 @@ class _ActionDropdownState extends State<_ActionDropdown>
                       widget.value ?? 'Pilih aksi',
                       style: TextStyle(
                         fontSize: 16,
-                        color: widget.value != null
-                            ? Colors.black87
-                            : Colors.grey.shade500,
+                        color: widget.value != null ? Colors.black87 : Colors.grey.shade500,
                       ),
                     ),
                   ),
                   AnimatedRotation(
                     turns: isExpanded ? 0.5 : 0,
                     duration: const Duration(milliseconds: 200),
-                    child: Icon(Icons.keyboard_arrow_down,
-                        color: Colors.grey.shade600),
+                    child: Icon(Icons.keyboard_arrow_down, color: Colors.grey.shade600),
                   ),
                 ],
               ),

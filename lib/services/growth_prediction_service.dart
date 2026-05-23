@@ -38,7 +38,7 @@ class GrowthPredictionService {
       // Jika Tebang Habis (statusEksekusi == 2) → tidak perlu buat prediksi baru
       // Pohon sudah tidak ada, tidak akan tumbuh lagi
       if (lastExecution.statusEksekusi == 2) {
-        print('✅ Tebang Habis: prediksi lama dinonaktifkan, tidak membuat prediksi baru');
+        print('✅ Tebang Habis: prediksi lama dinonaktifkan, data_pohon dinonaktifkan, tidak membuat prediksi baru');
         return GrowthPrediction(
           id: '',
           dataPohonId: dataPohonId,
@@ -86,7 +86,9 @@ class GrowthPredictionService {
     }
   }
 
-  // ✅ Nonaktifkan semua prediksi aktif lama untuk pohon tertentu
+  // ✅ Nonaktifkan semua prediksi aktif lama untuk pohon tertentu.
+  // Kalau executionType == 2 (Tebang Habis), nonaktifkan juga data_pohon
+  // supaya pohon tidak muncul lagi di analitik (query pakai status == 1).
   Future<void> _deactivateOldPredictions(String dataPohonId, int executionType) async {
     try {
       final snapshot = await _db
@@ -95,16 +97,25 @@ class GrowthPredictionService {
           .where('status', isEqualTo: 1)
           .get();
 
-      if (snapshot.docs.isEmpty) return;
-
-      // Batch update untuk efisiensi
-      final batch = _db.batch();
-      for (final doc in snapshot.docs) {
-        batch.update(doc.reference, {'status': 2}); // 2 = completed/selesai
+      if (snapshot.docs.isNotEmpty) {
+        // Batch update growth_predictions → status 2 (completed)
+        final batch = _db.batch();
+        for (final doc in snapshot.docs) {
+          batch.update(doc.reference, {'status': 2});
+        }
+        await batch.commit();
+        print('✅ Nonaktifkan ${snapshot.docs.length} prediksi lama untuk pohon $dataPohonId');
       }
-      await batch.commit();
 
-      print('✅ Nonaktifkan ${snapshot.docs.length} prediksi lama untuk pohon $dataPohonId');
+      // ✅ FIX UTAMA: Kalau Tebang Habis, nonaktifkan juga data_pohon
+      // Ini yang menyebabkan pohon masih muncul di analitik sebelumnya
+      if (executionType == 2) {
+        await _db
+            .collection('data_pohon')
+            .doc(dataPohonId)
+            .update({'status': 0}); // 0 = nonaktif / tebang habis
+        print('✅ data_pohon dinonaktifkan: $dataPohonId');
+      }
     } catch (e) {
       print('⚠️ Gagal menonaktifkan prediksi lama: $e');
       // Tidak rethrow — jangan sampai gagal ini menghentikan proses eksekusi
@@ -260,6 +271,21 @@ class GrowthPredictionService {
     } catch (e) {
       print('❌ Error updating prediction execution details: $e');
       throw e;
+    }
+  }
+
+  // ✅ FIX UTAMA: Nonaktifkan data_pohon saat tebang habis dari provider
+  // Dipanggil dari executeCompleteTreeFelling di provider
+  Future<void> deactivateTreeAfterFelling(String dataPohonId) async {
+    try {
+      await _db
+          .collection('data_pohon')
+          .doc(dataPohonId)
+          .update({'status': 0}); // 0 = nonaktif / tebang habis
+      print('✅ data_pohon dinonaktifkan setelah tebang habis: $dataPohonId');
+    } catch (e) {
+      print('❌ Error deactivating data_pohon: $e');
+      rethrow;
     }
   }
 

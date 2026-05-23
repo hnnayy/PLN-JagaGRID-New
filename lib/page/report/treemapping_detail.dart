@@ -59,8 +59,7 @@ class _TreeMappingDetailPageState extends State<TreeMappingDetailPage> {
     if (prioritas == 1) {
       icon = BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueGreen);
     } else if (prioritas == 2) {
-      icon =
-          BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueYellow);
+      icon = BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueYellow);
     } else if (prioritas == 3) {
       icon = BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueRed);
     } else {
@@ -89,6 +88,65 @@ class _TreeMappingDetailPageState extends State<TreeMappingDetailPage> {
     }
   }
 
+  // ─────────────────────────────────────────────
+  // Fullscreen image viewer
+  // ─────────────────────────────────────────────
+  void _showFullscreenImage(BuildContext context, String imageUrl) {
+    showDialog(
+      context: context,
+      barrierColor: Colors.black87,
+      builder: (_) => Dialog(
+        backgroundColor: Colors.transparent,
+        insetPadding: EdgeInsets.zero,
+        child: Stack(
+          children: [
+            // Foto fullscreen + bisa zoom/pan
+            InteractiveViewer(
+              panEnabled: true,
+              minScale: 1.0,
+              maxScale: 4.0,
+              child: Center(
+                child: CachedNetworkImage(
+                  imageUrl: imageUrl,
+                  fit: BoxFit.contain,
+                  placeholder: (context, url) => const Center(
+                    child: CircularProgressIndicator(color: Colors.white),
+                  ),
+                  errorWidget: (context, url, error) => const Icon(
+                    Icons.broken_image,
+                    color: Colors.white,
+                    size: 60,
+                  ),
+                ),
+              ),
+            ),
+
+            // Tombol silang tutup
+            Positioned(
+              top: 40,
+              right: 16,
+              child: GestureDetector(
+                onTap: () => Navigator.of(context).pop(),
+                child: Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: const BoxDecoration(
+                    color: Colors.black54,
+                    shape: BoxShape.circle,
+                  ),
+                  child:
+                      const Icon(Icons.close, color: Colors.white, size: 24),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // ─────────────────────────────────────────────
+  // Helpers
+  // ─────────────────────────────────────────────
   LatLng _parseLatLngFromString(String input) {
     try {
       final numberMatches =
@@ -204,7 +262,7 @@ class _TreeMappingDetailPageState extends State<TreeMappingDetailPage> {
     return '-';
   }
 
-  // ─── FITUR POHON MATI ─────────────────────────────────────────────────────
+  // ─── FITUR POHON MATI ────────────────────────────────────────────────────
 
   Future<void> _showPohonMatiDialog() async {
     final catatanController = TextEditingController();
@@ -231,8 +289,7 @@ class _TreeMappingDetailPageState extends State<TreeMappingDetailPage> {
             const SizedBox(height: 8),
             Text(
               'Pohon tidak akan muncul lagi di sistem dan semua prediksi akan dinonaktifkan.',
-              style:
-                  TextStyle(fontSize: 12, color: Colors.grey.shade600),
+              style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
             ),
             const SizedBox(height: 16),
             TextField(
@@ -292,14 +349,14 @@ class _TreeMappingDetailPageState extends State<TreeMappingDetailPage> {
                   color: Color(0xFF125E72),
                   shape: BoxShape.circle,
                 ),
-                child: const Icon(Icons.check,
-                    color: Colors.white, size: 40),
+                child:
+                    const Icon(Icons.check, color: Colors.white, size: 40),
               ),
               const SizedBox(height: 16),
               const Text(
                 'Berhasil!',
-                style: TextStyle(
-                    fontSize: 18, fontWeight: FontWeight.bold),
+                style:
+                    TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
               ),
               const SizedBox(height: 8),
               const Text(
@@ -314,7 +371,7 @@ class _TreeMappingDetailPageState extends State<TreeMappingDetailPage> {
               child: ElevatedButton(
                 onPressed: () {
                   Navigator.of(ctx).pop();
-                  Navigator.of(context).pop(); // kembali ke list pohon
+                  Navigator.of(context).pop();
                 },
                 style: ElevatedButton.styleFrom(
                   backgroundColor: const Color(0xFF125E72),
@@ -363,22 +420,19 @@ class _TreeMappingDetailPageState extends State<TreeMappingDetailPage> {
       {required double lat,
       required double lng,
       String? label}) async {
-    final query =
-        '${lat.toStringAsFixed(6)},${lng.toStringAsFixed(6)}';
+    final query = '${lat.toStringAsFixed(6)},${lng.toStringAsFixed(6)}';
     final encodedLabel = Uri.encodeComponent(label ?? 'Lokasi');
     final uri = Uri.parse(
         'https://www.google.com/maps/search/?api=1&query=$query&query_place_id=$encodedLabel');
     if (!await launchUrl(uri, mode: LaunchMode.externalApplication)) {
-      final geo =
-          Uri.parse('geo:$query?q=$query($encodedLabel)');
+      final geo = Uri.parse('geo:$query?q=$query($encodedLabel)');
       await launchUrl(geo, mode: LaunchMode.externalApplication);
     }
   }
 
   Future<void> _openDirections(
       {required double lat, required double lng}) async {
-    final query =
-        '${lat.toStringAsFixed(6)},${lng.toStringAsFixed(6)}';
+    final query = '${lat.toStringAsFixed(6)},${lng.toStringAsFixed(6)}';
     final uri = Uri.parse(
         'https://www.google.com/maps/dir/?api=1&destination=$query&travelmode=driving');
     await launchUrl(uri, mode: LaunchMode.externalApplication);
@@ -388,6 +442,12 @@ class _TreeMappingDetailPageState extends State<TreeMappingDetailPage> {
   Widget build(BuildContext context) {
     final screenWidth = MediaQuery.of(context).size.width;
     final screenHeight = MediaQuery.of(context).size.height;
+
+    // URL foto pohon
+    final fotoUrl = widget.pohon != null &&
+            widget.pohon!.fotoPohon.isNotEmpty
+        ? widget.pohon!.fotoPohon
+        : 'https://via.placeholder.com/150?text=Foto+Pohon';
 
     return Scaffold(
       appBar: AppBar(
@@ -418,8 +478,7 @@ class _TreeMappingDetailPageState extends State<TreeMappingDetailPage> {
                   Column(
                     children: [
                       Padding(
-                        padding:
-                            const EdgeInsets.fromLTRB(8, 0, 8, 4),
+                        padding: const EdgeInsets.fromLTRB(8, 0, 8, 4),
                         child: Container(
                           decoration: BoxDecoration(
                             color: Colors.white.withOpacity(0.6),
@@ -455,47 +514,37 @@ class _TreeMappingDetailPageState extends State<TreeMappingDetailPage> {
                                         color: const Color.fromARGB(
                                             255, 41, 41, 41),
                                         width: 1),
-                                    borderRadius:
-                                        BorderRadius.circular(8),
-                                    color:
-                                        Colors.white.withOpacity(0.1),
+                                    borderRadius: BorderRadius.circular(8),
+                                    color: Colors.white.withOpacity(0.1),
                                   ),
                                   child: LayoutBuilder(
                                     builder: (context, constraints) {
                                       return PopupMenuButton<MapType>(
                                         initialValue: _currentMapType,
-                                        offset:
-                                            const Offset(0, 56),
+                                        offset: const Offset(0, 56),
                                         elevation: 8,
                                         constraints: BoxConstraints(
-                                          minWidth:
-                                              constraints.maxWidth,
-                                          maxWidth:
-                                              constraints.maxWidth,
+                                          minWidth: constraints.maxWidth,
+                                          maxWidth: constraints.maxWidth,
                                         ),
                                         shape: RoundedRectangleBorder(
                                           borderRadius:
-                                              BorderRadius.circular(
-                                                  8),
+                                              BorderRadius.circular(8),
                                         ),
                                         color: Colors.white,
                                         child: Padding(
-                                          padding:
-                                              const EdgeInsets.symmetric(
-                                                  horizontal: 12,
-                                                  vertical: 12),
+                                          padding: const EdgeInsets.symmetric(
+                                              horizontal: 12, vertical: 12),
                                           child: Row(
                                             mainAxisAlignment:
-                                                MainAxisAlignment
-                                                    .spaceBetween,
+                                                MainAxisAlignment.spaceBetween,
                                             children: [
                                               Text(
                                                 _getMapTypeLabel(
                                                     _currentMapType),
                                                 style: const TextStyle(
                                                   color: Colors.black87,
-                                                  fontWeight:
-                                                      FontWeight.w500,
+                                                  fontWeight: FontWeight.w500,
                                                   fontFamily: 'Poppins',
                                                   fontSize: 14,
                                                 ),
@@ -515,8 +564,7 @@ class _TreeMappingDetailPageState extends State<TreeMappingDetailPage> {
                                               width: double.infinity,
                                               child: const Text('Normal',
                                                   style: TextStyle(
-                                                      fontFamily:
-                                                          'Poppins',
+                                                      fontFamily: 'Poppins',
                                                       fontSize: 14)),
                                             ),
                                           ),
@@ -526,8 +574,7 @@ class _TreeMappingDetailPageState extends State<TreeMappingDetailPage> {
                                               width: double.infinity,
                                               child: const Text('Satelit',
                                                   style: TextStyle(
-                                                      fontFamily:
-                                                          'Poppins',
+                                                      fontFamily: 'Poppins',
                                                       fontSize: 14)),
                                             ),
                                           ),
@@ -537,8 +584,7 @@ class _TreeMappingDetailPageState extends State<TreeMappingDetailPage> {
                                               width: double.infinity,
                                               child: const Text('Terrain',
                                                   style: TextStyle(
-                                                      fontFamily:
-                                                          'Poppins',
+                                                      fontFamily: 'Poppins',
                                                       fontSize: 14)),
                                             ),
                                           ),
@@ -548,8 +594,7 @@ class _TreeMappingDetailPageState extends State<TreeMappingDetailPage> {
                                               width: double.infinity,
                                               child: const Text('Hybrid',
                                                   style: TextStyle(
-                                                      fontFamily:
-                                                          'Poppins',
+                                                      fontFamily: 'Poppins',
                                                       fontSize: 14)),
                                             ),
                                           ),
@@ -579,8 +624,7 @@ class _TreeMappingDetailPageState extends State<TreeMappingDetailPage> {
                               ),
                               mapType: _currentMapType,
                               minMaxZoomPreference:
-                                  const MinMaxZoomPreference(
-                                      10.0, 20.0),
+                                  const MinMaxZoomPreference(10.0, 20.0),
                               markers: _markers,
                               myLocationEnabled: true,
                               myLocationButtonEnabled: true,
@@ -647,6 +691,7 @@ class _TreeMappingDetailPageState extends State<TreeMappingDetailPage> {
                                 physics:
                                     const AlwaysScrollableScrollPhysics(),
                                 children: [
+                                  // ── Handle bar ──
                                   Center(
                                     child: Container(
                                       margin: const EdgeInsets.symmetric(
@@ -660,6 +705,8 @@ class _TreeMappingDetailPageState extends State<TreeMappingDetailPage> {
                                       ),
                                     ),
                                   ),
+
+                                  // ── Judul ──
                                   Padding(
                                     padding: const EdgeInsets.fromLTRB(
                                         16, 0, 16, 8),
@@ -671,45 +718,91 @@ class _TreeMappingDetailPageState extends State<TreeMappingDetailPage> {
                                       ),
                                     ),
                                   ),
+
+                                  // ── FOTO POHON (tap = fullscreen) ──
                                   Center(
                                     child: Padding(
                                       padding: const EdgeInsets.symmetric(
                                           horizontal: 16.0),
-                                      child: ClipRRect(
-                                        borderRadius:
-                                            BorderRadius.circular(12),
-                                        child: CachedNetworkImage(
-                                          imageUrl: widget.pohon!.fotoPohon
-                                                  .isNotEmpty
-                                              ? widget.pohon!.fotoPohon
-                                              : 'https://via.placeholder.com/150?text=Foto+Pohon',
-                                          width: screenWidth * 0.7,
-                                          height: screenHeight * 0.25,
-                                          fit: BoxFit.cover,
-                                          placeholder: (context, url) =>
-                                              Container(
-                                            width: screenWidth * 0.7,
-                                            height: screenHeight * 0.25,
-                                            color: Colors.grey,
-                                            child: const Center(
-                                                child:
-                                                    CircularProgressIndicator()),
-                                          ),
-                                          errorWidget:
-                                              (context, url, error) =>
-                                                  Container(
-                                            width: screenWidth * 0.7,
-                                            height: screenHeight * 0.25,
-                                            color: Colors.grey,
-                                            child: const Center(
-                                                child: Text(
-                                                    'Gambar Tidak Tersedia')),
-                                          ),
+                                      child: GestureDetector(
+                                        onTap: () => _showFullscreenImage(
+                                            context, fotoUrl),
+                                        child: Stack(
+                                          children: [
+                                            ClipRRect(
+                                              borderRadius:
+                                                  BorderRadius.circular(12),
+                                              child: CachedNetworkImage(
+                                                imageUrl: fotoUrl,
+                                                width: screenWidth * 0.7,
+                                                height: screenHeight * 0.25,
+                                                fit: BoxFit.cover,
+                                                placeholder: (context, url) =>
+                                                    Container(
+                                                  width: screenWidth * 0.7,
+                                                  height: screenHeight * 0.25,
+                                                  color: Colors.grey,
+                                                  child: const Center(
+                                                      child:
+                                                          CircularProgressIndicator()),
+                                                ),
+                                                errorWidget:
+                                                    (context, url, error) =>
+                                                        Container(
+                                                  width: screenWidth * 0.7,
+                                                  height: screenHeight * 0.25,
+                                                  color: Colors.grey,
+                                                  child: const Center(
+                                                      child: Text(
+                                                          'Gambar Tidak Tersedia')),
+                                                ),
+                                              ),
+                                            ),
+
+                                            // ── Icon zoom di pojok kanan bawah foto ──
+                                            Positioned(
+                                              bottom: 8,
+                                              right: 8,
+                                              child: Container(
+                                                padding:
+                                                    const EdgeInsets.all(6),
+                                                decoration: BoxDecoration(
+                                                  color: Colors.black
+                                                      .withOpacity(0.5),
+                                                  borderRadius:
+                                                      BorderRadius.circular(8),
+                                                ),
+                                                child: const Icon(
+                                                  Icons.zoom_in,
+                                                  color: Colors.white,
+                                                  size: 18,
+                                                ),
+                                              ),
+                                            ),
+                                          ],
                                         ),
                                       ),
                                     ),
                                   ),
-                                  // Prioritas badge
+
+                                  // ── Hint ketuk ──
+                                  const SizedBox(height: 6),
+                                  Row(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      Icon(Icons.touch_app,
+                                          size: 12, color: Colors.grey[400]),
+                                      const SizedBox(width: 4),
+                                      Text(
+                                        'Ketuk foto untuk memperbesar',
+                                        style: TextStyle(
+                                            fontSize: 11,
+                                            color: Colors.grey[400]),
+                                      ),
+                                    ],
+                                  ),
+
+                                  // ── Prioritas badge ──
                                   Padding(
                                     padding: const EdgeInsets.all(16.0),
                                     child: Center(
@@ -736,8 +829,10 @@ class _TreeMappingDetailPageState extends State<TreeMappingDetailPage> {
                                       ),
                                     ),
                                   ),
-                                  // Info rows
-                                  _infoRow('ID Pohon',
+
+                                  // ── Info rows ──
+                                  _infoRow(
+                                      'ID Pohon',
                                       widget.pohon!.idPohon.isNotEmpty
                                           ? widget.pohon!.idPohon
                                           : 'P023',
@@ -798,7 +893,8 @@ class _TreeMappingDetailPageState extends State<TreeMappingDetailPage> {
                                           ? widget.pohon!.kmsAset
                                           : 'Tidak tersedia',
                                       screenWidth),
-                                  // Aset JTM (async)
+
+                                  // ── Aset JTM (async) ──
                                   Padding(
                                     padding: const EdgeInsets.fromLTRB(
                                         16, 8, 16, 8),
@@ -811,8 +907,7 @@ class _TreeMappingDetailPageState extends State<TreeMappingDetailPage> {
                                         Text('Aset JTM',
                                             style: TextStyle(
                                                 fontSize: screenWidth * 0.04,
-                                                fontWeight:
-                                                    FontWeight.bold)),
+                                                fontWeight: FontWeight.bold)),
                                         Flexible(
                                           child: FutureBuilder<String>(
                                             future: _asetJtmNameFuture,
@@ -833,7 +928,8 @@ class _TreeMappingDetailPageState extends State<TreeMappingDetailPage> {
                                       ],
                                     ),
                                   ),
-                                  // Tanggal penjadwalan (async)
+
+                                  // ── Tanggal penjadwalan (async) ──
                                   Padding(
                                     padding: const EdgeInsets.fromLTRB(
                                         16, 8, 16, 8),
@@ -866,6 +962,7 @@ class _TreeMappingDetailPageState extends State<TreeMappingDetailPage> {
                                       ],
                                     ),
                                   ),
+
                                   _infoRow(
                                       'Tujuan Penjadwalan',
                                       widget.pohon!.tujuanPenjadwalan == 1
@@ -890,7 +987,8 @@ class _TreeMappingDetailPageState extends State<TreeMappingDetailPage> {
                                           ? widget.pohon!.catatan
                                           : 'Perlu perhatian khusus untuk pemeliharaan.',
                                       screenWidth),
-                                  // Created by (async)
+
+                                  // ── Created by (async) ──
                                   Padding(
                                     padding: const EdgeInsets.fromLTRB(
                                         16, 8, 16, 8),
@@ -924,6 +1022,7 @@ class _TreeMappingDetailPageState extends State<TreeMappingDetailPage> {
                                       ],
                                     ),
                                   ),
+
                                   _infoRow(
                                       'Dibuat Pada',
                                       '${_formatDateTime(widget.pohon!.createdDate)} WITA',
@@ -963,15 +1062,14 @@ class _TreeMappingDetailPageState extends State<TreeMappingDetailPage> {
                                               MaterialPageRoute(
                                                   builder: (context) =>
                                                       EksekusiPage(
-                                                          pohon: widget
-                                                              .pohon!)),
+                                                          pohon:
+                                                              widget.pohon!)),
                                             );
                                           },
                                           style: ElevatedButton.styleFrom(
                                             backgroundColor:
                                                 const Color(0xFF0B5F6D),
-                                            minimumSize: Size(
-                                                screenWidth * 0.9,
+                                            minimumSize: Size(screenWidth * 0.9,
                                                 screenHeight * 0.06),
                                             shape: RoundedRectangleBorder(
                                               borderRadius:
@@ -997,15 +1095,14 @@ class _TreeMappingDetailPageState extends State<TreeMappingDetailPage> {
                                               MaterialPageRoute(
                                                   builder: (context) =>
                                                       RiwayatEksekusiPage(
-                                                          pohon: widget
-                                                              .pohon!)),
+                                                          pohon:
+                                                              widget.pohon!)),
                                             );
                                           },
                                           style: ElevatedButton.styleFrom(
                                             backgroundColor:
                                                 const Color(0xFF0B5F6D),
-                                            minimumSize: Size(
-                                                screenWidth * 0.9,
+                                            minimumSize: Size(screenWidth * 0.9,
                                                 screenHeight * 0.06),
                                             shape: RoundedRectangleBorder(
                                               borderRadius:
@@ -1030,8 +1127,7 @@ class _TreeMappingDetailPageState extends State<TreeMappingDetailPage> {
                                           style: ElevatedButton.styleFrom(
                                             backgroundColor:
                                                 Colors.red.shade700,
-                                            minimumSize: Size(
-                                                screenWidth * 0.9,
+                                            minimumSize: Size(screenWidth * 0.9,
                                                 screenHeight * 0.06),
                                             shape: RoundedRectangleBorder(
                                               borderRadius:

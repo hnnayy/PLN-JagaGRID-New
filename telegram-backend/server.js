@@ -34,17 +34,20 @@ app.post("/webhook", async (req, res) => {
     const message = req.body.message;
     if (!message) return res.send("ok");
 
-    const chatId = String(message.chat.id);
+    // ✅ FIX: simpan sebagai integer, bukan string
+    // String(message.chat.id) menyebabkan chat_id tersimpan sebagai string
+    // Telegram API butuh integer → error 400 kalau string
+    const chatId = message.chat.id; // ✅ integer langsung dari Telegram
     const username = message.from.username || "";
     const text = message.text;
 
     console.log("📩 Message:", text, "dari:", username);
 
-    // ✅ Simpan ke Firestore
+    // ✅ Simpan ke Firestore sebagai integer
     if (db && username) {
       await db.collection("telegram_users").doc(username).set({
         username_telegram: username,
-        chat_id: chatId,
+        chat_id: chatId, // ✅ integer, bukan string
         last_message: text,
         updated_at: admin.firestore.FieldValue.serverTimestamp(),
       }, { merge: true });
@@ -56,7 +59,7 @@ app.post("/webhook", async (req, res) => {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        chat_id: chatId,
+        chat_id: chatId, // ✅ integer
         text: "✅ Kamu sudah terhubung ke PLN JagaGRID!",
       }),
     });

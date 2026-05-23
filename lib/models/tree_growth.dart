@@ -1,21 +1,27 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 class TreeGrowth {
-  final String id; // Firestore document ID
-  final String name; // Nama pohon
-  final double growthRate; // cm/tahun
+  final String id;
+  final String name;
+  final double growthRate;
   final DateTime createdAt;
-  final int status; // 1 = aktif, 0 = terhapus (soft delete)
-  final DateTime? deletedAt; // Waktu dihapus (null jika tidak dihapus)
+  final int status;
+  final DateTime? deletedAt;
+  final String unit; // 'all' = global (Admin), 'ULP BARRU' = milik ULP tertentu
 
   TreeGrowth({
     required this.id,
     required this.name,
     required this.growthRate,
     required this.createdAt,
-    this.status = 1, // Default aktif
+    this.status = 1,
     this.deletedAt,
+    this.unit = 'all',
   });
+
+  bool get isActive => status == 1;
+  bool get isDeleted => status == 0;
+  bool get isGlobal => unit == 'all'; // Data dari Admin UP3
 
   Map<String, dynamic> toMap() {
     return {
@@ -25,6 +31,7 @@ class TreeGrowth {
       'created_at': Timestamp.fromDate(createdAt),
       'status': status,
       'deleted_at': deletedAt != null ? Timestamp.fromDate(deletedAt!) : null,
+      'unit': unit,
     };
   }
 
@@ -36,6 +43,7 @@ class TreeGrowth {
       createdAt: (map['created_at'] as Timestamp?)?.toDate() ?? DateTime.now(),
       status: (map['status'] as int?) ?? 1,
       deletedAt: (map['deleted_at'] as Timestamp?)?.toDate(),
+      unit: map['unit']?.toString() ?? 'all',
     );
   }
 
@@ -46,6 +54,7 @@ class TreeGrowth {
     DateTime? createdAt,
     int? status,
     DateTime? deletedAt,
+    String? unit,
   }) {
     return TreeGrowth(
       id: id ?? this.id,
@@ -54,10 +63,7 @@ class TreeGrowth {
       createdAt: createdAt ?? this.createdAt,
       status: status ?? this.status,
       deletedAt: deletedAt ?? this.deletedAt,
+      unit: unit ?? this.unit,
     );
   }
-
-  // Helper methods
-  bool get isActive => status == 1;
-  bool get isDeleted => status == 0;
 }

@@ -19,6 +19,102 @@ class GrowthPredictionProvider with ChangeNotifier {
   bool get isLoading => _isLoading;
   String? get errorMessage => _errorMessage;
 
+  // ─────────────────────────────────────────────────────────────
+  // STREAM: realtime listener ke Firestore
+  // Dipakai oleh RepetitionAnalyticsPage via StreamBuilder
+  // Menggabungkan data real + synthetic, difilter per session unit
+  // ─────────────────────────────────────────────────────────────
+  Stream<List<GrowthPrediction>> watchActivePredictions() async* {
+    final prefs = await SharedPreferences.getInstance();
+    final level = prefs.getInt('session_level') ?? 2;
+    final sessionUnit = prefs.getString('session_unit') ?? '';
+
+    bool allowed(DataPohon p) {
+      if (level == 2) return p.up3 == sessionUnit || p.ulp == sessionUnit;
+      return true;
+    }
+
+    final db = FirebaseFirestore.instance;
+
+    // Stream utama: growth_predictions status == 1
+    final predStream = db
+        .collection('growth_predictions')
+        .where('status', isEqualTo: 1)
+        .snapshots();
+
+    await for (final predSnap in predStream) {
+      try {
+        // Fetch semua pohon aktif (sekali per event stream)
+        final pohonSnap = await db
+            .collection('data_pohon')
+            .where('status', isEqualTo: 1)
+            .get();
+
+        final treeMap = <String, DataPohon>{};
+        for (final doc in pohonSnap.docs) {
+          final dp = DataPohon.fromMap({...doc.data(), 'id': doc.id});
+          treeMap[doc.id] = dp;
+        }
+
+        // Parse prediksi real dari Firestore
+        final realPredictions = predSnap.docs.map((doc) {
+          return GrowthPrediction.fromMap(doc.data(), doc.id);
+        }).toList();
+
+        final existingIds =
+            realPredictions.map((p) => p.dataPohonId).toSet();
+
+        // Filter prediksi real sesuai session
+        final filteredReal = realPredictions.where((p) {
+          final t = treeMap[p.dataPohonId];
+          if (t == null) return false;
+          return allowed(t);
+        }).toList();
+
+        // Buat synthetic untuk pohon yang belum punya prediksi
+        final synthetic = <GrowthPrediction>[];
+        for (final entry in treeMap.entries) {
+          final data = entry.value;
+          if (existingIds.contains(data.id)) continue;
+          if (!allowed(data)) continue;
+          synthetic.add(
+            GrowthPrediction(
+              id: 'synthetic:${data.id}',
+              dataPohonId: data.id,
+              lastExecutionDate: data.scheduleDate,
+              lastHeight: data.initialHeight * 100,
+              growthRate: data.growthRate,
+              safeDistance: 3.0,
+              predictedNextExecution: data.scheduleDate,
+              predictionReason:
+                  'Belum ada eksekusi. Menggunakan tanggal penjadwalan awal.',
+              confidenceLevel: 0.5,
+              repetitionCycle: 0,
+              createdDate: DateTime.now(),
+              status: 1,
+              executionType: data.tujuanPenjadwalan,
+              lastExecutionNotes: '',
+            ),
+          );
+        }
+
+        final merged = [...filteredReal, ...synthetic]
+          ..sort((a, b) =>
+              a.predictedNextExecution.compareTo(b.predictedNextExecution));
+
+        yield merged;
+      } catch (e) {
+        print('❌ Stream error: $e');
+        // Emit list kosong daripada crash
+        yield [];
+      }
+    }
+  }
+
+  // ─────────────────────────────────────────────────────────────
+  // LOAD ONCE: tetap dipertahankan untuk keperluan lain
+  // (createPredictionAfterExecution, markPredictionExecuted, dll)
+  // ─────────────────────────────────────────────────────────────
   Future<void> loadActivePredictions() async {
     _isLoading = true;
     _errorMessage = null;
@@ -47,9 +143,7 @@ class GrowthPredictionProvider with ChangeNotifier {
       final level = prefs.getInt('session_level') ?? 2;
       final sessionUnit = prefs.getString('session_unit') ?? '';
       bool allowed(DataPohon p) {
-        if (level == 2) {
-          return p.up3 == sessionUnit || p.ulp == sessionUnit;
-        }
+        if (level == 2) return p.up3 == sessionUnit || p.ulp == sessionUnit;
         return true;
       }
 
@@ -63,15 +157,12 @@ class GrowthPredictionProvider with ChangeNotifier {
             id: 'synthetic:$id',
             dataPohonId: id,
             lastExecutionDate: data.scheduleDate,
-            // FIX 4b: konversi meter → cm
-            // data.initialHeight dalam meter (diinput teknisi)
-            // lastHeight di GrowthPrediction expect cm
-            // Tanpa konversi: pohon 1.5m dianggap 1.5cm → prediksi salah besar
             lastHeight: data.initialHeight * 100,
             growthRate: data.growthRate,
             safeDistance: 3.0,
             predictedNextExecution: data.scheduleDate,
-            predictionReason: 'Belum ada eksekusi. Menggunakan tanggal penjadwalan awal.',
+            predictionReason:
+                'Belum ada eksekusi. Menggunakan tanggal penjadwalan awal.',
             confidenceLevel: 0.5,
             repetitionCycle: 0,
             createdDate: DateTime.now(),
@@ -89,10 +180,12 @@ class GrowthPredictionProvider with ChangeNotifier {
       }).toList();
 
       final merged = [...filteredReal, ...synthetic]
-        ..sort((a, b) => a.predictedNextExecution.compareTo(b.predictedNextExecution));
+        ..sort((a, b) =>
+            a.predictedNextExecution.compareTo(b.predictedNextExecution));
 
       _activePredictions = merged;
-      print('✅ Loaded ${predictions.length} active predictions (+${synthetic.length} default)');
+      print(
+          '✅ Loaded ${predictions.length} active predictions (+${synthetic.length} default)');
     } catch (e) {
       _errorMessage = 'Gagal memuat prediksi: $e';
       print('❌ Error loading predictions: $e');
@@ -112,7 +205,8 @@ class GrowthPredictionProvider with ChangeNotifier {
     try {
       final db = FirebaseFirestore.instance;
 
-      final pohonDoc = await db.collection('data_pohon').doc(dataPohonId).get();
+      final pohonDoc =
+          await db.collection('data_pohon').doc(dataPohonId).get();
       if (!pohonDoc.exists) {
         throw Exception('Data pohon tidak ditemukan untuk ID: $dataPohonId');
       }
@@ -121,7 +215,8 @@ class GrowthPredictionProvider with ChangeNotifier {
         'id': pohonDoc.id,
       });
 
-      final eksekusiDoc = await db.collection('eksekusi').doc(eksekusiId).get();
+      final eksekusiDoc =
+          await db.collection('eksekusi').doc(eksekusiId).get();
       if (!eksekusiDoc.exists) {
         throw Exception('Data eksekusi tidak ditemukan untuk ID: $eksekusiId');
       }
@@ -151,7 +246,6 @@ class GrowthPredictionProvider with ChangeNotifier {
         );
       }
 
-      await _createNotificationForPrediction(prediction, context);
       await loadActivePredictions();
 
       return prediction;
@@ -182,6 +276,9 @@ class GrowthPredictionProvider with ChangeNotifier {
         executionNotes,
       );
 
+      await _growthService
+          .deactivateTreeAfterFelling(currentPrediction.dataPohonId);
+
       _activePredictions[predictionIndex] = currentPrediction.copyWith(
         status: 2,
         executionType: 2,
@@ -190,60 +287,25 @@ class GrowthPredictionProvider with ChangeNotifier {
 
       final notificationProvider =
           Provider.of<NotificationProvider>(context, listen: false);
-      final message =
-          'Pohon ${currentPrediction.dataPohonId} telah dihapus sepenuhnya (tebang habis)';
+
       final notification = AppNotification(
-        title: 'Pohon Dihapus Sepenuhnya',
-        message: message,
+        title: 'Tebang Habis Selesai',
+        message: '${currentPrediction.dataPohonId} telah ditebang habis.',
         date: DateTime.now(),
         idPohon: currentPrediction.dataPohonId,
       );
 
       await notificationProvider.addNotification(
         notification,
-        scheduleDate: null,
-        pohonId: currentPrediction.dataPohonId,
-        namaPohon: 'Pohon ${currentPrediction.dataPohonId}',
         documentIdPohon: currentPrediction.dataPohonId,
       );
 
       notifyListeners();
-      print('✅ Complete tree felling executed for prediction: $predictionId');
+      print(
+          '✅ Complete tree felling executed for prediction: $predictionId');
     } catch (e) {
       _errorMessage = 'Gagal mengeksekusi tebang habis: $e';
       print('❌ Error executing complete felling: $e');
-    }
-  }
-
-  Future<void> _createNotificationForPrediction(
-    GrowthPrediction prediction,
-    BuildContext context,
-  ) async {
-    try {
-      final notificationProvider =
-          Provider.of<NotificationProvider>(context, listen: false);
-      final notificationDate = prediction.predictedNextExecution
-          .subtract(const Duration(days: 3));
-      final message =
-          'Pohon ${prediction.dataPohonId} perlu perawatan dalam ${prediction.predictionReason.split('.').last.trim()}';
-      final notification = AppNotification(
-        title: 'Reminder Perawatan Pohon',
-        message: message,
-        date: DateTime.now(),
-        idPohon: prediction.dataPohonId,
-      );
-
-      await notificationProvider.addNotification(
-        notification,
-        scheduleDate: notificationDate,
-        pohonId: prediction.dataPohonId,
-        namaPohon: 'Pohon ${prediction.dataPohonId}',
-        documentIdPohon: prediction.dataPohonId,
-      );
-
-      print('✅ Notification created for prediction: ${prediction.id}');
-    } catch (e) {
-      print('⚠️ Failed to create notification for prediction: $e');
     }
   }
 
@@ -264,12 +326,12 @@ class GrowthPredictionProvider with ChangeNotifier {
 
       if (executionType == 2) {
         await _growthService.updatePredictionStatus(predictionId, 2);
+        await _growthService
+            .deactivateTreeAfterFelling(currentPrediction.dataPohonId);
         _activePredictions[predictionIndex] =
             currentPrediction.copyWith(status: 2);
       } else {
         final nextCycle = currentPrediction.repetitionCycle + 1;
-
-        // FIX 4: Fetch data pohon asli dari Firestore
         final pohonData =
             await _getTreeData(currentPrediction.dataPohonId);
 
@@ -284,7 +346,6 @@ class GrowthPredictionProvider with ChangeNotifier {
             createdBy: '',
             createdDate: Timestamp.now(),
             status: 1,
-            // FIX 5: lastHeight dalam cm → bagi 100 untuk dapat meter
             tinggiPohon: currentPrediction.lastHeight / 100,
             diameterPohon: 0.0,
           ),
@@ -298,10 +359,23 @@ class GrowthPredictionProvider with ChangeNotifier {
           executionNotes,
         );
 
+        try {
+          final db = FirebaseFirestore.instance;
+          final predSnap = await db
+              .collection('growth_predictions')
+              .where('data_pohon_id',
+                  isEqualTo: currentPrediction.dataPohonId)
+              .where('status', isEqualTo: 1)
+              .get();
+          for (final pd in predSnap.docs) {
+            await pd.reference.update({'reminder_sent': false});
+          }
+        } catch (e) {
+          print('⚠️ Gagal set reminder_sent: $e');
+        }
+
         _activePredictions[predictionIndex] =
             currentPrediction.copyWith(status: 2);
-
-        await _createNotificationForPrediction(createdPrediction, context);
       }
 
       notifyListeners();
@@ -312,7 +386,8 @@ class GrowthPredictionProvider with ChangeNotifier {
     }
   }
 
-  Future<void> cancelPrediction(String predictionId, String reason) async {
+  Future<void> cancelPrediction(
+      String predictionId, String reason) async {
     try {
       await _growthService.cancelPrediction(predictionId, reason);
 
@@ -359,7 +434,6 @@ class GrowthPredictionProvider with ChangeNotifier {
     }
   }
 
-  // FIX 4: Fetch data pohon asli dari Firestore
   Future<DataPohon> _getTreeData(String dataPohonId) async {
     try {
       final doc = await FirebaseFirestore.instance

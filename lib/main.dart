@@ -24,154 +24,230 @@ import 'page/login/login.dart';
 import 'navigation_menu.dart';
 import 'services/reminder_service.dart';
 
-// Global navigator key untuk navigasi dari notification
-final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
+final GlobalKey<NavigatorState> navigatorKey =
+    GlobalKey<NavigatorState>();
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
+  // =========================================================
+  // LOAD ENV
+  // =========================================================
   try {
-    await dotenv.load(fileName: ".env");
+    await dotenv.load(fileName: '.env');
+    debugPrint('✅ ENV loaded');
   } catch (e) {
-    print("ENV file not found: $e");
+    debugPrint('❌ ENV gagal load: $e');
   }
 
+  // =========================================================
+  // FIREBASE INIT
+  // =========================================================
   try {
     await Firebase.initializeApp(
       options: DefaultFirebaseOptions.currentPlatform,
     );
 
     await FirebaseAppCheck.instance.activate(
-      androidProvider: AndroidProvider.debug, // ganti playIntegrity di production
+      androidProvider: AndroidProvider.debug,
     );
 
-    print('✅ Firebase initialized successfully + App Check active');
+    debugPrint('✅ Firebase initialized');
   } catch (e) {
-    print('❌ Error initializing Firebase/AppCheck: $e');
+    debugPrint('❌ Firebase init error: $e');
   }
 
-  // Ensure we have a Firebase Auth user before any Firestore access
+  // =========================================================
+  // AUTH ANON
+  // =========================================================
   try {
     final auth = FirebaseAuth.instance;
+
     if (auth.currentUser == null) {
       await auth.signInAnonymously();
-      print('🔐 Signed in anonymously for Firestore access');
+      debugPrint('✅ Anonymous auth success');
     } else {
-      print('🔐 Auth session already available (${auth.currentUser!.uid})');
+      debugPrint('✅ Auth already available');
     }
   } catch (e) {
-    print('❌ Failed to sign in anonymously: $e');
+    debugPrint('❌ Anonymous auth failed: $e');
   }
 
-  // Periksa status login dengan penanganan error
+  // =========================================================
+  // SESSION LOGIN
+  // =========================================================
   bool isLoggedIn = false;
+
   try {
     final prefs = await SharedPreferences.getInstance();
-    isLoggedIn = prefs.getString('session_username') != null;
+
+    isLoggedIn =
+        prefs.getString('session_username') != null;
   } catch (e) {
-    print('❌ Error accessing SharedPreferences: $e');
-    isLoggedIn = false; // Default ke false jika gagal
+    debugPrint('❌ SharedPreferences error: $e');
   }
 
-  runApp(OverlaySupport(
-    child: MyApp(isLoggedIn: isLoggedIn),
-  ));
+  // =========================================================
+  // RUN APP
+  // =========================================================
+  runApp(
+    OverlaySupport(
+      child: MyApp(isLoggedIn: isLoggedIn),
+    ),
+  );
 
-  // Fungsi rekursif untuk setup navigation callback dengan retry
-  void _setupNavigationCallback(int attempt) {
+  // =========================================================
+  // SETUP CALLBACK NAVIGATION
+  // =========================================================
+  void setupNotificationNavigation(int attempt) {
     if (attempt >= 5) {
-      debugPrint('❌ Gagal setup navigation callback setelah 5 percobaan');
+      debugPrint('❌ Setup callback gagal');
       return;
     }
 
     final context = navigatorKey.currentContext;
-    if (context != null && context.mounted && context.findRenderObject() != null) {
+
+    if (context != null &&
+        context.mounted &&
+        context.findRenderObject() != null) {
       try {
-        final notificationProvider = Provider.of<NotificationProvider>(context, listen: false);
-        notificationProvider.setNotificationTapCallback((String? documentId) async {
-          if (documentId != null && documentId.isNotEmpty) {
+        final notificationProvider =
+            Provider.of<NotificationProvider>(
+          context,
+          listen: false,
+        );
+
+        notificationProvider
+            .setNotificationTapCallback(
+          (String? documentId) async {
+            if (documentId == null ||
+                documentId.isEmpty) {
+              debugPrint('❌ documentId kosong');
+              return;
+            }
+
             try {
-              final docSnapshot = await FirebaseFirestore.instance
-                  .collection('data_pohon')
-                  .doc(documentId)
-                  .get();
+              final docSnapshot =
+                  await FirebaseFirestore.instance
+                      .collection('data_pohon')
+                      .doc(documentId)
+                      .get();
 
-              if (docSnapshot.exists && navigatorKey.currentState != null && navigatorKey.currentContext != null) {
-                final pohon = DataPohon.fromMap({
-                  ...docSnapshot.data()!,
-                  'id': docSnapshot.id,
-                });
+              if (!docSnapshot.exists) {
+                debugPrint('❌ Pohon tidak ditemukan');
+                return;
+              }
 
-                if (navigatorKey.currentContext != null && navigatorKey.currentContext!.mounted) {
-                  navigatorKey.currentState!.push(
-                    MaterialPageRoute(
-                      builder: (context) => TreeMappingDetailPage(pohon: pohon),
+              final pohon = DataPohon.fromMap({
+                ...docSnapshot.data()!,
+                'id': docSnapshot.id,
+              });
+
+              if (navigatorKey.currentState != null &&
+                  navigatorKey.currentContext != null) {
+                navigatorKey.currentState!.push(
+                  MaterialPageRoute(
+                    builder: (_) =>
+                        TreeMappingDetailPage(
+                      pohon: pohon,
                     ),
-                  );
-                  debugPrint('✅ Navigasi ke detail pohon berhasil: $documentId');
-                } else {
-                  debugPrint('⚠️ Context tidak valid untuk navigasi: $documentId');
-                }
-              } else {
-                debugPrint('❌ Document tidak ditemukan atau navigator tidak tersedia: $documentId');
+                  ),
+                );
+
+                debugPrint(
+                    '✅ Navigasi notif berhasil');
               }
             } catch (e) {
-              debugPrint('❌ Error fetching pohon for notification: $e');
+              debugPrint(
+                  '❌ Error open notification: $e');
             }
-          } else {
-            debugPrint('❌ Document ID kosong atau null');
-          }
-        });
-        debugPrint('🔧 Navigation callback berhasil di-setup pada attempt ${attempt + 1}');
+          },
+        );
+
+        debugPrint(
+            '✅ Notification callback ready');
       } catch (e) {
-        debugPrint('❌ Error setting up navigation callback pada attempt ${attempt + 1}: $e');
-        Future.delayed(Duration(milliseconds: 1000 * (attempt + 1)), () {
-          _setupNavigationCallback(attempt + 1);
-        });
+        debugPrint(
+            '❌ Setup callback error: $e');
+
+        Future.delayed(
+          Duration(milliseconds: 1000 * (attempt + 1)),
+          () => setupNotificationNavigation(attempt + 1),
+        );
       }
     } else {
-      debugPrint('⏳ Menunggu context stabil... attempt ${attempt + 1}');
-      Future.delayed(const Duration(milliseconds: 500), () {
-        _setupNavigationCallback(attempt + 1);
-      });
+      Future.delayed(
+        const Duration(milliseconds: 500),
+        () => setupNotificationNavigation(attempt + 1),
+      );
     }
   }
 
   WidgetsBinding.instance.addPostFrameCallback((_) {
-    _setupNavigationCallback(0);
+    setupNotificationNavigation(0);
 
     final ctx = navigatorKey.currentContext;
+
     if (ctx != null) {
-      final notif = Provider.of<NotificationProvider>(ctx, listen: false);
-      ReminderService.runThreeDayTelegramRemindersIfNeeded(notif);
+      final notif = Provider.of<NotificationProvider>(
+        ctx,
+        listen: false,
+      );
+
+      // =====================================================
+      // H-3 REMINDER CHECK
+      // =====================================================
+      ReminderService
+          .runThreeDayTelegramRemindersIfNeeded(
+        notif,
+      );
     }
   });
 }
 
+// =========================================================
+// APP
+// =========================================================
 class MyApp extends StatelessWidget {
   final bool isLoggedIn;
 
-  const MyApp({super.key, required this.isLoggedIn});
+  const MyApp({
+    super.key,
+    required this.isLoggedIn,
+  });
 
   @override
   Widget build(BuildContext context) {
     return MultiProvider(
       providers: [
-        ChangeNotifierProvider(create: (_) => DataPohonProvider()),
-        ChangeNotifierProvider(create: (_) => EksekusiProvider()),
-        ChangeNotifierProvider(create: (_) => NotificationProvider()),
-        ChangeNotifierProvider(create: (_) => GrowthPredictionProvider()),
-        ChangeNotifierProvider(create: (_) => TreeGrowthProvider()),
+        ChangeNotifierProvider(
+          create: (_) => DataPohonProvider(),
+        ),
+        ChangeNotifierProvider(
+          create: (_) => EksekusiProvider(),
+        ),
+        ChangeNotifierProvider(
+          create: (_) => NotificationProvider(),
+        ),
+        ChangeNotifierProvider(
+          create: (_) => GrowthPredictionProvider(),
+        ),
+        ChangeNotifierProvider(
+          create: (_) => TreeGrowthProvider(),
+        ),
       ],
       child: MaterialApp(
         navigatorKey: navigatorKey,
         debugShowCheckedModeBanner: false,
-        home: isLoggedIn ? const NavigationMenu() : const SplashScreen(),
+        home: isLoggedIn
+            ? const NavigationMenu()
+            : const SplashScreen(),
         routes: {
           '/map': (context) => MapPage(),
           '/addData': (context) => AddDataPage(),
           '/report': (context) => TreeMappingReportPage(),
-          '/treeGrowth': (context) => const TreeGrowthListPage(),
+          '/treeGrowth': (context) =>
+              const TreeGrowthListPage(),
           '/login': (context) => const LoginPage(),
         },
       ),

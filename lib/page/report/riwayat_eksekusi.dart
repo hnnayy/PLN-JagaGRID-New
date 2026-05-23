@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../models/data_pohon.dart';
 import '../../models/eksekusi.dart';
@@ -10,12 +12,70 @@ class RiwayatEksekusiPage extends StatelessWidget {
 
   const RiwayatEksekusiPage({super.key, required this.pohon});
 
+  // ─────────────────────────────────────────────
+  // Fullscreen image viewer
+  // ─────────────────────────────────────────────
+  void _showFullscreenImage(BuildContext context, String imageUrl) {
+    showDialog(
+      context: context,
+      barrierColor: Colors.black87,
+      builder: (_) => Dialog(
+        backgroundColor: Colors.transparent,
+        insetPadding: EdgeInsets.zero,
+        child: Stack(
+          children: [
+            // Foto fullscreen + bisa zoom/pan
+            InteractiveViewer(
+              panEnabled: true,
+              minScale: 1.0,
+              maxScale: 4.0,
+              child: Center(
+                child: CachedNetworkImage(
+                  imageUrl: imageUrl,
+                  fit: BoxFit.contain,
+                  placeholder: (context, url) => const Center(
+                    child: CircularProgressIndicator(color: Colors.white),
+                  ),
+                  errorWidget: (context, url, error) => const Icon(
+                    Icons.broken_image,
+                    color: Colors.white,
+                    size: 60,
+                  ),
+                ),
+              ),
+            ),
+
+            // Tombol silang tutup
+            Positioned(
+              top: 40,
+              right: 16,
+              child: GestureDetector(
+                onTap: () => Navigator.of(context).pop(),
+                child: Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: const BoxDecoration(
+                    color: Colors.black54,
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(Icons.close, color: Colors.white, size: 24),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // ─────────────────────────────────────────────
+  // Build
+  // ─────────────────────────────────────────────
   @override
   Widget build(BuildContext context) {
     final screenWidth = MediaQuery.of(context).size.width;
-    final screenHeight = MediaQuery.of(context).size.height;
 
     return Scaffold(
+      backgroundColor: const Color(0xFFF3F3F3),
       appBar: AppBar(
         backgroundColor: const Color(0xFF125E72),
         leading: IconButton(
@@ -26,10 +86,10 @@ class RiwayatEksekusiPage extends StatelessWidget {
           fit: BoxFit.scaleDown,
           alignment: Alignment.centerLeft,
           child: Text(
-            'Riwayat Eksekusi - Pohon ID #${pohon.idPohon}',
+            'Riwayat Eksekusi #${pohon.idPohon}',
             style: TextStyle(
               color: AppColors.white,
-              fontSize: screenWidth * 0.05,
+              fontSize: screenWidth * 0.045,
               fontWeight: FontWeight.bold,
             ),
           ),
@@ -44,181 +104,413 @@ class RiwayatEksekusiPage extends StatelessWidget {
           if (perm.hasError || perm.data != true) {
             return const Center(child: Text('Akses ditolak untuk pohon ini'));
           }
-          return Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: StreamBuilder<List<Eksekusi>>(
-          stream: FirebaseFirestore.instance
-              .collection('eksekusi')
-              .where('data_pohon_id', isEqualTo: pohon.id)
-              .snapshots()
-              .map((snapshot) => snapshot.docs
-                  .map((doc) => Eksekusi.fromMap({...doc.data(), 'id': doc.id}))
-                  .toList()
-                  // Sort client-side to avoid requiring a composite index
-                  ..sort((a, b) => b.createdDate.compareTo(a.createdDate))),
-          builder: (context, snapshot) {
-            if (snapshot.connectionState == ConnectionState.waiting) {
-              return const Center(child: CircularProgressIndicator());
-            }
-            if (snapshot.hasError) {
-              return Center(child: Text('Error: ${snapshot.error}'));
-            }
-            final eksekusiList = snapshot.data ?? [];
-            if (eksekusiList.isEmpty) {
-              return const Center(child: Text('Tidak ada riwayat eksekusi'));
-            }
 
-            // Sinkronisasi ringkasan (jumlah & eksekusi terakhir) supaya sama dengan management page
-            final total = eksekusiList.length;
-            // Karena sudah orderBy createddate desc, index 0 adalah terbaru
-            final latestDate = _formatDate(eksekusiList.first.tanggalEksekusi);
+          return StreamBuilder<List<Eksekusi>>(
+            stream: FirebaseFirestore.instance
+                .collection('eksekusi')
+                .where('data_pohon_id', isEqualTo: pohon.id)
+                .snapshots()
+                .map((snapshot) => snapshot.docs
+                    .map((doc) =>
+                        Eksekusi.fromMap({...doc.data(), 'id': doc.id}))
+                    .toList()
+                  ..sort((a, b) =>
+                      b.createdDate.compareTo(a.createdDate))),
+            builder: (context, snapshot) {
+              if (snapshot.connectionState == ConnectionState.waiting) {
+                return const Center(child: CircularProgressIndicator());
+              }
+              if (snapshot.hasError) {
+                return Center(child: Text('Error: ${snapshot.error}'));
+              }
 
-            return Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Card(
-                  color: AppColors.white,
-                  elevation: 2,
-                  child: Padding(
-                    padding: const EdgeInsets.all(12.0),
+              final eksekusiList = snapshot.data ?? [];
+
+              if (eksekusiList.isEmpty) {
+                return Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(Icons.history, size: 64, color: Colors.grey[300]),
+                      const SizedBox(height: 16),
+                      Text(
+                        'Belum ada riwayat eksekusi',
+                        style: TextStyle(
+                          fontSize: 16,
+                          color: Colors.grey[500],
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ],
+                  ),
+                );
+              }
+
+              final total = eksekusiList.length;
+              final latest = eksekusiList.first;
+              final latestTipe = latest.statusEksekusi == 1
+                  ? 'Tebang Pangkas'
+                  : 'Tebang Habis';
+
+              return ListView(
+                padding: const EdgeInsets.all(16),
+                children: [
+                  // ── Summary Card ──
+                  Container(
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      gradient: const LinearGradient(
+                        colors: [Color(0xFF125E72), Color(0xFF14A2B9)],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                      ),
+                      borderRadius: BorderRadius.circular(16),
+                    ),
                     child: Row(
                       children: [
                         Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              const Text('Jumlah Eksekusi', style: TextStyle(color: Colors.grey, fontSize: 12)),
-                              Text('$total', style: const TextStyle(fontWeight: FontWeight.bold)),
-                            ],
+                          child: _summaryItem(
+                            'Total Eksekusi',
+                            '$total kali',
+                            Icons.repeat,
                           ),
                         ),
+                        Container(
+                            width: 1,
+                            height: 40,
+                            color: Colors.white.withOpacity(0.3)),
                         Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.end,
-                            children: [
-                              const Text('Eksekusi Terakhir', style: TextStyle(color: Colors.grey, fontSize: 12)),
-                              Text(latestDate, style: const TextStyle(fontWeight: FontWeight.bold)),
-                            ],
+                          child: _summaryItem(
+                            'Terakhir',
+                            _formatDateShort(latest.tanggalEksekusi),
+                            Icons.calendar_today,
+                          ),
+                        ),
+                        Container(
+                            width: 1,
+                            height: 40,
+                            color: Colors.white.withOpacity(0.3)),
+                        Expanded(
+                          child: _summaryItem(
+                            'Tipe',
+                            latestTipe,
+                            Icons.content_cut,
                           ),
                         ),
                       ],
                     ),
                   ),
-                ),
-                const SizedBox(height: 8),
-                Expanded(
-                  child: ListView.builder(
-                    itemCount: eksekusiList.length,
-                    itemBuilder: (context, index) {
-                      final eksekusi = eksekusiList[index];
-                Color statusColor;
-                String aksiText;
-                switch (eksekusi.statusEksekusi) {
-                  case 1: // Tebang Pangkas
-                    statusColor = Colors.green;
-                    aksiText = 'Pemangkasan';
-                    break;
-                  case 2: // Tebang Habis
-                    statusColor = Colors.red;
-                    aksiText = 'Penebangan';
-                    break;
-                  default:
-                    statusColor = Colors.orange; // Should not occur due to validations
-                    aksiText = 'Tidak Diketahui';
-                }
 
-                      return Card(
-                        margin: const EdgeInsets.symmetric(vertical: 8.0),
-                        child: ExpansionTile(
-                          title: Text(
-                            'Tanggal Eksekusi: ${_formatDate(eksekusi.tanggalEksekusi)}',
-                            style: TextStyle(
-                              fontSize: screenWidth * 0.04,
-                              fontWeight: FontWeight.bold,
+                  const SizedBox(height: 20),
+
+                  // ── List Riwayat ──
+                  ...eksekusiList.asMap().entries.map((entry) {
+                    final index = entry.key;
+                    final eksekusi = entry.value;
+                    final nomorEksekusi = total - index;
+                    final isTebangPangkas = eksekusi.statusEksekusi == 1;
+                    final tipeColor =
+                        isTebangPangkas ? Colors.green : Colors.red;
+                    final tipeText =
+                        isTebangPangkas ? 'Tebang Pangkas' : 'Tebang Habis';
+                    final tipeIcon =
+                        isTebangPangkas ? Icons.content_cut : Icons.park;
+
+                    return Container(
+                      margin: const EdgeInsets.only(bottom: 16),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(16),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.06),
+                            blurRadius: 10,
+                            offset: const Offset(0, 4),
+                          ),
+                        ],
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          // ── Header card ──
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 16, vertical: 12),
+                            decoration: const BoxDecoration(
+                              color: Color(0xFF125E72),
+                              borderRadius: BorderRadius.only(
+                                topLeft: Radius.circular(16),
+                                topRight: Radius.circular(16),
+                              ),
+                            ),
+                            child: Row(
+                              mainAxisAlignment:
+                                  MainAxisAlignment.spaceBetween,
+                              children: [
+                                Text(
+                                  'Eksekusi #$nomorEksekusi${index == 0 ? " (Terkini)" : ""}',
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 14,
+                                  ),
+                                ),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 10, vertical: 4),
+                                  decoration: BoxDecoration(
+                                    color: tipeColor,
+                                    borderRadius: BorderRadius.circular(20),
+                                  ),
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Icon(tipeIcon,
+                                          size: 12, color: Colors.white),
+                                      const SizedBox(width: 4),
+                                      Text(
+                                        tipeText,
+                                        style: const TextStyle(
+                                          color: Colors.white,
+                                          fontSize: 11,
+                                          fontWeight: FontWeight.w600,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
                             ),
                           ),
-                          children: [
+
+                          // ── Foto setelah eksekusi ──
+                          if (eksekusi.fotoSetelah != null &&
+                              eksekusi.fotoSetelah!.isNotEmpty) ...[
                             Padding(
-                              padding: const EdgeInsets.all(16.0),
+                              padding:
+                                  const EdgeInsets.fromLTRB(16, 16, 16, 8),
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   Row(
-                                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                     children: [
-                                      const Text('Aksi:'),
+                                      Icon(Icons.camera_alt,
+                                          size: 14, color: Colors.grey[600]),
+                                      const SizedBox(width: 6),
                                       Text(
-                                        aksiText,
-                                        style: TextStyle(fontSize: screenWidth * 0.035),
-                                      ),
-                                    ],
-                                  ),
-                                  const SizedBox(height: 8),
-                                  Row(
-                                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                    children: [
-                                      const Text('Tinggi Pohon:'),
-                                      Text(
-                                        '${eksekusi.tinggiPohon} cm',
-                                        style: TextStyle(fontSize: screenWidth * 0.035),
-                                      ),
-                                    ],
-                                  ),
-                                  const SizedBox(height: 8),
-                                  Row(
-                                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                    children: [
-                                      const Text('Diameter:'),
-                                      Text(
-                                        '${eksekusi.diameterPohon} cm',
-                                        style: TextStyle(fontSize: screenWidth * 0.035),
-                                      ),
-                                    ],
-                                  ),
-                                  const SizedBox(height: 8),
-                                  Row(
-                                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                    children: [
-                                      const Text('Status:'),
-                                      Text(
-                                        eksekusi.status == 1 ? 'Selesai' : 'Berjalan',
+                                        'Foto Setelah Eksekusi',
                                         style: TextStyle(
-                                          fontSize: screenWidth * 0.035,
-                                          color: statusColor,
+                                          fontSize: 12,
+                                          color: Colors.grey[600],
+                                          fontWeight: FontWeight.w600,
                                         ),
                                       ),
                                     ],
                                   ),
                                   const SizedBox(height: 8),
-                                  if (eksekusi.fotoSetelah != null) ...[
-                                    const Text('Foto Setelah Eksekusi:'),
-                                    const SizedBox(height: 8),
-                                    Image.network(
-                                      eksekusi.fotoSetelah!,
-                                      fit: BoxFit.cover,
-                                      height: screenHeight * 0.2,
-                                      width: screenWidth * 0.8,
-                                      errorBuilder: (context, error, stackTrace) =>
-                                          const Text('Gambar tidak tersedia'),
+
+                                  // ── FOTO DENGAN GESTURE TAP ──
+                                  GestureDetector(
+                                    onTap: () => _showFullscreenImage(
+                                        context, eksekusi.fotoSetelah!),
+                                    child: Stack(
+                                      children: [
+                                        ClipRRect(
+                                          borderRadius:
+                                              BorderRadius.circular(12),
+                                          child: CachedNetworkImage(
+                                            imageUrl: eksekusi.fotoSetelah!,
+                                            width: double.infinity,
+                                            height: 220,
+                                            fit: BoxFit.cover,
+                                            placeholder: (context, url) =>
+                                                Container(
+                                              height: 220,
+                                              color: Colors.grey[200],
+                                              child: const Center(
+                                                child:
+                                                    CircularProgressIndicator(),
+                                              ),
+                                            ),
+                                            errorWidget:
+                                                (context, url, error) =>
+                                                    Container(
+                                              height: 220,
+                                              color: Colors.grey[200],
+                                              child: Column(
+                                                mainAxisAlignment:
+                                                    MainAxisAlignment.center,
+                                                children: [
+                                                  Icon(Icons.broken_image,
+                                                      color: Colors.grey[400],
+                                                      size: 40),
+                                                  const SizedBox(height: 8),
+                                                  Text(
+                                                    'Foto tidak tersedia',
+                                                    style: TextStyle(
+                                                        color: Colors.grey[500],
+                                                        fontSize: 12),
+                                                  ),
+                                                ],
+                                              ),
+                                            ),
+                                          ),
+                                        ),
+
+                                        // ── Icon zoom di pojok kanan bawah foto ──
+                                        Positioned(
+                                          bottom: 8,
+                                          right: 8,
+                                          child: Container(
+                                            padding: const EdgeInsets.all(6),
+                                            decoration: BoxDecoration(
+                                              color:
+                                                  Colors.black.withOpacity(0.5),
+                                              borderRadius:
+                                                  BorderRadius.circular(8),
+                                            ),
+                                            child: const Icon(
+                                              Icons.zoom_in,
+                                              color: Colors.white,
+                                              size: 18,
+                                            ),
+                                          ),
+                                        ),
+                                      ],
                                     ),
-                                  ],
+                                  ),
+
+                                  // ── Hint ketuk ──
+                                  const SizedBox(height: 6),
+                                  Row(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      Icon(Icons.touch_app,
+                                          size: 12, color: Colors.grey[400]),
+                                      const SizedBox(width: 4),
+                                      Text(
+                                        'Ketuk foto untuk memperbesar',
+                                        style: TextStyle(
+                                            fontSize: 11,
+                                            color: Colors.grey[400]),
+                                      ),
+                                    ],
+                                  ),
                                 ],
                               ),
                             ),
                           ],
-                        ),
-                      );
-                    },
-                  ),
-                ),
-              ],
-            );
-          },
-        ),
-      );
+
+                          // ── Detail info ──
+                          Padding(
+                            padding:
+                                const EdgeInsets.fromLTRB(16, 8, 16, 16),
+                            child: Column(
+                              children: [
+                                _detailRow(
+                                  Icons.calendar_today,
+                                  'Tanggal Eksekusi',
+                                  eksekusi.tanggalEksekusi,
+                                ),
+                                const SizedBox(height: 8),
+                                _detailRow(
+                                  Icons.height,
+                                  'Tinggi Setelah Eksekusi',
+                                  '${eksekusi.tinggiPohon} m',
+                                ),
+                                const SizedBox(height: 8),
+                                _detailRow(
+                                  Icons.circle_outlined,
+                                  'Diameter Pohon',
+                                  '${eksekusi.diameterPohon} cm',
+                                ),
+                                const SizedBox(height: 8),
+                                _detailRow(
+                                  Icons.check_circle_outline,
+                                  'Status',
+                                  eksekusi.status == 1 ? 'Selesai' : 'Berjalan',
+                                  valueColor: eksekusi.status == 1
+                                      ? Colors.green
+                                      : Colors.orange,
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    );
+                  }).toList(),
+                ],
+              );
+            },
+          );
         },
       ),
     );
+  }
+
+  // ─────────────────────────────────────────────
+  // Helper widgets
+  // ─────────────────────────────────────────────
+  Widget _summaryItem(String label, String value, IconData icon) {
+    return Column(
+      children: [
+        Icon(icon, color: Colors.white70, size: 18),
+        const SizedBox(height: 4),
+        Text(
+          value,
+          style: const TextStyle(
+            color: Colors.white,
+            fontWeight: FontWeight.bold,
+            fontSize: 12,
+          ),
+          textAlign: TextAlign.center,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+        ),
+        Text(
+          label,
+          style: const TextStyle(
+            color: Colors.white70,
+            fontSize: 10,
+          ),
+          textAlign: TextAlign.center,
+        ),
+      ],
+    );
+  }
+
+  Widget _detailRow(IconData icon, String label, String value,
+      {Color? valueColor}) {
+    return Row(
+      children: [
+        Icon(icon, size: 16, color: const Color(0xFF125E72)),
+        const SizedBox(width: 8),
+        Text(
+          '$label: ',
+          style: const TextStyle(
+            fontSize: 13,
+            color: Colors.black54,
+          ),
+        ),
+        Expanded(
+          child: Text(
+            value,
+            style: TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.w600,
+              color: valueColor ?? Colors.black87,
+            ),
+            textAlign: TextAlign.end,
+          ),
+        ),
+      ],
+    );
+  }
+
+  String _formatDateShort(String tanggalEksekusi) {
+    final parts = tanggalEksekusi.split(' ');
+    return parts[0];
   }
 
   Future<bool> _isAllowed() async {
@@ -233,12 +525,5 @@ class RiwayatEksekusiPage extends StatelessWidget {
     } catch (_) {
       return true;
     }
-  }
-
-  String _formatDate(String tanggalEksekusi) {
-    // tanggalEksekusi is in format "DD/MM/YYYY HH:MM WITA"
-    // Extract the date part (DD/MM/YYYY) for display
-    final parts = tanggalEksekusi.split(' ');
-    return parts[0]; // Returns DD/MM/YYYY (e.g., 06/09/2025)
   }
 }

@@ -7,13 +7,20 @@ class CustomDropdown extends StatefulWidget {
   final String labelText;
   final Function(String?) onChanged;
 
-  const CustomDropdown({super.key, required this.value, required this.items, required this.labelText, required this.onChanged});
+  const CustomDropdown({
+    super.key,
+    required this.value,
+    required this.items,
+    required this.labelText,
+    required this.onChanged,
+  });
 
   @override
   State<CustomDropdown> createState() => _CustomDropdownState();
 }
 
-class _CustomDropdownState extends State<CustomDropdown> with SingleTickerProviderStateMixin {
+class _CustomDropdownState extends State<CustomDropdown>
+    with SingleTickerProviderStateMixin {
   bool isExpanded = false;
   late AnimationController _controller;
   OverlayEntry? _overlayEntry;
@@ -23,7 +30,8 @@ class _CustomDropdownState extends State<CustomDropdown> with SingleTickerProvid
   @override
   void initState() {
     super.initState();
-    _controller = AnimationController(duration: const Duration(milliseconds: 200), vsync: this);
+    _controller = AnimationController(
+        duration: const Duration(milliseconds: 200), vsync: this);
   }
 
   @override
@@ -39,7 +47,8 @@ class _CustomDropdownState extends State<CustomDropdown> with SingleTickerProvid
     setState(() => isExpanded = true);
     _controller.forward();
 
-    final renderBox = _dropdownKey.currentContext!.findRenderObject() as RenderBox;
+    final renderBox =
+        _dropdownKey.currentContext!.findRenderObject() as RenderBox;
     _overlayEntry = OverlayEntry(
       builder: (context) => Positioned(
         width: renderBox.size.width,
@@ -73,13 +82,21 @@ class _CustomDropdownState extends State<CustomDropdown> with SingleTickerProvid
                       },
                       child: Container(
                         padding: const EdgeInsets.all(16),
-                        decoration: BoxDecoration(color: widget.value == widget.items[index] ? const Color(0xFFF0F9FF) : null),
+                        decoration: BoxDecoration(
+                          color: widget.value == widget.items[index]
+                              ? const Color(0xFFF0F9FF)
+                              : null,
+                        ),
                         child: Text(
                           widget.items[index],
                           style: TextStyle(
                             fontSize: 16,
-                            color: widget.value == widget.items[index] ? const Color(0xFF2E5D6F) : Colors.black87,
-                            fontWeight: widget.value == widget.items[index] ? FontWeight.w500 : FontWeight.normal,
+                            color: widget.value == widget.items[index]
+                                ? const Color(0xFF2E5D6F)
+                                : Colors.black87,
+                            fontWeight: widget.value == widget.items[index]
+                                ? FontWeight.w500
+                                : FontWeight.normal,
                           ),
                         ),
                       ),
@@ -105,7 +122,14 @@ class _CustomDropdownState extends State<CustomDropdown> with SingleTickerProvid
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(widget.labelText, style: TextStyle(fontSize: 12, color: Colors.grey.shade600, fontWeight: FontWeight.w500)),
+        Text(
+          widget.labelText,
+          style: TextStyle(
+            fontSize: 12,
+            color: Colors.grey.shade600,
+            fontWeight: FontWeight.w500,
+          ),
+        ),
         const SizedBox(height: 8),
         CompositedTransformTarget(
           link: _layerLink,
@@ -115,11 +139,29 @@ class _CustomDropdownState extends State<CustomDropdown> with SingleTickerProvid
             child: Container(
               width: double.infinity,
               padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(color: const Color(0xFFF0F9FF), borderRadius: BorderRadius.circular(8)),
+              decoration: BoxDecoration(
+                color: const Color(0xFFF0F9FF),
+                borderRadius: BorderRadius.circular(8),
+              ),
               child: Row(
                 children: [
-                  Expanded(child: Text(widget.value ?? 'Pilih unit kerja', style: TextStyle(fontSize: 16, color: widget.value != null ? Colors.black87 : Colors.grey.shade500))),
-                  AnimatedRotation(turns: isExpanded ? 0.5 : 0, duration: const Duration(milliseconds: 200), child: Icon(Icons.keyboard_arrow_down, color: Colors.grey.shade600)),
+                  Expanded(
+                    child: Text(
+                      widget.value ?? 'Pilih unit kerja',
+                      style: TextStyle(
+                        fontSize: 16,
+                        color: widget.value != null
+                            ? Colors.black87
+                            : Colors.grey.shade500,
+                      ),
+                    ),
+                  ),
+                  AnimatedRotation(
+                    turns: isExpanded ? 0.5 : 0,
+                    duration: const Duration(milliseconds: 200),
+                    child: Icon(Icons.keyboard_arrow_down,
+                        color: Colors.grey.shade600),
+                  ),
                 ],
               ),
             ),
@@ -142,25 +184,54 @@ class EditUserPage extends StatefulWidget {
 
 class _EditUserPageState extends State<EditUserPage> {
   final _formKey = GlobalKey<FormState>();
-  late TextEditingController fullNameController, usernameController, addedDateController, usernameTelegramController, chatIdTelegramController, passwordController;
+  late TextEditingController fullNameController,
+      usernameController,
+      addedDateController,
+      usernameTelegramController,
+      chatIdTelegramController,
+      passwordController;
+
   String? selectedUnit;
-  int selectedLevel = 2; // Default: 2 untuk unit layanan
+  int selectedLevel = 2;
   bool _isLoading = false;
   bool _obscurePassword = true;
 
-  final units = ["ULP MATTIROTASI", "ULP BARRU", "ULP RAPPANG", "ULP PANGSID", "ULP TANRUTEDONG", "ULP SOPPENG", "ULP PAJALESANG", "ULP MAKASSAR", "ULP BONE"];
+  final units = [
+    "ULP MATTIROTASI",
+    "ULP BARRU",
+    "ULP RAPPANG",
+    "ULP PANGSID",
+    "ULP TANRUTEDONG",
+    "ULP SOPPENG",
+    "ULP PAJALESANG",
+    "ULP MAKASSAR",
+    "ULP BONE",
+  ];
 
   @override
   void initState() {
     super.initState();
-    fullNameController = TextEditingController(text: widget.user["name"]);
-    usernameController = TextEditingController(text: widget.user["username"]);
-    usernameTelegramController = TextEditingController(text: widget.user["username_telegram"]);
-    chatIdTelegramController = TextEditingController(text: widget.user["chat_id_telegram"]);
-    passwordController = TextEditingController(text: widget.user["password"]);
-    selectedUnit = widget.user["unit"];
-    selectedLevel = widget.user["level"] ?? 2; // Set level dari data user atau default 2
-    addedDateController = TextEditingController(text: widget.user["added"] ?? "");
+    fullNameController =
+        TextEditingController(text: widget.user["name"]?.toString() ?? '');
+    usernameController =
+        TextEditingController(text: widget.user["username"]?.toString() ?? '');
+    usernameTelegramController = TextEditingController(
+        text: widget.user["username_telegram"]?.toString() ?? '');
+
+    // ✅ FIX: chat_id_telegram bisa int atau string di Firestore
+    chatIdTelegramController = TextEditingController(
+        text: widget.user["chat_id_telegram"]?.toString() ?? '');
+
+    passwordController =
+        TextEditingController(text: widget.user["password"]?.toString() ?? '');
+
+    // ✅ unit dari Firestore mungkin lowercase, tampilkan uppercase untuk display
+    final rawUnit = widget.user["unit"]?.toString() ?? '';
+    selectedUnit = rawUnit.toUpperCase();
+
+    selectedLevel = widget.user["level"] ?? 2;
+    addedDateController =
+        TextEditingController(text: widget.user["added"]?.toString() ?? '');
   }
 
   @override
@@ -176,33 +247,55 @@ class _EditUserPageState extends State<EditUserPage> {
 
   Future<void> _saveUser() async {
     if (selectedUnit == null) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Pilih unit kerja terlebih dahulu"), backgroundColor: Colors.red));
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text("Pilih unit kerja terlebih dahulu"),
+          backgroundColor: Colors.red,
+        ),
+      );
       return;
     }
-    
+
     if (_formKey.currentState!.validate()) {
       setState(() => _isLoading = true);
-      
+
+      final chatIdStr = chatIdTelegramController.text.trim();
+
       final updatedUser = {
         "name": fullNameController.text.trim(),
-        "username": usernameController.text.trim().startsWith('@') ? usernameController.text.trim() : '@${usernameController.text.trim()}',
-        "unit": selectedUnit!,
+        "username": usernameController.text.trim().startsWith('@')
+            ? usernameController.text.trim()
+            : '@${usernameController.text.trim()}',
+        // ✅ FIX: simpan lowercase agar match dengan backend Railway
+        "unit": selectedUnit!.toLowerCase(),
         "level": selectedLevel,
         "username_telegram": usernameTelegramController.text.trim(),
-        "chat_id_telegram": chatIdTelegramController.text.trim(),
+        // ✅ FIX: simpan sebagai int agar Telegram API tidak error 400
+        "chat_id_telegram": int.tryParse(chatIdStr) ?? chatIdStr,
         "password": passwordController.text.trim(),
         "added": addedDateController.text,
       };
 
       try {
-        await FirebaseFirestore.instance.collection("users").doc(widget.docId).update(updatedUser);
+        await FirebaseFirestore.instance
+            .collection("users")
+            .doc(widget.docId)
+            .update(updatedUser);
+
         if (mounted) {
           setState(() => _isLoading = false);
           _showSuccessDialog(updatedUser);
         }
       } catch (e) {
         setState(() => _isLoading = false);
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Gagal update user: $e"), backgroundColor: Colors.red));
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text("Gagal update user: $e"),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
       }
     }
   }
@@ -212,43 +305,84 @@ class _EditUserPageState extends State<EditUserPage> {
       context: context,
       barrierDismissible: false,
       builder: (context) => Dialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        shape:
+            RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
         child: Container(
           padding: const EdgeInsets.all(28),
-          decoration: BoxDecoration(borderRadius: BorderRadius.circular(20), color: Colors.white),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(20),
+            color: Colors.white,
+          ),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
               Container(
-                width: 85, 
+                width: 85,
                 height: 85,
-                decoration: BoxDecoration(color: const Color(0xFF2E5D6F), shape: BoxShape.circle),
-                child: const Icon(Icons.check_circle_rounded, size: 55, color: Colors.white),
+                decoration: const BoxDecoration(
+                  color: Color(0xFF2E5D6F),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(Icons.check_circle_rounded,
+                    size: 55, color: Colors.white),
               ),
               const SizedBox(height: 24),
-              const Text("Berhasil!", style: TextStyle(fontSize: 26, fontWeight: FontWeight.bold, color: Color(0xFF2E5D6F))),
+              const Text(
+                "Berhasil!",
+                style: TextStyle(
+                  fontSize: 26,
+                  fontWeight: FontWeight.bold,
+                  color: Color(0xFF2E5D6F),
+                ),
+              ),
               const SizedBox(height: 10),
-              Text("User ${updatedUser["name"]} berhasil diupdate", style: TextStyle(fontSize: 15, color: Colors.grey.shade600), textAlign: TextAlign.center),
+              Text(
+                "User ${updatedUser["name"]} berhasil diupdate",
+                style: TextStyle(fontSize: 15, color: Colors.grey.shade600),
+                textAlign: TextAlign.center,
+              ),
               const SizedBox(height: 24),
               Container(
                 width: double.infinity,
                 padding: const EdgeInsets.all(20),
-                decoration: BoxDecoration(color: const Color(0xFFF8FAFB), borderRadius: BorderRadius.circular(15)),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFF8FAFB),
+                  borderRadius: BorderRadius.circular(15),
+                ),
                 child: Column(
                   children: [
-                    ("Nama", updatedUser["name"] ?? ""),
-                    ("Username", updatedUser["username"] ?? ""),
-                    ("Unit", updatedUser["unit"] ?? ""),
+                    ("Nama", updatedUser["name"]?.toString() ?? ""),
+                    ("Username", updatedUser["username"]?.toString() ?? ""),
+                    ("Unit", updatedUser["unit"]?.toString().toUpperCase() ?? ""),
                     ("Level", updatedUser["level"] == 1 ? "Unit Induk" : "Unit Layanan"),
-                    ("Username Telegram", updatedUser["username_telegram"] ?? "-"),
-                    ("Chat ID Telegram", updatedUser["chat_id_telegram"] ?? "-"),
-                    ("Ditambahkan", updatedUser["added"] ?? ""),
+                    ("Username Telegram", updatedUser["username_telegram"]?.toString() ?? "-"),
+                    ("Chat ID Telegram", updatedUser["chat_id_telegram"]?.toString() ?? "-"),
+                    ("Ditambahkan", updatedUser["added"]?.toString() ?? ""),
                   ].map((detail) => Padding(
                     padding: const EdgeInsets.symmetric(vertical: 6),
                     child: Row(
                       children: [
-                        SizedBox(width: 120, child: Text("${detail.$1}:", style: TextStyle(color: Colors.grey.shade700, fontWeight: FontWeight.w600, fontSize: 14))),
-                        Expanded(child: Text(detail.$2, style: const TextStyle(color: Color(0xFF2E5D6F), fontSize: 14, fontWeight: FontWeight.w500))),
+                        SizedBox(
+                          width: 120,
+                          child: Text(
+                            "${detail.$1}:",
+                            style: TextStyle(
+                              color: Colors.grey.shade700,
+                              fontWeight: FontWeight.w600,
+                              fontSize: 14,
+                            ),
+                          ),
+                        ),
+                        Expanded(
+                          child: Text(
+                            detail.$2,
+                            style: const TextStyle(
+                              color: Color(0xFF2E5D6F),
+                              fontSize: 14,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ),
                       ],
                     ),
                   )).toList(),
@@ -261,15 +395,20 @@ class _EditUserPageState extends State<EditUserPage> {
                   style: ElevatedButton.styleFrom(
                     backgroundColor: const Color(0xFF2E5D6F),
                     foregroundColor: Colors.white,
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12)),
                     padding: const EdgeInsets.symmetric(vertical: 14),
                   ),
                   onPressed: () {
                     Navigator.of(context).pop();
-                    Navigator.pop(context); // Hanya kembali ke halaman sebelumnya tanpa mengirim data
+                    Navigator.pop(context);
                   },
                   icon: const Icon(Icons.list_rounded, size: 20),
-                  label: const Text("Kembali ke List", style: TextStyle(fontWeight: FontWeight.w600, fontSize: 15)),
+                  label: const Text(
+                    "Kembali ke List",
+                    style:
+                        TextStyle(fontWeight: FontWeight.w600, fontSize: 15),
+                  ),
                 ),
               ),
             ],
@@ -279,11 +418,25 @@ class _EditUserPageState extends State<EditUserPage> {
     );
   }
 
-  Widget _buildField(String label, TextEditingController controller, {bool enabled = true, String? Function(String?)? validator, bool obscureText = false, Widget? suffixIcon}) {
+  Widget _buildField(
+    String label,
+    TextEditingController controller, {
+    bool enabled = true,
+    String? Function(String?)? validator,
+    bool obscureText = false,
+    Widget? suffixIcon,
+  }) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(label, style: TextStyle(fontSize: 12, color: Colors.grey.shade600, fontWeight: FontWeight.w500)),
+        Text(
+          label,
+          style: TextStyle(
+            fontSize: 12,
+            color: Colors.grey.shade600,
+            fontWeight: FontWeight.w500,
+          ),
+        ),
         const SizedBox(height: 8),
         TextFormField(
           controller: controller,
@@ -291,8 +444,11 @@ class _EditUserPageState extends State<EditUserPage> {
           obscureText: obscureText,
           decoration: InputDecoration(
             filled: true,
-            fillColor: const Color(0xFFF0F9FF),
-            border: const OutlineInputBorder(borderSide: BorderSide.none, borderRadius: BorderRadius.all(Radius.circular(8))),
+            fillColor: enabled ? const Color(0xFFF0F9FF) : Colors.grey.shade100,
+            border: const OutlineInputBorder(
+              borderSide: BorderSide.none,
+              borderRadius: BorderRadius.all(Radius.circular(8)),
+            ),
             contentPadding: const EdgeInsets.all(16),
             suffixIcon: suffixIcon,
           ),
@@ -310,22 +466,51 @@ class _EditUserPageState extends State<EditUserPage> {
         backgroundColor: const Color(0xFF2E5D6F),
         elevation: 0,
         centerTitle: true,
-        leading: IconButton(icon: const Icon(Icons.arrow_back, color: Colors.white), onPressed: () => Navigator.of(context).pop()),
-        title: const Text("Edit User", style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white, fontSize: 20)),
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back, color: Colors.white),
+          onPressed: () => Navigator.of(context).pop(),
+        ),
+        title: const Text(
+          "Edit User",
+          style: TextStyle(
+            fontWeight: FontWeight.bold,
+            color: Colors.white,
+            fontSize: 20,
+          ),
+        ),
       ),
       body: Container(
-        decoration: const BoxDecoration(color: Colors.white, borderRadius: BorderRadius.only(topLeft: Radius.circular(32), topRight: Radius.circular(32))),
+        decoration: const BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.only(
+            topLeft: Radius.circular(32),
+            topRight: Radius.circular(32),
+          ),
+        ),
         child: Form(
           key: _formKey,
           child: ListView(
             padding: const EdgeInsets.all(24),
             children: [
-              CustomDropdown(value: selectedUnit, items: units, labelText: "Unit Kerja", onChanged: (value) => setState(() => selectedUnit = value)),
+              CustomDropdown(
+                value: selectedUnit,
+                items: units,
+                labelText: "Unit Kerja",
+                onChanged: (value) => setState(() => selectedUnit = value),
+              ),
               const SizedBox(height: 20),
+
               Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text("Pilih Level Unit", style: TextStyle(fontSize: 12, color: Colors.grey.shade600, fontWeight: FontWeight.w500)),
+                  Text(
+                    "Pilih Level Unit",
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: Colors.grey.shade600,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
                   const SizedBox(height: 8),
                   Row(
                     children: [
@@ -335,10 +520,13 @@ class _EditUserPageState extends State<EditUserPage> {
                             Radio<int>(
                               value: 1,
                               groupValue: selectedLevel,
-                              onChanged: (value) => setState(() => selectedLevel = value!),
+                              onChanged: (value) =>
+                                  setState(() => selectedLevel = value!),
                               activeColor: const Color(0xFF2E5D6F),
                             ),
-                            const Text('Unit Induk', style: TextStyle(fontSize: 16, color: Colors.black87)),
+                            const Text('Unit Induk',
+                                style: TextStyle(
+                                    fontSize: 16, color: Colors.black87)),
                           ],
                         ),
                       ),
@@ -348,10 +536,13 @@ class _EditUserPageState extends State<EditUserPage> {
                             Radio<int>(
                               value: 2,
                               groupValue: selectedLevel,
-                              onChanged: (value) => setState(() => selectedLevel = value!),
+                              onChanged: (value) =>
+                                  setState(() => selectedLevel = value!),
                               activeColor: const Color(0xFF2E5D6F),
                             ),
-                            const Text('Unit Layanan', style: TextStyle(fontSize: 16, color: Colors.black87)),
+                            const Text('Unit Layanan',
+                                style: TextStyle(
+                                    fontSize: 16, color: Colors.black87)),
                           ],
                         ),
                       ),
@@ -359,35 +550,63 @@ class _EditUserPageState extends State<EditUserPage> {
                   ),
                 ],
               ),
+
               const SizedBox(height: 20),
-              _buildField("Nama Lengkap", fullNameController, validator: (value) => value?.isEmpty ?? true ? "Nama tidak boleh kosong" : null),
+              _buildField(
+                "Nama Lengkap",
+                fullNameController,
+                validator: (value) =>
+                    value?.isEmpty ?? true ? "Nama tidak boleh kosong" : null,
+              ),
               const SizedBox(height: 20),
-              _buildField("Username", usernameController, validator: (value) => value?.isEmpty ?? true ? "Username tidak boleh kosong" : null),
+              _buildField(
+                "Username",
+                usernameController,
+                validator: (value) =>
+                    value?.isEmpty ?? true ? "Username tidak boleh kosong" : null,
+              ),
               const SizedBox(height: 20),
               _buildField("Username Telegram", usernameTelegramController),
               const SizedBox(height: 20),
               _buildField("Chat ID Telegram", chatIdTelegramController),
               const SizedBox(height: 20),
               _buildField(
-                "Password", 
-                passwordController, 
+                "Password",
+                passwordController,
                 obscureText: _obscurePassword,
-                validator: (value) => value?.isEmpty ?? true ? "Password tidak boleh kosong" : null,
+                validator: (value) =>
+                    value?.isEmpty ?? true ? "Password tidak boleh kosong" : null,
                 suffixIcon: IconButton(
-                  icon: Icon(_obscurePassword ? Icons.visibility : Icons.visibility_off, color: Colors.grey.shade600),
-                  onPressed: () => setState(() => _obscurePassword = !_obscurePassword),
+                  icon: Icon(
+                    _obscurePassword ? Icons.visibility : Icons.visibility_off,
+                    color: Colors.grey.shade600,
+                  ),
+                  onPressed: () =>
+                      setState(() => _obscurePassword = !_obscurePassword),
                 ),
               ),
               const SizedBox(height: 20),
               _buildField("Ditambahkan", addedDateController, enabled: false),
               const SizedBox(height: 32),
+
               SizedBox(
                 width: double.infinity,
                 height: 50,
                 child: ElevatedButton(
-                  style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF2E5D6F), foregroundColor: Colors.white, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(25))),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF2E5D6F),
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(25)),
+                  ),
                   onPressed: _isLoading ? null : _saveUser,
-                  child: _isLoading ? const CircularProgressIndicator(color: Colors.white) : const Text("Perbarui", style: TextStyle(fontWeight: FontWeight.w600, fontSize: 16)),
+                  child: _isLoading
+                      ? const CircularProgressIndicator(color: Colors.white)
+                      : const Text(
+                          "Perbarui",
+                          style: TextStyle(
+                              fontWeight: FontWeight.w600, fontSize: 16),
+                        ),
                 ),
               ),
             ],

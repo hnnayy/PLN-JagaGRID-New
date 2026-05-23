@@ -12,57 +12,46 @@ class ReportMenuPage extends StatelessWidget {
     try {
       final service = DataPohonService();
       final snapshot = await service.getAllDataPohon().first;
-      
-      // Filter berdasarkan session level & unit
+
       final prefs = await SharedPreferences.getInstance();
       final level = prefs.getInt('session_level') ?? 2;
       final sessionUnit = prefs.getString('session_unit') ?? '';
-      
+
       List<DataPohon> filteredList = snapshot;
       if (level == 2) {
-        filteredList = snapshot.where((p) => 
-          p.up3 == sessionUnit || p.ulp == sessionUnit
-        ).toList();
+        filteredList = snapshot
+            .where((p) => p.up3 == sessionUnit || p.ulp == sessionUnit)
+            .toList();
       }
-      
-      // Hitung statistik
+
       final totalPohon = filteredList.length;
       final totalUnit = filteredList
           .map((p) => p.ulp.isNotEmpty ? p.ulp : p.up3)
           .where((unit) => unit.isNotEmpty)
           .toSet()
           .length;
-      
-      return {
-        'totalPohon': totalPohon,
-        'totalUnit': totalUnit,
-      };
-    } catch (e) {
-      return {
-        'totalPohon': 0,
-        'totalUnit': 0,
-      };
-    }
-  }
 
-  Future<void> _navigateToRekapan(BuildContext context) async {
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) => const RekapanPerUnitListPage(),
-      ),
-    );
+      return {'totalPohon': totalPohon, 'totalUnit': totalUnit};
+    } catch (e) {
+      return {'totalPohon': 0, 'totalUnit': 0};
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: const Color(0xFFF2F4F7),
       appBar: AppBar(
         backgroundColor: const Color(0xFF2B6B7C),
         automaticallyImplyLeading: false,
+        elevation: 0,
         title: const Text(
           'Laporan',
-          style: TextStyle(color: Color.fromARGB(255, 245, 245, 244), fontSize: 20),
+          style: TextStyle(
+            color: Colors.white,
+            fontSize: 20,
+            fontWeight: FontWeight.w600,
+          ),
         ),
         centerTitle: true,
       ),
@@ -72,17 +61,65 @@ class ReportMenuPage extends StatelessWidget {
           if (snapshot.connectionState == ConnectionState.waiting) {
             return const Center(child: CircularProgressIndicator());
           }
-          
+
           final stats = snapshot.data ?? {'totalPohon': 0, 'totalUnit': 0};
           final totalPohon = stats['totalPohon'] ?? 0;
           final totalUnit = stats['totalUnit'] ?? 0;
-          
-          return Padding(
-            padding: const EdgeInsets.all(16.0),
+
+          return SingleChildScrollView(
+            padding: const EdgeInsets.all(16),
             child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+                // Summary Header
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(20),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF2B6B7C),
+                    borderRadius: BorderRadius.circular(14),
+                  ),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: _buildSummaryItem(
+                          icon: Icons.park,
+                          label: 'Total Pohon',
+                          value: '$totalPohon',
+                        ),
+                      ),
+                      Container(width: 1, height: 50, color: Colors.white24),
+                      Expanded(
+                        child: _buildSummaryItem(
+                          icon: Icons.business,
+                          label: 'Total Unit',
+                          value: '$totalUnit',
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+
+                const SizedBox(height: 24),
+
+                const Text(
+                  'Menu Laporan',
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.black54,
+                    letterSpacing: 0.5,
+                  ),
+                ),
+
+                const SizedBox(height: 12),
+
                 // Card Semua Data Pohon
-                InkWell(
+                _buildMenuCard(
+                  context: context,
+                  icon: Icons.description_outlined,
+                  title: 'Semua Data Pohon',
+                  subtitle: 'Lihat seluruh data pohon yang telah diinput',
                   onTap: () {
                     Navigator.push(
                       context,
@@ -91,154 +128,116 @@ class ReportMenuPage extends StatelessWidget {
                       ),
                     );
                   },
-                  child: Container(
-                    padding: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(12),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.grey.withOpacity(0.2),
-                          spreadRadius: 1,
-                          blurRadius: 5,
-                          offset: const Offset(0, 2),
-                        ),
-                      ],
-                    ),
-                    child: Row(
-                      children: [
-                        Container(
-                          width: 50,
-                          height: 50,
-                          decoration: BoxDecoration(
-                            color: Colors.grey[300],
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          child: const Icon(
-                            Icons.description,
-                            color: Color(0xFF2B6B7C),
-                            size: 30,
-                          ),
-                        ),
-                        const SizedBox(width: 16),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              const Text(
-                                'Semua Data Pohon',
-                                style: TextStyle(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                              const SizedBox(height: 4),
-                              const Text(
-                                'Lihat Seluruh Data Pohon Yang Telah Diinput',
-                                style: TextStyle(
-                                  fontSize: 12,
-                                  color: Colors.grey,
-                                ),
-                              ),
-                              const SizedBox(height: 8),
-                              Row(
-                                children: [
-                                  const Icon(Icons.file_copy, size: 16),
-                                  const SizedBox(width: 4),
-                                  Text(
-                                    'Total: $totalPohon pohon',
-                                    style: const TextStyle(fontSize: 12),
-                                  ),
-                                ],
-                              ),
-                            ],
-                          ),
-                        ),
-                        const Icon(Icons.chevron_right, color: Colors.grey),
-                      ],
-                    ),
-                  ),
                 ),
-                
-                const SizedBox(height: 16),
-                
+
+                const SizedBox(height: 12),
+
                 // Card Rekapan Per Unit
-                InkWell(
-                  onTap: () => _navigateToRekapan(context),
-                  child: Container(
-                    padding: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(12),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.grey.withOpacity(0.2),
-                          spreadRadius: 1,
-                          blurRadius: 5,
-                          offset: const Offset(0, 2),
-                        ),
-                      ],
-                    ),
-                    child: Row(
-                      children: [
-                        Container(
-                          width: 50,
-                          height: 50,
-                          decoration: BoxDecoration(
-                            color: Colors.grey[300],
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          child: const Icon(
-                            Icons.bar_chart,
-                            color: Color(0xFF2B6B7C),
-                            size: 30,
-                          ),
-                        ),
-                        const SizedBox(width: 16),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              const Text(
-                                'Rekapan Per Unit',
-                                style: TextStyle(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                              const SizedBox(height: 4),
-                              const Text(
-                                'Statistik Pohon Berdasarkan Unit Kerja',
-                                style: TextStyle(
-                                  fontSize: 12,
-                                  color: Colors.grey,
-                                ),
-                              ),
-                              const SizedBox(height: 8),
-                              Row(
-                                children: [
-                                  const Icon(Icons.trending_up, size: 16),
-                                  const SizedBox(width: 4),
-                                  Text(
-                                    '$totalUnit Unit Aktif',
-                                    style: const TextStyle(fontSize: 12),
-                                  ),
-                                ],
-                              ),
-                            ],
-                          ),
-                        ),
-                        const Icon(Icons.chevron_right, color: Colors.grey),
-                      ],
-                    ),
-                  ),
+                _buildMenuCard(
+                  context: context,
+                  icon: Icons.bar_chart_outlined,
+                  title: 'Rekapan Per Unit',
+                  subtitle: 'Statistik pohon berdasarkan unit kerja',
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const RekapanPerUnitListPage(),
+                      ),
+                    );
+                  },
                 ),
               ],
             ),
           );
         },
       ),
-      backgroundColor: Colors.grey[100],
+    );
+  }
+
+  Widget _buildSummaryItem({
+    required IconData icon,
+    required String label,
+    required String value,
+  }) {
+    return Column(
+      children: [
+        Icon(icon, color: Colors.white70, size: 22),
+        const SizedBox(height: 6),
+        Text(
+          value,
+          style: const TextStyle(
+            color: Colors.white,
+            fontSize: 24,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        const SizedBox(height: 2),
+        Text(
+          label,
+          style: const TextStyle(color: Colors.white70, fontSize: 12),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildMenuCard({
+    required BuildContext context,
+    required IconData icon,
+    required String title,
+    required String subtitle,
+    required VoidCallback onTap,
+  }) {
+    return Material(
+      color: Colors.white,
+      borderRadius: BorderRadius.circular(12),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(12),
+        splashColor: const Color(0xFF2B6B7C).withOpacity(0.08),
+        highlightColor: const Color(0xFF2B6B7C).withOpacity(0.04),
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Row(
+            children: [
+              Container(
+                width: 48,
+                height: 48,
+                decoration: BoxDecoration(
+                  color: const Color(0xFF2B6B7C).withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Icon(icon, color: const Color(0xFF2B6B7C), size: 26),
+              ),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      title,
+                      style: const TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.black87,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      subtitle,
+                      style: const TextStyle(
+                        fontSize: 12,
+                        color: Colors.black45,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const Icon(Icons.chevron_right, color: Colors.black26),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }

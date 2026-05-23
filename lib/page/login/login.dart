@@ -295,7 +295,7 @@ class _LoginPageState extends State<LoginPage> {
           .collection('users')
           .where('username', isEqualTo: username)
           .where('password', isEqualTo: password)
-          .where('status', isEqualTo: 1) // ← hanya user aktif
+          .where('status', isEqualTo: 1)
           .get();
 
       if (query.docs.isNotEmpty) {
@@ -303,14 +303,18 @@ class _LoginPageState extends State<LoginPage> {
         final prefs = await SharedPreferences.getInstance();
 
         await prefs.setString('session_id', query.docs.first.id);
-        await prefs.setString('session_username', userData['username'] ?? '');
-        await prefs.setString('session_name', userData['name'] ?? '');
-        await prefs.setString('session_unit', userData['unit'] ?? '');
-        await prefs.setString('session_kode_unit', userData['kode_unit'] ?? ''); // ← TAMBAHAN BARU
+        await prefs.setString('session_username', userData['username']?.toString() ?? '');
+        await prefs.setString('session_name', userData['name']?.toString() ?? '');
+        // unit di-uppercase untuk display konsisten di app
+        await prefs.setString('session_unit',
+            (userData['unit'] ?? '').toString().trim().toUpperCase());
+        await prefs.setString('session_kode_unit', userData['kode_unit']?.toString() ?? '');
         await prefs.setInt('session_level', userData['level'] ?? 2);
-        await prefs.setString('session_added', userData['added'] ?? '');
-        await prefs.setString('session_username_telegram', userData['username_telegram'] ?? '');
-        await prefs.setString('session_chat_id_telegram', userData['chat_id_telegram'] ?? '');
+        await prefs.setString('session_added', userData['added']?.toString() ?? '');
+        await prefs.setString('session_username_telegram', userData['username_telegram']?.toString() ?? '');
+        // ✅ FIX: chat_id_telegram bisa int atau string di Firestore
+        await prefs.setString('session_chat_id_telegram',
+            userData['chat_id_telegram']?.toString() ?? '');
         await prefs.setInt('session_status', userData['status'] ?? 1);
 
         if (mounted) {

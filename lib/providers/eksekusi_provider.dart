@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
-import '../models/eksekusi.dart';
-import 'dart:async'; // Already present
-import 'dart:io'; // Add this import for File type
+import 'dart:async';
+import 'dart:io';
 import 'dart:developer' as developer;
-import '../services/eksekusi_service.dart'; // Already present
+import '../models/eksekusi.dart';
+import '../services/eksekusi_service.dart';
+import '../providers/notification_provider.dart';
 
 class EksekusiProvider extends ChangeNotifier {
   List<Eksekusi> _eksekusiList = [];
@@ -12,7 +12,6 @@ class EksekusiProvider extends ChangeNotifier {
 
   List<Eksekusi> get eksekusiList => _eksekusiList;
 
-  // Method to set and listen to the eksekusi stream
   void setEksekusiStream(Stream<List<Eksekusi>> stream) {
     _subscription?.cancel();
     _subscription = stream.listen(
@@ -26,12 +25,14 @@ class EksekusiProvider extends ChangeNotifier {
     );
   }
 
-  // Method to handle adding eksekusi via EksekusiService
-  Future<void> addEksekusi(Eksekusi eksekusi, File image) async {
+  Future<void> addEksekusi(
+    Eksekusi eksekusi,
+    File image,
+    NotificationProvider notificationProvider,
+  ) async {
     try {
       final eksekusiService = EksekusiService();
-      await eksekusiService.addEksekusi(eksekusi, image);
-      // Refresh the stream after adding
+      await eksekusiService.addEksekusi(eksekusi, image, notificationProvider);
       setEksekusiStream(eksekusiService.getAllEksekusi());
     } catch (e) {
       developer.log('Error adding eksekusi: $e', name: 'EksekusiProvider');
@@ -39,7 +40,6 @@ class EksekusiProvider extends ChangeNotifier {
     }
   }
 
-  // Cleanup subscription when provider is disposed
   @override
   void dispose() {
     _subscription?.cancel();

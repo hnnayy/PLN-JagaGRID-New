@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../../models/unit.dart';
 import '../../../models/user.dart';
 import '../../../services/unit_service.dart';
@@ -271,7 +272,7 @@ class FormAddUserPage extends StatefulWidget {
 class _FormAddUserPageState extends State<FormAddUserPage> {
   final _formKey = GlobalKey<FormState>();
   final UnitService _unitService = UnitService();
-  final UserService _userService = UserService(); // ← pakai UserService
+  final UserService _userService = UserService();
 
   List<UnitModel> _unitList = [];
   UnitModel? _selectedUnitModel;
@@ -286,6 +287,8 @@ class _FormAddUserPageState extends State<FormAddUserPage> {
   bool _isPasswordVisible = false;
   bool _isLoading = false;
   bool _isLoadingUnits = true;
+  bool _isCheckingChatId = false;
+  String? _chatIdStatus;
 
   String? _unitError;
   String? _nameError;
@@ -309,6 +312,46 @@ class _FormAddUserPageState extends State<FormAddUserPage> {
       });
     } catch (e) {
       setState(() => _isLoadingUnits = false);
+    }
+  }
+
+  Future<void> _checkChatId() async {
+    final username =
+        telegramUsernameController.text.trim().replaceAll('@', '');
+
+    if (username.isEmpty) {
+      setState(() =>
+          _telegramUsernameError = 'Isi username Telegram dulu');
+      return;
+    }
+
+    setState(() {
+      _isCheckingChatId = true;
+      _chatIdStatus = null;
+      telegramChatIdController.clear();
+    });
+
+    try {
+      final doc = await FirebaseFirestore.instance
+          .collection('telegram_users')
+          .doc(username)
+          .get();
+
+      if (doc.exists) {
+        // ✅ FIX: convert ke string dulu apapun tipenya (int atau string) dari Firestore
+        final chatId = doc.data()?['chat_id']?.toString() ?? '';
+        setState(() {
+          telegramChatIdController.text = chatId;
+          _chatIdStatus = 'success';
+          _telegramChatIdError = null;
+        });
+      } else {
+        setState(() => _chatIdStatus = 'not_found');
+      }
+    } catch (e) {
+      setState(() => _chatIdStatus = 'error');
+    } finally {
+      setState(() => _isCheckingChatId = false);
     }
   }
 
@@ -380,8 +423,8 @@ class _FormAddUserPageState extends State<FormAddUserPage> {
     }
 
     if (telegramChatIdController.text.trim().isEmpty) {
-      setState(
-          () => _telegramChatIdError = 'Chat ID Telegram tidak boleh kosong');
+      setState(() =>
+          _telegramChatIdError = 'Chat ID Telegram tidak boleh kosong');
       isValid = false;
     } else {
       if (!RegExp(r'^-?\d+$')
@@ -418,9 +461,8 @@ class _FormAddUserPageState extends State<FormAddUserPage> {
     setState(() => _isLoading = true);
 
     try {
-      // Cek duplikat username via UserService
-      final usernameExist = await _userService.isUsernameExist(
-          usernameController.text.trim());
+      final usernameExist = await _userService
+          .isUsernameExist(usernameController.text.trim());
       if (usernameExist) {
         setState(() {
           _isLoading = false;
@@ -429,13 +471,13 @@ class _FormAddUserPageState extends State<FormAddUserPage> {
         return;
       }
 
-      // Cek duplikat chat ID via UserService
-      final chatIdExist = await _userService.isChatIdExist(
-          telegramChatIdController.text.trim());
+      final chatIdExist = await _userService
+          .isChatIdExist(telegramChatIdController.text.trim());
       if (chatIdExist) {
         setState(() {
           _isLoading = false;
-          _telegramChatIdError = 'Chat ID Telegram sudah terdaftar dalam sistem';
+          _telegramChatIdError =
+              'Chat ID Telegram sudah terdaftar dalam sistem';
         });
         return;
       }
@@ -452,13 +494,13 @@ class _FormAddUserPageState extends State<FormAddUserPage> {
       final newUser = UserModel(
         name: fullNameController.text.trim(),
         username: username,
-        unit: _selectedUnitModel!.namaUnit,
-        kodeUnit: _selectedUnitModel!.kodeUnit, // ← tambah kode_unit
+        unit: _selectedUnitModel!.namaUnit.toLowerCase(), // ✅ simpan lowercase
+        kodeUnit: _selectedUnitModel!.kodeUnit,
         level: selectedLevel,
         password: passwordController.text.trim(),
         added: getCurrentDate(),
         usernameTelegram: telegramUsername,
-        chatIdTelegram: telegramChatIdController.text.trim(),
+        chatIdTelegram: telegramChatIdController.text.trim(), // tetap string di model, dikonversi saat toMap()
         status: 1,
       );
 
@@ -476,8 +518,8 @@ class _FormAddUserPageState extends State<FormAddUserPage> {
             content: Text("Error: ${e.toString()}"),
             backgroundColor: Colors.red,
             behavior: SnackBarBehavior.floating,
-            shape:
-                RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(10)),
           ),
         );
       }
@@ -507,8 +549,7 @@ class _FormAddUserPageState extends State<FormAddUserPage> {
                   color: Color(0xFF2E5D6F),
                   shape: BoxShape.circle,
                 ),
-                child:
-                    const Icon(Icons.check, color: Colors.white, size: 40),
+                child: const Icon(Icons.check, color: Colors.white, size: 40),
               ),
               const SizedBox(height: 24),
               const Text(
@@ -567,6 +608,7 @@ class _FormAddUserPageState extends State<FormAddUserPage> {
       telegramChatIdController.clear();
       passwordController.clear();
       _isPasswordVisible = false;
+      _chatIdStatus = null;
     });
     _clearAllErrors();
   }
@@ -629,10 +671,11 @@ class _FormAddUserPageState extends State<FormAddUserPage> {
                     setState(() => _usernameError = null);
                   } else if (label == "Username Telegram" &&
                       _telegramUsernameError != null) {
-                    setState(() => _telegramUsernameError = null);
-                  } else if (label == "Chat ID Telegram" &&
-                      _telegramChatIdError != null) {
-                    setState(() => _telegramChatIdError = null);
+                    setState(() {
+                      _telegramUsernameError = null;
+                      _chatIdStatus = null;
+                      telegramChatIdController.clear();
+                    });
                   } else if (label == "Password") {
                     if (_passwordError != null) {
                       setState(() => _passwordError = null);
@@ -653,6 +696,136 @@ class _FormAddUserPageState extends State<FormAddUserPage> {
           ),
         ],
         if (bottomWidget != null) bottomWidget,
+      ],
+    );
+  }
+
+  Widget _buildChatIdField() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Chat ID Telegram',
+          style: TextStyle(
+            fontSize: 12,
+            color: Colors.grey.shade600,
+            fontWeight: FontWeight.w500,
+          ),
+        ),
+        const SizedBox(height: 8),
+        Row(
+          children: [
+            Expanded(
+              child: TextFormField(
+                controller: telegramChatIdController,
+                keyboardType: TextInputType.number,
+                readOnly: true,
+                decoration: InputDecoration(
+                  filled: true,
+                  fillColor: _chatIdStatus == 'success'
+                      ? Colors.green.shade50
+                      : Colors.grey.shade100,
+                  border: const OutlineInputBorder(
+                    borderSide: BorderSide.none,
+                    borderRadius: BorderRadius.all(Radius.circular(8)),
+                  ),
+                  contentPadding: const EdgeInsets.all(16),
+                  hintText: 'Klik "Cek Chat ID"',
+                  hintStyle: TextStyle(
+                    color: Colors.grey.shade400,
+                    fontSize: 14,
+                  ),
+                ),
+                style: TextStyle(
+                  color: Colors.grey.shade700,
+                  fontWeight: FontWeight.w600,
+                  letterSpacing: 1.5,
+                ),
+              ),
+            ),
+            const SizedBox(width: 8),
+            SizedBox(
+              height: 54,
+              child: ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF2E5D6F),
+                  foregroundColor: Colors.white,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  padding: const EdgeInsets.symmetric(horizontal: 12),
+                ),
+                onPressed: _isCheckingChatId ? null : _checkChatId,
+                child: _isCheckingChatId
+                    ? const SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(
+                          color: Colors.white,
+                          strokeWidth: 2,
+                        ),
+                      )
+                    : const Text(
+                        'Cek\nChat ID',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(fontSize: 12),
+                      ),
+              ),
+            ),
+          ],
+        ),
+        if (_chatIdStatus == 'success') ...[
+          const SizedBox(height: 8),
+          const Row(
+            children: [
+              Icon(Icons.check_circle, color: Colors.green, size: 16),
+              SizedBox(width: 6),
+              Text(
+                'Chat ID ditemukan!',
+                style: TextStyle(color: Colors.green, fontSize: 13),
+              ),
+            ],
+          ),
+        ],
+        if (_chatIdStatus == 'not_found') ...[
+          const SizedBox(height: 8),
+          const Row(
+            children: [
+              Icon(Icons.cancel, color: Colors.red, size: 16),
+              SizedBox(width: 6),
+              Expanded(
+                child: Text(
+                  'User belum chat bot Telegram. Minta user chat dulu ke @jagagrid_pln_bot',
+                  style: TextStyle(color: Colors.red, fontSize: 13),
+                ),
+              ),
+            ],
+          ),
+        ],
+        if (_chatIdStatus == 'error') ...[
+          const SizedBox(height: 8),
+          const Row(
+            children: [
+              Icon(Icons.error, color: Colors.orange, size: 16),
+              SizedBox(width: 6),
+              Text(
+                'Gagal mengambil data, coba lagi',
+                style: TextStyle(color: Colors.orange, fontSize: 13),
+              ),
+            ],
+          ),
+        ],
+        if (_telegramChatIdError != null) ...[
+          const SizedBox(height: 8),
+          Text(
+            _telegramChatIdError!,
+            style: const TextStyle(
+              color: Colors.red,
+              fontSize: 14,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+        ],
       ],
     );
   }
@@ -767,7 +940,6 @@ class _FormAddUserPageState extends State<FormAddUserPage> {
           child: ListView(
             padding: const EdgeInsets.all(24),
             children: [
-              // ── Pilih Unit Kerja ──
               _isLoadingUnits
                   ? Container(
                       padding: const EdgeInsets.all(16),
@@ -806,13 +978,9 @@ class _FormAddUserPageState extends State<FormAddUserPage> {
                     ),
 
               const SizedBox(height: 16),
-
-              // ── Kode Unit (auto-fill) ──
               _buildKodeUnitField(),
-
               const SizedBox(height: 20),
 
-              // ── Level ──
               Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -865,25 +1033,17 @@ class _FormAddUserPageState extends State<FormAddUserPage> {
               ),
 
               const SizedBox(height: 20),
-
               _buildField("Nama Lengkap", fullNameController,
                   errorText: _nameError),
               const SizedBox(height: 20),
-
               _buildField("Username", usernameController,
                   errorText: _usernameError),
               const SizedBox(height: 20),
-
               _buildField("Username Telegram", telegramUsernameController,
                   errorText: _telegramUsernameError),
               const SizedBox(height: 20),
 
-              _buildField(
-                "Chat ID Telegram",
-                telegramChatIdController,
-                keyboardType: TextInputType.number,
-                errorText: _telegramChatIdError,
-              ),
+              _buildChatIdField(),
               const SizedBox(height: 20),
 
               _buildField(
@@ -909,7 +1069,6 @@ class _FormAddUserPageState extends State<FormAddUserPage> {
 
               const SizedBox(height: 32),
 
-              // ── Submit ──
               SizedBox(
                 width: double.infinity,
                 height: 54,

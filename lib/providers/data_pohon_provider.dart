@@ -2,6 +2,9 @@ import 'package:flutter/foundation.dart';
 import '../models/data_pohon.dart';
 import '../services/data_pohon_service.dart';
 import 'dart:io';
+import 'package:flutter_image_compress/flutter_image_compress.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:path/path.dart' as path;
 
 class DataPohonProvider with ChangeNotifier {
   final DataPohonService _service = DataPohonService();
@@ -18,7 +21,29 @@ class DataPohonProvider with ChangeNotifier {
 
   Future<String> addPohon(DataPohon pohon, File? fotoFile) async {
     try {
-      final docId = await _service.addDataPohon(pohon, fotoFile);
+      File? compressedFile = fotoFile;
+
+      if (fotoFile != null) {
+        final dir = await getTemporaryDirectory();
+        final targetPath = path.join(
+          dir.path,
+          '${DateTime.now().millisecondsSinceEpoch}_compressed.jpg',
+        );
+
+        final result = await FlutterImageCompress.compressAndGetFile(
+          fotoFile.absolute.path,
+          targetPath,
+          quality: 60,
+          minWidth: 800,
+          minHeight: 800,
+        );
+
+        if (result != null) {
+          compressedFile = File(result.path);
+        }
+      }
+
+      final docId = await _service.addDataPohon(pohon, compressedFile);
       notifyListeners();
       return docId;
     } catch (e) {
@@ -32,7 +57,6 @@ class DataPohonProvider with ChangeNotifier {
   Future<void> markAsDead(String id, {String catatan = ''}) async {
     try {
       await _service.markAsDead(id, catatan: catatan);
-      // Hapus dari list lokal langsung tanpa tunggu stream
       _pohonList.removeWhere((p) => p.id == id);
       notifyListeners();
       print('✅ Pohon $id ditandai mati di provider');
