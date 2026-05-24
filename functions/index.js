@@ -38,17 +38,16 @@ function normalizeUnit(str) {
     .replace(/^(ulp|up3)\s+/, '');
 }
 
-// ✅ FIX FINAL: parseInt + detail error lengkap + fallback tanpa Markdown
+// ✅ FIX: Hapus parse_mode Markdown, kirim plain text langsung
 async function sendTelegram(chatId, message, replyMarkup = null) {
   const parsedId = parseInt(chatId);
   console.log(`📤 Kirim ke chat_id: ${parsedId} (type: ${typeof parsedId})`);
 
-  // Coba dengan Markdown
   try {
     const body = {
       chat_id: parsedId,
       text: message,
-      parse_mode: 'Markdown',
+      // ✅ Tidak pakai Markdown sama sekali → tidak akan error
     };
     if (replyMarkup) body.reply_markup = replyMarkup;
 
@@ -57,32 +56,10 @@ async function sendTelegram(chatId, message, replyMarkup = null) {
       body
     );
     console.log(`✅ Telegram terkirim ke ${chatId}`);
-    return;
   } catch (e) {
-    console.error(`❌ Gagal kirim Telegram ke ${chatId} (Markdown):`, e.message);
+    console.error(`❌ Gagal kirim Telegram ke ${chatId}:`, e.message);
     if (e.response?.data) {
-      console.error(`❌ Telegram error detail:`, JSON.stringify(e.response.data));
-    }
-  }
-
-  // Fallback tanpa Markdown
-  try {
-    console.log(`🔄 Retry tanpa Markdown ke ${chatId}...`);
-    const body = {
-      chat_id: parsedId,
-      text: message.replace(/[*_`]/g, ''),
-    };
-    if (replyMarkup) body.reply_markup = replyMarkup;
-
-    await axios.post(
-      `https://api.telegram.org/bot${TELEGRAM_TOKEN}/sendMessage`,
-      body
-    );
-    console.log(`✅ Telegram terkirim ke ${chatId} (tanpa Markdown)`);
-  } catch (e2) {
-    console.error(`❌ Gagal kirim ke ${chatId} (tanpa Markdown):`, e2.message);
-    if (e2.response?.data) {
-      console.error(`❌ Detail error fallback:`, JSON.stringify(e2.response.data));
+      console.error(`❌ Detail error:`, JSON.stringify(e.response.data));
     }
   }
 }
@@ -235,8 +212,9 @@ async function sendH3Reminders() {
         year: 'numeric',
       });
 
+      // ✅ FIX: Hapus * dan _ → tidak ada Markdown → tidak akan error
       const telegramMsg =
-`⚠️ *Pengingat Eksekusi H-3*
+`⚠️ Pengingat Eksekusi H-3
 --------------------
 Pohon      : ${namaPohon}
 ID         : ${idPohon}
@@ -245,7 +223,7 @@ Penyulang  : ${penyulang}
 Jadwal     : ${jadwalStr}
 --------------------
 Segera lakukan persiapan eksekusi.
-_PLN JagaGRID_`;
+PLN JagaGRID`;
 
       const appTitle = `Pengingat H-3 — ${namaPohon}`;
       const appMessage = `${idPohon} • ${ulpFormatted} • Jadwal: ${jadwalStr}`;
@@ -313,7 +291,7 @@ app.post('/webhook', async (req, res) => {
     const message = req.body.message;
     if (!message) return res.send('ok');
 
-    const chatId = message.chat.id; // ✅ integer
+    const chatId = message.chat.id;
     const username = message.from.username || '';
     const text = message.text;
 
@@ -322,7 +300,7 @@ app.post('/webhook', async (req, res) => {
     if (db && username) {
       await db.collection('telegram_users').doc(username).set({
         username_telegram: username,
-        chat_id: chatId, // ✅ integer
+        chat_id: chatId,
         last_message: text,
         updated_at: admin.firestore.FieldValue.serverTimestamp(),
       }, { merge: true });
