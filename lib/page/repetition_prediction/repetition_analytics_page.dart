@@ -28,7 +28,6 @@ class _RepetitionAnalyticsPageState extends State<RepetitionAnalyticsPage> {
   String _sessionUnit = '';
   String _sessionName = '';
 
-  // Stream untuk realtime update
   Stream<List<GrowthPrediction>>? _predictionsStream;
 
   final ScrollController _scrollRisiko = ScrollController();
@@ -62,7 +61,6 @@ class _RepetitionAnalyticsPageState extends State<RepetitionAnalyticsPage> {
     });
   }
 
-  // ── Inisialisasi stream dari provider ──
   void _initStream() {
     setState(() {
       _predictionsStream =
@@ -70,7 +68,6 @@ class _RepetitionAnalyticsPageState extends State<RepetitionAnalyticsPage> {
     });
   }
 
-  // ── Batch fetch semua idPohon + DataPohon sekaligus ──
   Future<void> _preloadAllIdPohon(List<GrowthPrediction> predictions) async {
     final ids = predictions
         .map((p) => p.dataPohonId)
@@ -128,7 +125,6 @@ class _RepetitionAnalyticsPageState extends State<RepetitionAnalyticsPage> {
     );
   }
 
-  // ── Pull-to-refresh: reset cache idPohon & reinit stream ──
   Future<void> _refreshAll() async {
     try {
       setState(() {
@@ -175,20 +171,17 @@ class _RepetitionAnalyticsPageState extends State<RepetitionAnalyticsPage> {
             ),
           ),
         ),
-        // ── Icon refresh dihapus, pakai pull-to-refresh ──
       ),
       body: _predictionsStream == null
           ? const Center(child: CircularProgressIndicator())
           : StreamBuilder<List<GrowthPrediction>>(
               stream: _predictionsStream,
               builder: (context, snapshot) {
-                // ── Loading state awal ──
                 if (snapshot.connectionState == ConnectionState.waiting &&
                     !snapshot.hasData) {
                   return const Center(child: CircularProgressIndicator());
                 }
 
-                // ── Error state ──
                 if (snapshot.hasError) {
                   return Center(
                     child: Column(
@@ -215,20 +208,17 @@ class _RepetitionAnalyticsPageState extends State<RepetitionAnalyticsPage> {
 
                 final predictions = snapshot.data ?? [];
 
-                // ── Preload cache idPohon setiap ada data baru dari stream ──
                 if (!_cacheLoaded && predictions.isNotEmpty) {
                   WidgetsBinding.instance.addPostFrameCallback((_) {
                     _preloadAllIdPohon(predictions);
                   });
                 }
 
-                // ── Empty state ──
                 if (predictions.isEmpty) {
                   return RefreshIndicator(
                     onRefresh: _refreshAll,
                     color: AppColors.tealGelap,
                     child: ListView(
-                      // ListView agar pull-to-refresh tetap bisa digesek
                       children: [
                         SizedBox(
                           height: MediaQuery.of(context).size.height * 0.7,
@@ -258,35 +248,27 @@ class _RepetitionAnalyticsPageState extends State<RepetitionAnalyticsPage> {
                   );
                 }
 
-                // ── Main content dengan Pull-to-Refresh ──
                 return RefreshIndicator(
                   onRefresh: _refreshAll,
                   color: AppColors.tealGelap,
                   child: SingleChildScrollView(
-                    // AlwaysScrollable agar pull-to-refresh tetap aktif
                     physics: const AlwaysScrollableScrollPhysics(),
                     padding: const EdgeInsets.all(16),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        // ── Indikator realtime ──
                         _buildRealtimeBadge(),
                         const SizedBox(height: 12),
-
                         _buildRingkasan(predictions),
                         const SizedBox(height: 20),
-
                         if (_sessionLevel == 1) ...[
                           _buildBreakdownULP(predictions),
                           const SizedBox(height: 20),
                         ],
-
                         _buildPenilaianRisiko(predictions),
                         const SizedBox(height: 20),
-
                         _buildPohonKritis(predictions),
                         const SizedBox(height: 20),
-
                         _buildPertumbuhanJenisPohon(),
                         const SizedBox(height: 20),
                       ],
@@ -298,7 +280,6 @@ class _RepetitionAnalyticsPageState extends State<RepetitionAnalyticsPage> {
     );
   }
 
-  // ── Badge kecil realtime di atas konten ──
   Widget _buildRealtimeBadge() {
     return Row(
       children: [
@@ -319,15 +300,11 @@ class _RepetitionAnalyticsPageState extends State<RepetitionAnalyticsPage> {
     );
   }
 
-  // ─────────────────────────────────────────────
-  // SECTION 1: RINGKASAN
-  // ─────────────────────────────────────────────
   Widget _buildRingkasan(List<GrowthPrediction> predictions) {
     final total = predictions.length;
     final overdue = predictions.where((p) => p.isDueForExecution()).length;
     final due7Hari = predictions.where((p) {
-      final sisa =
-          p.predictedNextExecution.difference(DateTime.now()).inDays;
+      final sisa = p.predictedNextExecution.difference(DateTime.now()).inDays;
       return sisa >= 0 && sisa <= 7;
     }).length;
     final belumEksekusi =
@@ -427,9 +404,6 @@ class _RepetitionAnalyticsPageState extends State<RepetitionAnalyticsPage> {
     );
   }
 
-  // ─────────────────────────────────────────────
-  // SECTION 2: BREAKDOWN PER ULP
-  // ─────────────────────────────────────────────
   Widget _buildBreakdownULP(List<GrowthPrediction> predictions) {
     final pohonList = context.read<DataPohonProvider>().pohonList;
 
@@ -475,13 +449,11 @@ class _RepetitionAnalyticsPageState extends State<RepetitionAnalyticsPage> {
               final isLast = idx == sortedUlp.length - 1;
 
               return Container(
-                padding: const EdgeInsets.symmetric(
-                    horizontal: 16, vertical: 12),
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                 decoration: BoxDecoration(
                   border: isLast
                       ? null
-                      : Border(
-                          bottom: BorderSide(color: Colors.grey.shade100)),
+                      : Border(bottom: BorderSide(color: Colors.grey.shade100)),
                 ),
                 child: Row(
                   children: [
@@ -501,12 +473,10 @@ class _RepetitionAnalyticsPageState extends State<RepetitionAnalyticsPage> {
                               fontSize: 13, fontWeight: FontWeight.w500)),
                     ),
                     Text('$total pohon',
-                        style:
-                            const TextStyle(fontSize: 12, color: Colors.grey)),
+                        style: const TextStyle(fontSize: 12, color: Colors.grey)),
                     const SizedBox(width: 8),
                     Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 8, vertical: 3),
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                       decoration: BoxDecoration(
                         color: overdue > 0
                             ? Colors.red.shade50
@@ -534,9 +504,6 @@ class _RepetitionAnalyticsPageState extends State<RepetitionAnalyticsPage> {
     );
   }
 
-  // ─────────────────────────────────────────────
-  // SECTION 3: PENILAIAN RISIKO
-  // ─────────────────────────────────────────────
   Widget _buildPenilaianRisiko(List<GrowthPrediction> predictions) {
     final riskyCount = predictions
         .where((p) =>
@@ -616,15 +583,13 @@ class _RepetitionAnalyticsPageState extends State<RepetitionAnalyticsPage> {
                             value: riskScore,
                             minHeight: 10,
                             backgroundColor: Colors.grey.shade200,
-                            valueColor:
-                                AlwaysStoppedAnimation<Color>(riskColor),
+                            valueColor: AlwaysStoppedAnimation<Color>(riskColor),
                           ),
                         ),
                         const SizedBox(height: 4),
                         Text(
                           '$riskyCount dari ${predictions.length} pohon berisiko',
-                          style:
-                              const TextStyle(fontSize: 11, color: Colors.grey),
+                          style: const TextStyle(fontSize: 11, color: Colors.grey),
                         ),
                       ],
                     ),
@@ -653,13 +618,11 @@ class _RepetitionAnalyticsPageState extends State<RepetitionAnalyticsPage> {
                   children: [
                     const Text(
                       'Detail Pohon Berisiko',
-                      style: TextStyle(
-                          fontSize: 13, fontWeight: FontWeight.bold),
+                      style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold),
                     ),
                     const SizedBox(width: 8),
                     Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 7, vertical: 2),
+                      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
                       decoration: BoxDecoration(
                         color: Colors.red.withOpacity(0.1),
                         borderRadius: BorderRadius.circular(10),
@@ -677,13 +640,11 @@ class _RepetitionAnalyticsPageState extends State<RepetitionAnalyticsPage> {
                 const SizedBox(height: 4),
                 Row(
                   children: [
-                    Icon(Icons.touch_app,
-                        size: 12, color: Colors.grey.shade400),
+                    Icon(Icons.touch_app, size: 12, color: Colors.grey.shade400),
                     const SizedBox(width: 4),
                     Text(
                       'Ketuk pohon untuk melihat riwayat eksekusi',
-                      style:
-                          TextStyle(fontSize: 10, color: Colors.grey.shade400),
+                      style: TextStyle(fontSize: 10, color: Colors.grey.shade400),
                     ),
                   ],
                 ),
@@ -720,7 +681,8 @@ class _RepetitionAnalyticsPageState extends State<RepetitionAnalyticsPage> {
     final sisaHari = prediction.predictedNextExecution
         .difference(DateTime.now())
         .inDays;
-    final persenSisa = totalHari > 0 ? (sisaHari / totalHari * 100).round() : 0;
+    final persenSisa =
+        totalHari > 0 ? (sisaHari / totalHari * 100).round() : 0;
 
     Color badgeColor;
     String badgeText;
@@ -791,8 +753,7 @@ class _RepetitionAnalyticsPageState extends State<RepetitionAnalyticsPage> {
               crossAxisAlignment: CrossAxisAlignment.end,
               children: [
                 Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+                  padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
                   decoration: BoxDecoration(
                     color: badgeColor,
                     borderRadius: BorderRadius.circular(10),
@@ -807,8 +768,7 @@ class _RepetitionAnalyticsPageState extends State<RepetitionAnalyticsPage> {
                 ),
                 if (canNavigate) ...[
                   const SizedBox(height: 4),
-                  Icon(Icons.chevron_right,
-                      size: 16, color: Colors.grey.shade400),
+                  Icon(Icons.chevron_right, size: 16, color: Colors.grey.shade400),
                 ],
               ],
             ),
@@ -818,9 +778,6 @@ class _RepetitionAnalyticsPageState extends State<RepetitionAnalyticsPage> {
     );
   }
 
-  // ─────────────────────────────────────────────
-  // SECTION 4: POHON PALING KRITIS
-  // ─────────────────────────────────────────────
   Widget _buildPohonKritis(List<GrowthPrediction> predictions) {
     const double batasPLN = 780.0;
 
@@ -829,12 +786,11 @@ class _RepetitionAnalyticsPageState extends State<RepetitionAnalyticsPage> {
         .map((p) {
           final persen = (p.lastHeight / batasPLN).clamp(0.0, 1.0);
           final sisaCm = batasPLN - p.lastHeight;
-          final sisaTahun = sisaCm > 0 ? sisaCm / p.growthRate : 0.0;
+          // ✅ FIX: hapus sisaTahun, pakai getFormattedTimeUntilExecution()
           return {
             'prediction': p,
             'persen': persen,
             'sisaCm': sisaCm,
-            'sisaTahun': sisaTahun,
           };
         })
         .toList()
@@ -859,8 +815,7 @@ class _RepetitionAnalyticsPageState extends State<RepetitionAnalyticsPage> {
               Expanded(
                 child: Text(
                   'Batas aman PLN = tinggi tiang JTM (10.8m) − jarak aman (3m) = 7.8m = 780cm. Semakin tinggi persentasenya, semakin mendesak pohon perlu dieksekusi.',
-                  style:
-                      TextStyle(fontSize: 11, color: Colors.orange.shade800),
+                  style: TextStyle(fontSize: 11, color: Colors.orange.shade800),
                 ),
               ),
             ],
@@ -934,7 +889,6 @@ class _RepetitionAnalyticsPageState extends State<RepetitionAnalyticsPage> {
                             final p = item['prediction'] as GrowthPrediction;
                             final persen = item['persen'] as double;
                             final sisaCm = item['sisaCm'] as double;
-                            final sisaTahun = item['sisaTahun'] as double;
 
                             Color barColor;
                             if (persen >= 0.9) {
@@ -950,8 +904,7 @@ class _RepetitionAnalyticsPageState extends State<RepetitionAnalyticsPage> {
                                 _dataPohonCache.containsKey(p.dataPohonId);
 
                             return GestureDetector(
-                              onTap: () =>
-                                  _bukaRiwayatEksekusi(p.dataPohonId),
+                              onTap: () => _bukaRiwayatEksekusi(p.dataPohonId),
                               child: Container(
                                 margin: const EdgeInsets.only(bottom: 12),
                                 padding: const EdgeInsets.all(8),
@@ -999,8 +952,9 @@ class _RepetitionAnalyticsPageState extends State<RepetitionAnalyticsPage> {
                                       ],
                                     ),
                                     const SizedBox(height: 4),
+                                    // ✅ FIX: pakai getFormattedTimeUntilExecution()
                                     Text(
-                                      'Tinggi: ${p.lastHeight.round()} cm • Sisa: ${sisaCm.round()} cm lagi • ~${sisaTahun.toStringAsFixed(1)} tahun',
+                                      'Tinggi: ${p.lastHeight.round()} cm • Sisa: ${sisaCm.round()} cm lagi • ${p.getFormattedTimeUntilExecution()}',
                                       style: const TextStyle(
                                           fontSize: 10, color: Colors.grey),
                                     ),
@@ -1031,9 +985,6 @@ class _RepetitionAnalyticsPageState extends State<RepetitionAnalyticsPage> {
     );
   }
 
-  // ─────────────────────────────────────────────
-  // SECTION 5: PERTUMBUHAN PER JENIS POHON
-  // ─────────────────────────────────────────────
   Widget _buildPertumbuhanJenisPohon() {
     return Consumer<TreeGrowthProvider>(
       builder: (context, treeGrowthProvider, child) {
@@ -1047,8 +998,7 @@ class _RepetitionAnalyticsPageState extends State<RepetitionAnalyticsPage> {
           return Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              _buildSectionTitle(
-                  'Pertumbuhan per Jenis Pohon', Icons.forest),
+              _buildSectionTitle('Pertumbuhan per Jenis Pohon', Icons.forest),
               const SizedBox(height: 8),
               Container(
                 padding: const EdgeInsets.all(16),
@@ -1073,8 +1023,7 @@ class _RepetitionAnalyticsPageState extends State<RepetitionAnalyticsPage> {
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            _buildSectionTitle(
-                'Pertumbuhan per Jenis Pohon', Icons.forest),
+            _buildSectionTitle('Pertumbuhan per Jenis Pohon', Icons.forest),
             const SizedBox(height: 4),
             Container(
               padding: const EdgeInsets.all(10),
@@ -1160,17 +1109,17 @@ class _RepetitionAnalyticsPageState extends State<RepetitionAnalyticsPage> {
                                       value: persen,
                                       minHeight: 10,
                                       backgroundColor: Colors.grey.shade200,
-                                      valueColor:
-                                          AlwaysStoppedAnimation<Color>(
-                                              AppColors.tealGelap),
+                                      valueColor: AlwaysStoppedAnimation<Color>(
+                                          AppColors.tealGelap),
                                     ),
                                   ),
                                 ),
                                 const SizedBox(width: 8),
                                 SizedBox(
                                   width: 80,
+                                  // ✅ FIX: cm/thn → cm/tahun
                                   child: Text(
-                                    '${item.growthRate.toStringAsFixed(0)} cm/thn',
+                                    '${item.growthRate.toStringAsFixed(0)} cm/tahun',
                                     style: const TextStyle(
                                         fontSize: 11, color: Colors.grey),
                                     textAlign: TextAlign.right,
@@ -1192,9 +1141,6 @@ class _RepetitionAnalyticsPageState extends State<RepetitionAnalyticsPage> {
     );
   }
 
-  // ─────────────────────────────────────────────
-  // HELPER: Section title
-  // ─────────────────────────────────────────────
   Widget _buildSectionTitle(String title, IconData icon) {
     return Row(
       children: [

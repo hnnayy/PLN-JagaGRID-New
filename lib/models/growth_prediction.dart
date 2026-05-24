@@ -12,9 +12,9 @@ class GrowthPrediction {
   final double confidenceLevel; // 0.0 - 1.0
   final int repetitionCycle;
   final DateTime createdDate;
-  final int status; // 1=active, 2=completed (pohon sudah tidak ada), 3=cancelled
+  final int status; // 1=active, 2=completed, 3=cancelled
   final int executionType; // 1=tebang pangkas, 2=tebang habis
-  final String lastExecutionNotes; // Catatan eksekusi terakhir
+  final String lastExecutionNotes;
 
   GrowthPrediction({
     required this.id,
@@ -49,6 +49,7 @@ class GrowthPrediction {
       'status': status,
       'execution_type': executionType,
       'last_execution_notes': lastExecutionNotes,
+      'reminder_sent': false, // ✅ FIX: selalu false saat prediksi baru dibuat
     };
   }
 
@@ -84,21 +85,11 @@ class GrowthPrediction {
     double effectiveHeight = lastHeight;
     double effectiveGrowthRate = growthRate;
 
-    // Tebang pangkas: pakai tinggi setelah pangkas dan growth rate normal
-    // Tebang habis: ditangani di service, tidak sampai sini
-    effectiveHeight = lastHeight;
-    effectiveGrowthRate = growthRate;
-
-    // FIX 1: Batas aman = tinggi tiang JTM minimum (10.8m) - jarak aman (3m)
-    // = 7.8 meter = 780 cm dari tanah
-    // Bukan safeDistance * 100 (yang menghasilkan 300 cm = 3 meter, salah!)
-    const double tiangJTM = 10.8; // meter, nilai minimum tiang JTM PLN
+    const double tiangJTM = 10.8;
     final maxSafeHeight = (tiangJTM - safeDistance) * 100; // = 780 cm
 
     final remainingGrowth = maxSafeHeight - effectiveHeight;
 
-    // FIX 2: Jika pohon sudah melewati batas aman (remainingGrowth <= 0)
-    // jadwalkan eksekusi HARI INI, bukan paksa 50 cm lagi
     if (remainingGrowth <= 0) {
       return GrowthPrediction(
         id: '',
@@ -107,11 +98,11 @@ class GrowthPrediction {
         lastHeight: effectiveHeight,
         growthRate: effectiveGrowthRate,
         safeDistance: safeDistance,
-        predictedNextExecution: DateTime.now(), // jadwal hari ini
+        predictedNextExecution: DateTime.now(),
         predictionReason: 'Pohon dengan tinggi ${effectiveHeight.round()}cm telah melewati '
             'batas aman PLN ${maxSafeHeight.round()}cm (${tiangJTM}m - ${safeDistance}m). '
             'Eksekusi harus dilakukan SEGERA.',
-        confidenceLevel: 1.0, // confidence tinggi karena sudah pasti berbahaya
+        confidenceLevel: 1.0,
         repetitionCycle: repetitionCycle,
         createdDate: DateTime.now(),
         executionType: executionType,
@@ -119,10 +110,9 @@ class GrowthPrediction {
       );
     }
 
-    // Hitung waktu yang dibutuhkan untuk mencapai batas aman
+    // Hitung waktu dalam tahun (growth rate cm/tahun)
     final yearsToNextExecution = remainingGrowth / effectiveGrowthRate;
 
-    // Hitung tanggal prediksi
     final predictedDate = lastExecutionDate.add(
       Duration(days: (yearsToNextExecution * 365).round()),
     );
@@ -165,25 +155,14 @@ class GrowthPrediction {
     int executionType,
   ) {
     double baseConfidence = 0.8;
-
-    if (repetitionCycle <= 1) {
-      baseConfidence -= 0.2;
-    }
-
-    if (yearsToExecution > 5) {
-      baseConfidence -= 0.1;
-    }
-
-    if (repetitionCycle > 3) {
-      baseConfidence += 0.1;
-    }
-
+    if (repetitionCycle <= 1) baseConfidence -= 0.2;
+    if (yearsToExecution > 5) baseConfidence -= 0.1;
+    if (repetitionCycle > 3) baseConfidence += 0.1;
     if (executionType == 2) {
       baseConfidence -= 0.1;
     } else {
       baseConfidence += 0.05;
     }
-
     return baseConfidence.clamp(0.0, 1.0);
   }
 
@@ -195,9 +174,7 @@ class GrowthPrediction {
     int executionType,
     double maxSafeHeight,
   ) {
-    final predictedHeight = lastHeight + (growthRate * yearsToExecution);
     String executionTypeText = executionType == 1 ? 'pangkas' : 'habis';
-
     return 'Pohon dengan tinggi ${lastHeight.round()}cm dan growth rate ${growthRate.round()}cm/tahun '
         'akan mencapai batas aman PLN ${maxSafeHeight.round()}cm '
         '(tinggi tiang 10.8m - jarak aman ${safeDistance}m) '
@@ -206,8 +183,33 @@ class GrowthPrediction {
         '${yearsToExecution < 1 ? "kurang dari 1 tahun" : "${yearsToExecution.round()} tahun"} lagi.';
   }
 
+  // ✅ Cek apakah sudah waktunya eksekusi
   bool isDueForExecution() {
     return DateTime.now().isAfter(predictedNextExecution) && status == 1;
+  }
+
+  // ✅ Format tampilan prediksi dalam bulan/tahun yang mudah dibaca
+  String getFormattedTimeUntilExecution() {
+    final now = DateTime.now();
+    final diff = predictedNextExecution.difference(now);
+
+    if (diff.isNegative) return 'Sudah lewat jadwal!';
+
+    final totalDays = diff.inDays;
+    final years = totalDays ~/ 365;
+    final remainingDays = totalDays % 365;
+    final months = remainingDays ~/ 30;
+    final days = remainingDays % 30;
+
+    if (years > 0 && months > 0) {
+      return '$years tahun $months bulan lagi';
+    } else if (years > 0) {
+      return '$years tahun lagi';
+    } else if (months > 0) {
+      return '$months bulan $days hari lagi';
+    } else {
+      return '$totalDays hari lagi';
+    }
   }
 
   String getStatusString() {
@@ -227,25 +229,14 @@ class GrowthPrediction {
     }
   }
 
-  // FIX 3: Sudah benar — prioritas pakai persentase siklus, bukan hardcode 30 hari
-  // Otomatis menyesuaikan per jenis pohon (bambu vs jati vs kelapa dll)
   int getPriority() {
     final total = predictedNextExecution.difference(lastExecutionDate).inDays;
     final remaining = predictedNextExecution.difference(DateTime.now()).inDays;
 
-    // Sudah lewat jadwal → TINGGI
     if (remaining < 0) return 3;
-
-    // Hindari division by zero
     if (total <= 0) return 1;
-
-    // ≤ 20% sisa waktu → TINGGI
     if (remaining <= total * 0.2) return 3;
-
-    // ≤ 50% sisa waktu → SEDANG
     if (remaining <= total * 0.5) return 2;
-
-    // > 50% sisa waktu → RENDAH
     return 1;
   }
 

@@ -3,29 +3,25 @@ import '../constants/colors.dart';
 import 'package:provider/provider.dart';
 import '../providers/data_pohon_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'report/treemapping_report.dart'; // Import halaman report
-import '../../models/data_pohon.dart'; // Add this import for DataPohon
-import 'repetition_prediction/repetition_management_page.dart'; // Import halaman repetisi
+import 'report/treemapping_report.dart';
+import '../../models/data_pohon.dart';
+import 'repetition_prediction/repetition_management_page.dart';
 
 class HomePage extends StatelessWidget {
   const HomePage({Key? key}) : super(key: key);
 
-  // Method to filter pohonList based on session_level and session_unit
   Future<List<DataPohon>> _filterList(List<DataPohon> pohonList) async {
     List<DataPohon> filteredList = List.from(pohonList);
 
-    // Ambil level dan unit dari SharedPreferences
     final prefs = await SharedPreferences.getInstance();
     final level = prefs.getInt('session_level') ?? 2;
     final sessionUnit = prefs.getString('session_unit') ?? '';
 
-    // Filter berdasarkan level
     if (level == 2) {
-      // Ganti 'unit' dengan field yang sesuai di DataPohon
-      filteredList = filteredList.where((p) => p.up3 == sessionUnit || p.ulp == sessionUnit).toList();
+      filteredList = filteredList
+          .where((p) => p.up3 == sessionUnit || p.ulp == sessionUnit)
+          .toList();
     }
-
-    print('Jumlah data setelah filter di HomePage: ${filteredList.length}');
 
     return filteredList;
   }
@@ -37,7 +33,6 @@ class HomePage extends StatelessWidget {
     final screenHeight = screenSize.height;
     final isSmallScreen = screenWidth < 360;
     final isMediumScreen = screenWidth >= 360 && screenWidth < 400;
-  // Removed unused isLargeScreen variable after layout adjustments
 
     return Scaffold(
       backgroundColor: AppColors.putihKebiruan,
@@ -59,22 +54,23 @@ class HomePage extends StatelessWidget {
                   return const Center(child: CircularProgressIndicator());
                 }
                 if (snapshot.hasError) {
-                  print('Error filtering pohonList: ${snapshot.error}');
                   return Center(child: Text('Error: ${snapshot.error}'));
                 }
-                final pohonList = snapshot.data ?? [];
-                if (pohonList.isEmpty) {
-                  print('Data kosong setelah filter di HomePage');
-                  return const Center(child: Text('Tidak ada data pohon tersedia'));
-                }
 
-                // Calculate statistics based on filtered list
+                // ✅ FIX: tetap lanjut meskipun data kosong, semua angka = 0
+                final pohonList = snapshot.data ?? [];
+
                 final totalPohon = pohonList.length;
-                final prioritasTinggi = pohonList.where((p) => p.prioritas == 3).length;
-                final prioritasSedang = pohonList.where((p) => p.prioritas == 2).length;
-                final prioritasRendah = pohonList.where((p) => p.prioritas == 1).length;
-                final tebangHabis = pohonList.where((p) => p.tujuanPenjadwalan == 2).length;
-                final tebangPangkas = pohonList.where((p) => p.tujuanPenjadwalan == 1).length;
+                final prioritasTinggi =
+                    pohonList.where((p) => p.prioritas == 3).length;
+                final prioritasSedang =
+                    pohonList.where((p) => p.prioritas == 2).length;
+                final prioritasRendah =
+                    pohonList.where((p) => p.prioritas == 1).length;
+                final tebangHabis =
+                    pohonList.where((p) => p.tujuanPenjadwalan == 2).length;
+                final tebangPangkas =
+                    pohonList.where((p) => p.tujuanPenjadwalan == 1).length;
 
                 return LayoutBuilder(
                   builder: (context, constraints) {
@@ -82,12 +78,18 @@ class HomePage extends StatelessWidget {
                       physics: const BouncingScrollPhysics(),
                       child: Column(
                         children: [
-                          // HEADER - Responsif berdasarkan ukuran layar
+                          // ── HEADER ──
                           Container(
                             width: double.infinity,
                             padding: EdgeInsets.symmetric(
-                              vertical: screenHeight * (isSmallScreen ? 0.025 : isMediumScreen ? 0.035 : 0.04),
-                              horizontal: screenWidth * (isSmallScreen ? 0.04 : 0.06),
+                              vertical: screenHeight *
+                                  (isSmallScreen
+                                      ? 0.025
+                                      : isMediumScreen
+                                          ? 0.035
+                                          : 0.04),
+                              horizontal: screenWidth *
+                                  (isSmallScreen ? 0.04 : 0.06),
                             ),
                             decoration: BoxDecoration(
                               gradient: LinearGradient(
@@ -96,24 +98,38 @@ class HomePage extends StatelessWidget {
                                 end: Alignment.bottomRight,
                               ),
                               borderRadius: BorderRadius.vertical(
-                                bottom: Radius.circular(isSmallScreen ? 24 : 32),
+                                bottom: Radius.circular(
+                                    isSmallScreen ? 24 : 32),
                               ),
                             ),
                             child: Row(
                               children: [
                                 CircleAvatar(
-                                  radius: screenWidth * (isSmallScreen ? 0.07 : isMediumScreen ? 0.08 : 0.09),
+                                  radius: screenWidth *
+                                      (isSmallScreen
+                                          ? 0.07
+                                          : isMediumScreen
+                                              ? 0.08
+                                              : 0.09),
                                   backgroundColor: AppColors.white,
                                   child: Image.asset(
                                     'assets/logo/logo.png',
                                     fit: BoxFit.contain,
-                                    width: screenWidth * (isSmallScreen ? 0.10 : isMediumScreen ? 0.12 : 0.13),
+                                    width: screenWidth *
+                                        (isSmallScreen
+                                            ? 0.10
+                                            : isMediumScreen
+                                                ? 0.12
+                                                : 0.13),
                                   ),
                                 ),
-                                SizedBox(width: screenWidth * (isSmallScreen ? 0.03 : 0.04)),
+                                SizedBox(
+                                    width: screenWidth *
+                                        (isSmallScreen ? 0.03 : 0.04)),
                                 Expanded(
                                   child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
                                     children: [
                                       FittedBox(
                                         fit: BoxFit.scaleDown,
@@ -121,7 +137,12 @@ class HomePage extends StatelessWidget {
                                         child: Text(
                                           'PLN JagaGRID',
                                           style: TextStyle(
-                                            fontSize: screenWidth * (isSmallScreen ? 0.055 : isMediumScreen ? 0.06 : 0.065),
+                                            fontSize: screenWidth *
+                                                (isSmallScreen
+                                                    ? 0.055
+                                                    : isMediumScreen
+                                                        ? 0.06
+                                                        : 0.065),
                                             fontWeight: FontWeight.bold,
                                             color: AppColors.yellow,
                                             fontFamily: 'Poppins',
@@ -130,16 +151,25 @@ class HomePage extends StatelessWidget {
                                       ),
                                       SizedBox(height: isSmallScreen ? 4 : 6),
                                       FutureBuilder<SharedPreferences>(
-                                        future: SharedPreferences.getInstance(),
+                                        future:
+                                            SharedPreferences.getInstance(),
                                         builder: (context, snapshot) {
-                                          final userName = snapshot.data?.getString('session_name') ?? '';
+                                          final userName = snapshot.data
+                                                  ?.getString(
+                                                      'session_name') ??
+                                              '';
                                           return FittedBox(
                                             fit: BoxFit.scaleDown,
                                             alignment: Alignment.centerLeft,
                                             child: Text(
                                               'Hi, $userName',
                                               style: TextStyle(
-                                                fontSize: screenWidth * (isSmallScreen ? 0.045 : isMediumScreen ? 0.05 : 0.055),
+                                                fontSize: screenWidth *
+                                                    (isSmallScreen
+                                                        ? 0.045
+                                                        : isMediumScreen
+                                                            ? 0.05
+                                                            : 0.055),
                                                 fontWeight: FontWeight.w700,
                                                 color: AppColors.white,
                                                 fontFamily: 'Poppins',
@@ -154,8 +184,14 @@ class HomePage extends StatelessWidget {
                                         child: Text(
                                           greeting(),
                                           style: TextStyle(
-                                            fontSize: screenWidth * (isSmallScreen ? 0.035 : isMediumScreen ? 0.04 : 0.045),
-                                            color: AppColors.white.withOpacity(0.9),
+                                            fontSize: screenWidth *
+                                                (isSmallScreen
+                                                    ? 0.035
+                                                    : isMediumScreen
+                                                        ? 0.04
+                                                        : 0.045),
+                                            color: AppColors.white
+                                                .withOpacity(0.9),
                                             fontFamily: 'Poppins',
                                             fontWeight: FontWeight.w600,
                                           ),
@@ -167,97 +203,162 @@ class HomePage extends StatelessWidget {
                               ],
                             ),
                           ),
-                          SizedBox(height: screenHeight * (isSmallScreen ? 0.015 : 0.02)),
+                          SizedBox(
+                              height: screenHeight *
+                                  (isSmallScreen ? 0.015 : 0.02)),
 
-                          // TOP CARD diganti menjadi satu tile lebar: Sistem Repetisi
+                          // ── Sistem Repetisi Card ──
                           GestureDetector(
                             onTap: () {
                               Navigator.push(
                                 context,
                                 MaterialPageRoute(
-                                  builder: (context) => const RepetitionManagementPage(),
+                                  builder: (context) =>
+                                      const RepetitionManagementPage(),
                                 ),
                               );
                             },
                             child: Container(
                               padding: EdgeInsets.symmetric(
-                                horizontal: screenWidth * (isSmallScreen ? 0.06 : 0.08),
-                                vertical: screenHeight * (isSmallScreen ? 0.02 : 0.024),
+                                horizontal: screenWidth *
+                                    (isSmallScreen ? 0.06 : 0.08),
+                                vertical: screenHeight *
+                                    (isSmallScreen ? 0.02 : 0.024),
                               ),
                               margin: EdgeInsets.symmetric(
-                                horizontal: screenWidth * (isSmallScreen ? 0.05 : 0.07),
+                                horizontal: screenWidth *
+                                    (isSmallScreen ? 0.05 : 0.07),
                               ),
                               decoration: BoxDecoration(
                                 color: AppColors.white,
-                                borderRadius: BorderRadius.circular(isSmallScreen ? 14 : 18),
+                                borderRadius: BorderRadius.circular(
+                                    isSmallScreen ? 14 : 18),
                                 boxShadow: [
                                   BoxShadow(
-                                    color: AppColors.black.withOpacity(0.08),
+                                    color:
+                                        AppColors.black.withOpacity(0.08),
                                     blurRadius: 10,
-                                    offset: Offset(0, 4),
+                                    offset: const Offset(0, 4),
                                   )
                                 ],
                               ),
                               child: Row(
                                 children: [
                                   Container(
-                                    padding: EdgeInsets.all(screenWidth * (isSmallScreen ? 0.018 : 0.022)),
+                                    padding: EdgeInsets.all(screenWidth *
+                                        (isSmallScreen ? 0.018 : 0.022)),
                                     decoration: BoxDecoration(
-                                      color: AppColors.tealGelap.withOpacity(0.12),
-                                      borderRadius: BorderRadius.circular(isSmallScreen ? 8 : 10),
+                                      color: AppColors.tealGelap
+                                          .withOpacity(0.12),
+                                      borderRadius: BorderRadius.circular(
+                                          isSmallScreen ? 8 : 10),
                                     ),
                                     child: Icon(
                                       Icons.repeat,
                                       color: AppColors.tealGelap,
-                                      size: screenWidth * (isSmallScreen ? 0.06 : 0.065),
+                                      size: screenWidth *
+                                          (isSmallScreen ? 0.06 : 0.065),
                                     ),
                                   ),
                                   SizedBox(width: screenWidth * 0.04),
                                   Expanded(
                                     child: Column(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
                                       children: [
                                         Text(
                                           'Sistem Repetisi',
                                           style: TextStyle(
-                                            fontSize: screenWidth * (isSmallScreen ? 0.05 : 0.055),
+                                            fontSize: screenWidth *
+                                                (isSmallScreen
+                                                    ? 0.05
+                                                    : 0.055),
                                             fontWeight: FontWeight.bold,
                                             color: AppColors.tealGelap,
                                           ),
                                         ),
-                                        SizedBox(height: 4),
+                                        const SizedBox(height: 4),
                                         Text(
                                           'Kelola prediksi & rencana eksekusi',
                                           style: TextStyle(
-                                            fontSize: screenWidth * (isSmallScreen ? 0.03 : 0.032),
+                                            fontSize: screenWidth *
+                                                (isSmallScreen
+                                                    ? 0.03
+                                                    : 0.032),
                                             color: AppColors.grey,
                                           ),
                                         ),
                                       ],
                                     ),
                                   ),
-                                  Icon(Icons.arrow_forward_ios, size: screenWidth * 0.045, color: AppColors.grey),
+                                  Icon(Icons.arrow_forward_ios,
+                                      size: screenWidth * 0.045,
+                                      color: AppColors.grey),
                                 ],
                               ),
                             ),
                           ),
-                          SizedBox(height: screenHeight * (isSmallScreen ? 0.015 : 0.02)),
+                          SizedBox(
+                              height: screenHeight *
+                                  (isSmallScreen ? 0.015 : 0.02)),
 
-                          // STAGGERED GRID STATISTIK - 2 Kolom Menurun
+                          // ✅ FIX: Tambah banner kalau data kosong
+                          if (pohonList.isEmpty)
+                            Container(
+                              margin: EdgeInsets.symmetric(
+                                horizontal: screenWidth *
+                                    (isSmallScreen ? 0.05 : 0.07),
+                              ),
+                              padding: const EdgeInsets.all(12),
+                              decoration: BoxDecoration(
+                                color: Colors.blue.shade50,
+                                borderRadius: BorderRadius.circular(12),
+                                border: Border.all(
+                                    color: Colors.blue.shade200),
+                              ),
+                              child: Row(
+                                children: [
+                                  Icon(Icons.info_outline,
+                                      color: Colors.blue.shade400, size: 20),
+                                  const SizedBox(width: 10),
+                                  Expanded(
+                                    child: Text(
+                                      'Belum ada data pohon. Tambahkan pohon untuk memulai monitoring.',
+                                      style: TextStyle(
+                                        fontSize: screenWidth * 0.032,
+                                        color: Colors.blue.shade700,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+
+                          if (pohonList.isEmpty)
+                            SizedBox(
+                                height: screenHeight *
+                                    (isSmallScreen ? 0.015 : 0.02)),
+
+                          // ── Stats Grid — tetap tampil meskipun data kosong ──
                           Container(
                             width: double.infinity,
                             constraints: BoxConstraints(
                               minHeight: screenHeight * 0.4,
                             ),
                             decoration: const BoxDecoration(
-                              borderRadius: BorderRadius.vertical(top: Radius.circular(40)),
+                              borderRadius: BorderRadius.vertical(
+                                  top: Radius.circular(40)),
                             ),
                             child: Padding(
                               padding: EdgeInsets.only(
-                                top: screenHeight * (isSmallScreen ? 0.015 : 0.02),
-                                left: screenWidth * (isSmallScreen ? 0.03 : 0.04),
-                                right: screenWidth * (isSmallScreen ? 0.03 : 0.04),
-                                bottom: screenHeight * (isSmallScreen ? 0.02 : 0.04),
+                                top: screenHeight *
+                                    (isSmallScreen ? 0.015 : 0.02),
+                                left: screenWidth *
+                                    (isSmallScreen ? 0.03 : 0.04),
+                                right: screenWidth *
+                                    (isSmallScreen ? 0.03 : 0.04),
+                                bottom: screenHeight *
+                                    (isSmallScreen ? 0.02 : 0.04),
                               ),
                               child: _buildStatsGrid(
                                 context,
@@ -351,7 +452,6 @@ class HomePage extends StatelessWidget {
       },
     ];
 
-    // Menentukan aspect ratio berdasarkan ukuran layar
     double aspectRatio;
     if (isSmallScreen) {
       aspectRatio = 1.2;
@@ -387,7 +487,8 @@ class HomePage extends StatelessWidget {
             Navigator.push(
               context,
               MaterialPageRoute(
-                builder: (context) => TreeMappingReportPage(filterType: stat['filter'] as String),
+                builder: (context) => TreeMappingReportPage(
+                    filterType: stat['filter'] as String),
               ),
             );
           },
@@ -426,7 +527,8 @@ class _AnimatedStatCard extends StatefulWidget {
   State<_AnimatedStatCard> createState() => _AnimatedStatCardState();
 }
 
-class _AnimatedStatCardState extends State<_AnimatedStatCard> with SingleTickerProviderStateMixin {
+class _AnimatedStatCardState extends State<_AnimatedStatCard>
+    with SingleTickerProviderStateMixin {
   late AnimationController _controller;
   late Animation<int> _animation;
 
@@ -467,8 +569,10 @@ class _AnimatedStatCardState extends State<_AnimatedStatCard> with SingleTickerP
       child: Container(
         margin: const EdgeInsets.symmetric(vertical: 1),
         padding: EdgeInsets.symmetric(
-          horizontal: widget.screenWidth * (widget.isSmallScreen ? 0.01 : 0.015),
-          vertical: widget.screenWidth * (widget.isSmallScreen ? 0.01 : 0.015),
+          horizontal: widget.screenWidth *
+              (widget.isSmallScreen ? 0.01 : 0.015),
+          vertical: widget.screenWidth *
+              (widget.isSmallScreen ? 0.01 : 0.015),
         ),
         decoration: BoxDecoration(
           gradient: LinearGradient(
@@ -479,7 +583,8 @@ class _AnimatedStatCardState extends State<_AnimatedStatCard> with SingleTickerP
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
           ),
-          borderRadius: BorderRadius.circular(widget.isSmallScreen ? 10 : 14),
+          borderRadius:
+              BorderRadius.circular(widget.isSmallScreen ? 10 : 14),
           boxShadow: [
             BoxShadow(
               color: widget.color2.withOpacity(0.10),
@@ -495,7 +600,12 @@ class _AnimatedStatCardState extends State<_AnimatedStatCard> with SingleTickerP
             Flexible(
               child: Container(
                 padding: EdgeInsets.all(
-                  widget.screenWidth * (widget.isSmallScreen ? 0.008 : widget.isMediumScreen ? 0.01 : 0.012),
+                  widget.screenWidth *
+                      (widget.isSmallScreen
+                          ? 0.008
+                          : widget.isMediumScreen
+                              ? 0.01
+                              : 0.012),
                 ),
                 decoration: BoxDecoration(
                   color: Colors.white.withOpacity(0.18),
@@ -504,7 +614,12 @@ class _AnimatedStatCardState extends State<_AnimatedStatCard> with SingleTickerP
                 child: Icon(
                   widget.icon,
                   color: Colors.white,
-                  size: widget.screenWidth * (widget.isSmallScreen ? 0.045 : widget.isMediumScreen ? 0.05 : 0.055),
+                  size: widget.screenWidth *
+                      (widget.isSmallScreen
+                          ? 0.045
+                          : widget.isMediumScreen
+                              ? 0.05
+                              : 0.055),
                 ),
               ),
             ),
@@ -516,7 +631,12 @@ class _AnimatedStatCardState extends State<_AnimatedStatCard> with SingleTickerP
                   '${_animation.value}',
                   style: TextStyle(
                     color: Colors.black,
-                    fontSize: widget.screenWidth * (widget.isSmallScreen ? 0.055 : widget.isMediumScreen ? 0.06 : 0.065),
+                    fontSize: widget.screenWidth *
+                        (widget.isSmallScreen
+                            ? 0.055
+                            : widget.isMediumScreen
+                                ? 0.06
+                                : 0.065),
                     fontWeight: FontWeight.bold,
                     letterSpacing: 1.0,
                   ),
@@ -532,7 +652,12 @@ class _AnimatedStatCardState extends State<_AnimatedStatCard> with SingleTickerP
                   textAlign: TextAlign.center,
                   style: TextStyle(
                     color: Colors.black,
-                    fontSize: widget.screenWidth * (widget.isSmallScreen ? 0.028 : widget.isMediumScreen ? 0.032 : 0.035),
+                    fontSize: widget.screenWidth *
+                        (widget.isSmallScreen
+                            ? 0.028
+                            : widget.isMediumScreen
+                                ? 0.032
+                                : 0.035),
                     fontWeight: FontWeight.w600,
                   ),
                   maxLines: 2,

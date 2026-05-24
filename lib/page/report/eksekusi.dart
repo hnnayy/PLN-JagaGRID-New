@@ -1,14 +1,14 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
-import 'package:image_picker/image_picker.dart';
-import 'dart:io';
 import 'package:provider/provider.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:intl/intl.dart';
+import 'dart:io';
+import 'package:image_picker/image_picker.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../../models/data_pohon.dart';
 import '../../models/eksekusi.dart';
 import '../../providers/eksekusi_provider.dart';
 import '../../providers/notification_provider.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import '../../models/growth_prediction.dart';
 
 class EksekusiPage extends StatefulWidget {
@@ -31,6 +31,7 @@ class _EksekusiPageState extends State<EksekusiPage> {
   final ImagePicker _picker = ImagePicker();
   bool _isLoading = false;
   DateTime? _latestPlannedDate;
+  DateTime? _selectedDate; // ← tambahan untuk simpan DateTime asli
   bool _accessChecked = false;
   bool _isAllowed = true;
 
@@ -93,26 +94,72 @@ class _EksekusiPageState extends State<EksekusiPage> {
           .where('data_pohon_id', isEqualTo: widget.pohon.id)
           .where('status', isEqualTo: 1)
           .get();
+
+      DateTime planned;
       if (snap.docs.isEmpty) {
-        _latestPlannedDate = widget.pohon.scheduleDate;
-        _dateController.text = _formatDate(_latestPlannedDate!);
-        return;
+        planned = widget.pohon.scheduleDate;
+      } else {
+        final preds = snap.docs
+            .map((d) => GrowthPrediction.fromMap(d.data(), d.id))
+            .toList()
+          ..sort((a, b) => b.createdDate.compareTo(a.createdDate));
+        planned = preds.first.predictedNextExecution;
       }
-      final preds = snap.docs
-          .map((d) => GrowthPrediction.fromMap(d.data(), d.id))
-          .toList()
-        ..sort((a, b) => b.createdDate.compareTo(a.createdDate));
-      _latestPlannedDate = preds.first.predictedNextExecution;
-      _dateController.text = _formatDate(_latestPlannedDate!);
-      setState(() {});
+
+      setState(() {
+        _latestPlannedDate = planned;
+        _selectedDate = planned;
+        _dateController.text = _formatDisplay(planned);
+      });
     } catch (_) {
-      _latestPlannedDate = widget.pohon.scheduleDate;
-      _dateController.text = _formatDate(_latestPlannedDate!);
+      setState(() {
+        _latestPlannedDate = widget.pohon.scheduleDate;
+        _selectedDate = widget.pohon.scheduleDate;
+        _dateController.text = _formatDisplay(widget.pohon.scheduleDate);
+      });
     }
   }
 
-  String _formatDate(DateTime date) {
-    return '${date.day.toString().padLeft(2, '0')}/${date.month.toString().padLeft(2, '0')}/${date.year}';
+  // Format tampilan di field: DD/MM/YYYY
+  String _formatDisplay(DateTime date) {
+    return DateFormat('dd/MM/yyyy').format(date);
+  }
+
+  // Format untuk disimpan ke Eksekusi model: DD/MM/YYYY HH:MM WITA
+  String _formatForSave(DateTime date) {
+    return '${DateFormat('dd/MM/yyyy').format(date)} 09:00 WITA';
+  }
+
+  // ── Date Picker ──
+  Future<void> _pickDate() async {
+    final DateTime? picked = await showDatePicker(
+      context: context,
+      initialDate: _selectedDate ?? DateTime.now(),
+      firstDate: DateTime(2000),
+      lastDate: DateTime(2101),
+      builder: (context, child) => Theme(
+        data: Theme.of(context).copyWith(
+          colorScheme: const ColorScheme.light(
+            primary: Color(0xFF125E72),
+            onPrimary: Colors.white,
+            onSurface: Colors.black87,
+          ),
+          textButtonTheme: TextButtonThemeData(
+            style: TextButton.styleFrom(
+              foregroundColor: const Color(0xFF125E72),
+            ),
+          ),
+        ),
+        child: child!,
+      ),
+    );
+
+    if (picked != null) {
+      setState(() {
+        _selectedDate = picked;
+        _dateController.text = _formatDisplay(picked);
+      });
+    }
   }
 
   Future<void> _pickImage() async {
@@ -170,27 +217,18 @@ class _EksekusiPageState extends State<EksekusiPage> {
       return;
     }
 
+    // Validasi tanggal sudah dipilih
+    if (_selectedDate == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Tanggal eksekusi wajib dipilih')),
+      );
+      return;
+    }
+
     setState(() => _isLoading = true);
 
     try {
-      final rawInput = _dateController.text.trim();
-      DateTime? selectedDate;
-      try {
-        selectedDate = DateFormat('dd/MM/yyyy').parseStrict(rawInput);
-      } catch (_) {
-        selectedDate = null;
-      }
-      if (selectedDate == null) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-              content: Text(
-                  'Tanggal eksekusi tidak valid. Gunakan format DD/MM/YYYY.')),
-        );
-        setState(() => _isLoading = false);
-        return;
-      }
-      final formattedTanggalEksekusi =
-          '${_formatDate(selectedDate)} 09:00 WITA';
+      final formattedTanggalEksekusi = _formatForSave(_selectedDate!);
 
       final prefs = await SharedPreferences.getInstance();
       final creatorId = prefs.getString('session_id') ?? '';
@@ -344,6 +382,7 @@ class _EksekusiPageState extends State<EksekusiPage> {
       return const Scaffold(
           body: Center(child: Text('Akses ditolak untuk pohon ini')));
     }
+
     final screenWidth = MediaQuery.of(context).size.width;
     final screenHeight = MediaQuery.of(context).size.height;
 
@@ -414,7 +453,7 @@ class _EksekusiPageState extends State<EksekusiPage> {
                             ),
                           ),
                           const SizedBox(height: 8),
-                          _infoRow('ID Pohon', widget.pohon.idPohon.isNotEmpty ? widget.pohon.idPohon : 'P023', screenWidth),
+                          _infoRow('ID Pohon', widget.pohon.idPohon.isNotEmpty ? widget.pohon.idPohon : '-', screenWidth),
                           _infoRow('UP3', widget.pohon.up3.isNotEmpty ? widget.pohon.up3 : '-', screenWidth),
                           _infoRow('ULP', widget.pohon.ulp.isNotEmpty ? widget.pohon.ulp : '-', screenWidth),
                           _infoRow('Penyulang', widget.pohon.penyulang.isNotEmpty ? widget.pohon.penyulang : '-', screenWidth),
@@ -423,9 +462,17 @@ class _EksekusiPageState extends State<EksekusiPage> {
                           _infoRow('KMS Aset', widget.pohon.kmsAset.isNotEmpty ? widget.pohon.kmsAset : '-', screenWidth),
                           _infoRow('Vendor', widget.pohon.vendor.isNotEmpty ? widget.pohon.vendor : '-', screenWidth),
                           _infoRow('Koordinat', widget.pohon.koordinat.isNotEmpty ? widget.pohon.koordinat : '-', screenWidth),
-                          _infoRow('Tanggal Penjadwalan', _formatDate(_latestPlannedDate ?? widget.pohon.scheduleDate), screenWidth),
+                          _infoRow('Tanggal Penjadwalan',
+                              _latestPlannedDate != null
+                                  ? _formatDisplay(_latestPlannedDate!)
+                                  : _formatDisplay(widget.pohon.scheduleDate),
+                              screenWidth),
                           _infoRow('Tujuan Penjadwalan',
-                              widget.pohon.tujuanPenjadwalan == 1 ? 'Tebang Pangkas' : widget.pohon.tujuanPenjadwalan == 2 ? 'Tebang Habis' : 'Tidak diketahui',
+                              widget.pohon.tujuanPenjadwalan == 1
+                                  ? 'Tebang Pangkas'
+                                  : widget.pohon.tujuanPenjadwalan == 2
+                                      ? 'Tebang Habis'
+                                      : 'Tidak diketahui',
                               screenWidth),
                           _infoRow('Laju Pertumbuhan', '${widget.pohon.growthRate} cm/tahun', screenWidth),
                           _infoRow('Tinggi Awal', '${widget.pohon.initialHeight} m', screenWidth),
@@ -456,6 +503,8 @@ class _EksekusiPageState extends State<EksekusiPage> {
                             ),
                           ),
                           const SizedBox(height: 16),
+
+                          // Tinggi Pohon
                           _inputField(
                             label: 'Tinggi Pohon Setelah Dipangkas',
                             icon: Icons.height,
@@ -472,6 +521,8 @@ class _EksekusiPageState extends State<EksekusiPage> {
                             },
                           ),
                           const SizedBox(height: 12),
+
+                          // Diameter
                           _inputField(
                             label: 'Diameter Pohon',
                             icon: Icons.aspect_ratio,
@@ -485,27 +536,75 @@ class _EksekusiPageState extends State<EksekusiPage> {
                             },
                           ),
                           const SizedBox(height: 12),
-                          _inputField(
-                            label: 'Tanggal Eksekusi',
-                            icon: Icons.calendar_today,
-                            controller: _dateController,
-                            hintText: 'DD/MM/YYYY',
-                            validator: (value) {
-                              if (value == null || value.isEmpty) return 'Tanggal wajib diisi';
-                              return null;
-                            },
-                          ),
-                          const SizedBox(height: 12),
+
+                          // ── Tanggal Eksekusi — Date Picker ──
                           Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Row(
                                 children: [
-                                  const Icon(Icons.camera_alt, size: 18, color: Color(0xFF125E72)),
+                                  const Icon(Icons.calendar_today,
+                                      size: 18, color: Color(0xFF125E72)),
+                                  const SizedBox(width: 6),
+                                  const Text(
+                                    'Tanggal Eksekusi',
+                                    style: TextStyle(
+                                        fontSize: 13,
+                                        fontWeight: FontWeight.w600),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 8),
+                              GestureDetector(
+                                onTap: _pickDate,
+                                child: Container(
+                                  width: double.infinity,
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 12, vertical: 14),
+                                  decoration: BoxDecoration(
+                                    border: Border.all(color: Colors.grey.shade400),
+                                    borderRadius: BorderRadius.circular(8),
+                                    color: const Color(0xFFF0F9FF),
+                                  ),
+                                  child: Row(
+                                    children: [
+                                      Expanded(
+                                        child: Text(
+                                          _dateController.text.isEmpty
+                                              ? 'Pilih tanggal eksekusi'
+                                              : _dateController.text,
+                                          style: TextStyle(
+                                            fontSize: 14,
+                                            color: _dateController.text.isEmpty
+                                                ? Colors.grey.shade500
+                                                : Colors.black87,
+                                          ),
+                                        ),
+                                      ),
+                                      const Icon(Icons.calendar_month,
+                                          color: Color(0xFF125E72), size: 20),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 12),
+
+                          // Foto
+                          Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                children: [
+                                  const Icon(Icons.camera_alt,
+                                      size: 18, color: Color(0xFF125E72)),
                                   const SizedBox(width: 6),
                                   const Text(
                                     'Foto Setelah Eksekusi',
-                                    style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+                                    style: TextStyle(
+                                        fontSize: 13,
+                                        fontWeight: FontWeight.w600),
                                   ),
                                 ],
                               ),
@@ -514,13 +613,24 @@ class _EksekusiPageState extends State<EksekusiPage> {
                                 width: double.infinity,
                                 child: OutlinedButton.icon(
                                   onPressed: _pickImage,
-                                  icon: Icon(_selectedImage == null ? Icons.add_a_photo : Icons.edit, size: 18),
-                                  label: Text(_selectedImage == null ? 'Pilih Foto' : 'Ganti Foto'),
+                                  icon: Icon(
+                                    _selectedImage == null
+                                        ? Icons.add_a_photo
+                                        : Icons.edit,
+                                    size: 18,
+                                  ),
+                                  label: Text(_selectedImage == null
+                                      ? 'Pilih Foto'
+                                      : 'Ganti Foto'),
                                   style: OutlinedButton.styleFrom(
                                     foregroundColor: const Color(0xFF125E72),
-                                    side: const BorderSide(color: Color(0xFF125E72)),
-                                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                                    padding: const EdgeInsets.symmetric(vertical: 12),
+                                    side: const BorderSide(
+                                        color: Color(0xFF125E72)),
+                                    shape: RoundedRectangleBorder(
+                                        borderRadius:
+                                            BorderRadius.circular(8)),
+                                    padding: const EdgeInsets.symmetric(
+                                        vertical: 12),
                                   ),
                                 ),
                               ),
@@ -539,9 +649,12 @@ class _EksekusiPageState extends State<EksekusiPage> {
                             ],
                           ),
                           const SizedBox(height: 12),
+
+                          // Aksi dropdown
                           _ActionDropdown(
                             value: _selectedAction,
-                            onChanged: (val) => setState(() => _selectedAction = val ?? _selectedAction),
+                            onChanged: (val) => setState(
+                                () => _selectedAction = val ?? _selectedAction),
                           ),
                         ],
                       ),
@@ -554,13 +667,18 @@ class _EksekusiPageState extends State<EksekusiPage> {
                     children: [
                       Expanded(
                         child: OutlinedButton(
-                          onPressed: _isLoading ? null : () => Navigator.pop(context),
+                          onPressed: _isLoading
+                              ? null
+                              : () => Navigator.pop(context),
                           style: OutlinedButton.styleFrom(
-                            padding: const EdgeInsets.symmetric(vertical: 16),
+                            padding:
+                                const EdgeInsets.symmetric(vertical: 16),
                             side: const BorderSide(color: Color(0xFF125E72)),
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                            shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(8)),
                           ),
-                          child: const Text('Batal', style: TextStyle(color: Color(0xFF125E72))),
+                          child: const Text('Batal',
+                              style: TextStyle(color: Color(0xFF125E72))),
                         ),
                       ),
                       const SizedBox(width: 16),
@@ -570,14 +688,17 @@ class _EksekusiPageState extends State<EksekusiPage> {
                           style: ElevatedButton.styleFrom(
                             backgroundColor: const Color(0xFF125E72),
                             foregroundColor: Colors.white,
-                            padding: const EdgeInsets.symmetric(vertical: 16),
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                            padding:
+                                const EdgeInsets.symmetric(vertical: 16),
+                            shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(8)),
                           ),
                           child: _isLoading
                               ? const SizedBox(
                                   height: 20,
                                   width: 20,
-                                  child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
+                                  child: CircularProgressIndicator(
+                                      color: Colors.white, strokeWidth: 2),
                                 )
                               : const Text('Simpan Eksekusi'),
                         ),
@@ -594,7 +715,8 @@ class _EksekusiPageState extends State<EksekusiPage> {
               color: Colors.black.withOpacity(0.5),
               child: const Center(
                 child: CircularProgressIndicator(
-                  valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF125E72)),
+                  valueColor:
+                      AlwaysStoppedAnimation<Color>(Color(0xFF125E72)),
                 ),
               ),
             ),
@@ -618,17 +740,21 @@ class _EksekusiPageState extends State<EksekusiPage> {
           children: [
             Icon(icon, size: 18, color: const Color(0xFF125E72)),
             const SizedBox(width: 6),
-            Text(label, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
+            Text(label,
+                style: const TextStyle(
+                    fontSize: 13, fontWeight: FontWeight.w600)),
           ],
         ),
         const SizedBox(height: 6),
         TextFormField(
           controller: controller,
           decoration: InputDecoration(
-            border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+            border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(8)),
             hintText: hintText,
             suffixText: suffix,
-            contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+            contentPadding:
+                const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
           ),
           keyboardType: TextInputType.number,
           validator: validator,
@@ -646,7 +772,9 @@ class _EksekusiPageState extends State<EksekusiPage> {
         children: [
           Text(
             label,
-            style: TextStyle(fontSize: screenWidth * 0.035, fontWeight: FontWeight.bold),
+            style: TextStyle(
+                fontSize: screenWidth * 0.035,
+                fontWeight: FontWeight.bold),
           ),
           const SizedBox(width: 12),
           Flexible(
@@ -663,6 +791,7 @@ class _EksekusiPageState extends State<EksekusiPage> {
   }
 }
 
+// ── Action Dropdown (sama seperti sebelumnya) ──
 class _ActionDropdown extends StatefulWidget {
   final String? value;
   final ValueChanged<String?> onChanged;
@@ -696,12 +825,14 @@ class _ActionDropdownState extends State<_ActionDropdown>
     super.dispose();
   }
 
-  void _toggleDropdown() => isExpanded ? _closeDropdown() : _openDropdown();
+  void _toggleDropdown() =>
+      isExpanded ? _closeDropdown() : _openDropdown();
 
   void _openDropdown() {
     setState(() => isExpanded = true);
     _controller.forward();
-    final renderBox = _dropdownKey.currentContext!.findRenderObject() as RenderBox;
+    final renderBox =
+        _dropdownKey.currentContext!.findRenderObject() as RenderBox;
     _overlayEntry = OverlayEntry(
       builder: (context) => Positioned(
         width: renderBox.size.width,
@@ -736,14 +867,20 @@ class _ActionDropdownState extends State<_ActionDropdown>
                       child: Container(
                         padding: const EdgeInsets.all(16),
                         decoration: BoxDecoration(
-                          color: widget.value == _items[index] ? const Color(0xFFF0F9FF) : null,
+                          color: widget.value == _items[index]
+                              ? const Color(0xFFF0F9FF)
+                              : null,
                         ),
                         child: Text(
                           _items[index],
                           style: TextStyle(
                             fontSize: 16,
-                            color: widget.value == _items[index] ? const Color(0xFF2E5D6F) : Colors.black87,
-                            fontWeight: widget.value == _items[index] ? FontWeight.w500 : FontWeight.normal,
+                            color: widget.value == _items[index]
+                                ? const Color(0xFF2E5D6F)
+                                : Colors.black87,
+                            fontWeight: widget.value == _items[index]
+                                ? FontWeight.w500
+                                : FontWeight.normal,
                           ),
                         ),
                       ),
@@ -771,7 +908,10 @@ class _ActionDropdownState extends State<_ActionDropdown>
       children: [
         Text(
           'Aksi',
-          style: TextStyle(fontSize: 12, color: Colors.grey.shade600, fontWeight: FontWeight.w500),
+          style: TextStyle(
+              fontSize: 12,
+              color: Colors.grey.shade600,
+              fontWeight: FontWeight.w500),
         ),
         const SizedBox(height: 8),
         CompositedTransformTarget(
@@ -793,14 +933,17 @@ class _ActionDropdownState extends State<_ActionDropdown>
                       widget.value ?? 'Pilih aksi',
                       style: TextStyle(
                         fontSize: 16,
-                        color: widget.value != null ? Colors.black87 : Colors.grey.shade500,
+                        color: widget.value != null
+                            ? Colors.black87
+                            : Colors.grey.shade500,
                       ),
                     ),
                   ),
                   AnimatedRotation(
                     turns: isExpanded ? 0.5 : 0,
                     duration: const Duration(milliseconds: 200),
-                    child: Icon(Icons.keyboard_arrow_down, color: Colors.grey.shade600),
+                    child: Icon(Icons.keyboard_arrow_down,
+                        color: Colors.grey.shade600),
                   ),
                 ],
               ),
