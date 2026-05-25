@@ -20,7 +20,6 @@ class RepetitionManagementPage extends StatefulWidget {
 
 class _RepetitionManagementPageState extends State<RepetitionManagementPage> {
   final Map<String, String> _idPohonCache = {};
-  // ✅ DITAMBAHKAN: ScrollController untuk scroll indicator
   final ScrollController _scrollController = ScrollController();
 
   @override
@@ -37,10 +36,6 @@ class _RepetitionManagementPageState extends State<RepetitionManagementPage> {
     super.dispose();
   }
 
-  // ✅ Sorting pakai getPriority() langsung — tidak perlu query Firestore
-  // TINGGI → paling atas, tanggal paling lama duluan
-  // SEDANG → tengah
-  // RENDAH → paling bawah, tanggal paling baru duluan
   List<GrowthPrediction> _sortPredictions(List<GrowthPrediction> predictions) {
     final sorted = [...predictions];
     sorted.sort((a, b) {
@@ -108,9 +103,7 @@ class _RepetitionManagementPageState extends State<RepetitionManagementPage> {
       body: Consumer<GrowthPredictionProvider>(
         builder: (context, provider, child) {
           if (provider.isLoading) {
-            return const Center(
-              child: CircularProgressIndicator(),
-            );
+            return const Center(child: CircularProgressIndicator());
           }
 
           if (provider.errorMessage != null) {
@@ -127,9 +120,7 @@ class _RepetitionManagementPageState extends State<RepetitionManagementPage> {
                   ),
                   const SizedBox(height: 16),
                   ElevatedButton(
-                    onPressed: () {
-                      provider.loadActivePredictions();
-                    },
+                    onPressed: () => provider.loadActivePredictions(),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: AppColors.tealGelap,
                     ),
@@ -165,13 +156,11 @@ class _RepetitionManagementPageState extends State<RepetitionManagementPage> {
             );
           }
 
-          // ✅ Sorting langsung tanpa FutureBuilder
           final predictions = _sortPredictions(rawPredictions);
 
           return Column(
             children: [
               Expanded(
-                // ✅ DITAMBAHKAN: Scrollbar di pinggir kanan
                 child: Scrollbar(
                   controller: _scrollController,
                   thumbVisibility: true,
@@ -210,6 +199,9 @@ class _RepetitionManagementPageState extends State<RepetitionManagementPage> {
     } else {
       cardColor = AppColors.white;
     }
+
+    // ✅ Konversi lastHeight dari cm → meter untuk tampilan
+    final tinggiMeter = (prediction.lastHeight / 100).toStringAsFixed(1);
 
     return Card(
       margin: const EdgeInsets.only(bottom: 12),
@@ -257,7 +249,7 @@ class _RepetitionManagementPageState extends State<RepetitionManagementPage> {
                 Expanded(
                   child: _buildDetailItem(
                     'Tinggi Saat Ini',
-                    '${prediction.lastHeight.round()} cm',
+                    '$tinggiMeter m', // ✅ tampil dalam meter
                     Icons.height,
                   ),
                 ),
@@ -399,9 +391,8 @@ class _RepetitionManagementPageState extends State<RepetitionManagementPage> {
         if (snapshot.connectionState == ConnectionState.waiting) {
           return const SizedBox(height: 4);
         }
-        if (snapshot.hasError) {
-          return const SizedBox.shrink();
-        }
+        if (snapshot.hasError) return const SizedBox.shrink();
+
         final eksekusiList = snapshot.data ?? [];
         final count = eksekusiList.length;
 
@@ -444,10 +435,7 @@ class _RepetitionManagementPageState extends State<RepetitionManagementPage> {
             children: [
               Text(
                 label,
-                style: const TextStyle(
-                  fontSize: 10,
-                  color: Colors.grey,
-                ),
+                style: const TextStyle(fontSize: 10, color: Colors.grey),
               ),
               Text(
                 value,
@@ -463,7 +451,6 @@ class _RepetitionManagementPageState extends State<RepetitionManagementPage> {
     );
   }
 
-  // ✅ Badge prioritas pakai getPriority() langsung
   Widget _buildPriorityBadge(GrowthPrediction prediction) {
     final priority = prediction.getPriority();
     switch (priority) {
@@ -506,11 +493,7 @@ class _RepetitionManagementPageState extends State<RepetitionManagementPage> {
         );
         return;
       }
-      final pohon = DataPohon.fromMap({
-        ...doc.data()!,
-        'id': doc.id,
-      });
-
+      final pohon = DataPohon.fromMap({...doc.data()!, 'id': doc.id});
       if (!mounted) return;
       Navigator.push(
         context,
@@ -535,12 +518,7 @@ class _RepetitionManagementPageState extends State<RepetitionManagementPage> {
         );
         return;
       }
-
-      final pohon = DataPohon.fromMap({
-        ...doc.data()!,
-        'id': doc.id,
-      });
-
+      final pohon = DataPohon.fromMap({...doc.data()!, 'id': doc.id});
       if (!mounted) return;
       Navigator.push(
         context,
@@ -626,9 +604,7 @@ class _PredictionSearchDelegate extends SearchDelegate<void> {
   }
 
   @override
-  Widget buildResults(BuildContext context) {
-    return buildSuggestions(context);
-  }
+  Widget buildResults(BuildContext context) => buildSuggestions(context);
 
   @override
   List<Widget>? buildActions(BuildContext context) {

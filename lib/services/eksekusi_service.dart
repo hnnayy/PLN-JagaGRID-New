@@ -3,7 +3,6 @@ import 'dart:io';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:http/http.dart' as http;
 import 'package:flutter_dotenv/flutter_dotenv.dart';
-import 'package:intl/intl.dart';
 import 'package:flutter_image_compress/flutter_image_compress.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:path/path.dart' as pathLib;
@@ -40,7 +39,7 @@ class EksekusiService {
   Future<void> addEksekusi(
     Eksekusi eksekusi,
     File image,
-    NotificationProvider notificationProvider, // ✅ dari luar, bukan instance baru
+    NotificationProvider notificationProvider,
   ) async {
     try {
       if (eksekusi.statusEksekusi != 1 && eksekusi.statusEksekusi != 2) {
@@ -118,15 +117,15 @@ class EksekusiService {
       }
 
       // ── Simpan eksekusi ke Firestore ──
-      final nowWita = DateTime.now().toUtc().add(const Duration(hours: 8));
-      final formattedTanggalEksekusi =
-          DateFormat('dd/MM/yyyy HH:mm').format(nowWita) + ' WITA';
+      // ✅ Pakai tanggalEksekusi dari user (sudah include jam WITA dari UI)
+      // Import intl sudah tidak diperlukan di sini karena format dibuat di UI
+      final formattedTanggalEksekusi = eksekusi.tanggalEksekusi;
 
       final updatedEksekusi = Eksekusi(
         id: eksekusi.id,
         dataPohonId: eksekusi.dataPohonId,
         statusEksekusi: eksekusi.statusEksekusi,
-        tanggalEksekusi: formattedTanggalEksekusi,
+        tanggalEksekusi: formattedTanggalEksekusi, // ✅ dari user, bukan DateTime.now()
         fotoSetelah: fotoUrl,
         createdBy: eksekusi.createdBy,
         createdDate: eksekusi.createdDate,
@@ -184,7 +183,6 @@ class EksekusiService {
 'Pohon telah ditebang habis.\n'
 '_PLN JagaGRID_';
 
-            // Notif app (ringkas)
             await notificationProvider.addNotification(
               AppNotification(
                 title: appTitle,
@@ -195,7 +193,6 @@ class EksekusiService {
               documentIdPohon: pohon.id,
             );
 
-            // Telegram (lengkap + tombol Maps)
             await notificationProvider.sendTelegramMessageForTree(
               telegramMessage,
               dataPohonId: pohon.id,
@@ -274,7 +271,6 @@ class EksekusiService {
 'Prediksi eksekusi berikutnya: $prediksiFormatted\n'
 '_PLN JagaGRID_';
 
-          // Notif app (ringkas)
           await notificationProvider.addNotification(
             AppNotification(
               title: appTitle,
@@ -285,7 +281,6 @@ class EksekusiService {
             documentIdPohon: pohon.id,
           );
 
-          // Telegram (lengkap + tombol Maps)
           await notificationProvider.sendTelegramMessageForTree(
             telegramMessage,
             dataPohonId: pohon.id,

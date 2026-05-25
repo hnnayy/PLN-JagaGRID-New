@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:app_links/app_links.dart';
 import 'models/data_pohon.dart';
 import 'firebase_options.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
@@ -22,17 +23,12 @@ import 'page/report/treemapping_detail.dart';
 import 'page/tree_growth/tree_growth_list_page.dart';
 import 'page/login/login.dart';
 import 'navigation_menu.dart';
-import 'services/reminder_service.dart';
 
-final GlobalKey<NavigatorState> navigatorKey =
-    GlobalKey<NavigatorState>();
+final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // =========================================================
-  // LOAD ENV
-  // =========================================================
   try {
     await dotenv.load(fileName: '.env');
     debugPrint('✅ ENV loaded');
@@ -40,29 +36,20 @@ void main() async {
     debugPrint('❌ ENV gagal load: $e');
   }
 
-  // =========================================================
-  // FIREBASE INIT
-  // =========================================================
   try {
     await Firebase.initializeApp(
       options: DefaultFirebaseOptions.currentPlatform,
     );
-
     await FirebaseAppCheck.instance.activate(
       androidProvider: AndroidProvider.debug,
     );
-
     debugPrint('✅ Firebase initialized');
   } catch (e) {
     debugPrint('❌ Firebase init error: $e');
   }
 
-  // =========================================================
-  // AUTH ANON
-  // =========================================================
   try {
     final auth = FirebaseAuth.instance;
-
     if (auth.currentUser == null) {
       await auth.signInAnonymously();
       debugPrint('✅ Anonymous auth success');
@@ -73,32 +60,20 @@ void main() async {
     debugPrint('❌ Anonymous auth failed: $e');
   }
 
-  // =========================================================
-  // SESSION LOGIN
-  // =========================================================
   bool isLoggedIn = false;
-
   try {
     final prefs = await SharedPreferences.getInstance();
-
-    isLoggedIn =
-        prefs.getString('session_username') != null;
+    isLoggedIn = prefs.getString('session_username') != null;
   } catch (e) {
     debugPrint('❌ SharedPreferences error: $e');
   }
 
-  // =========================================================
-  // RUN APP
-  // =========================================================
   runApp(
     OverlaySupport(
       child: MyApp(isLoggedIn: isLoggedIn),
     ),
   );
 
-  // =========================================================
-  // SETUP CALLBACK NAVIGATION
-  // =========================================================
   void setupNotificationNavigation(int attempt) {
     if (attempt >= 5) {
       debugPrint('❌ Setup callback gagal');
@@ -111,27 +86,23 @@ void main() async {
         context.mounted &&
         context.findRenderObject() != null) {
       try {
-        final notificationProvider =
-            Provider.of<NotificationProvider>(
+        final notificationProvider = Provider.of<NotificationProvider>(
           context,
           listen: false,
         );
 
-        notificationProvider
-            .setNotificationTapCallback(
+        notificationProvider.setNotificationTapCallback(
           (String? documentId) async {
-            if (documentId == null ||
-                documentId.isEmpty) {
+            if (documentId == null || documentId.isEmpty) {
               debugPrint('❌ documentId kosong');
               return;
             }
 
             try {
-              final docSnapshot =
-                  await FirebaseFirestore.instance
-                      .collection('data_pohon')
-                      .doc(documentId)
-                      .get();
+              final docSnapshot = await FirebaseFirestore.instance
+                  .collection('data_pohon')
+                  .doc(documentId)
+                  .get();
 
               if (!docSnapshot.exists) {
                 debugPrint('❌ Pohon tidak ditemukan');
@@ -147,29 +118,20 @@ void main() async {
                   navigatorKey.currentContext != null) {
                 navigatorKey.currentState!.push(
                   MaterialPageRoute(
-                    builder: (_) =>
-                        TreeMappingDetailPage(
-                      pohon: pohon,
-                    ),
+                    builder: (_) => TreeMappingDetailPage(pohon: pohon),
                   ),
                 );
-
-                debugPrint(
-                    '✅ Navigasi notif berhasil');
+                debugPrint('✅ Navigasi notif berhasil');
               }
             } catch (e) {
-              debugPrint(
-                  '❌ Error open notification: $e');
+              debugPrint('❌ Error open notification: $e');
             }
           },
         );
 
-        debugPrint(
-            '✅ Notification callback ready');
+        debugPrint('✅ Notification callback ready');
       } catch (e) {
-        debugPrint(
-            '❌ Setup callback error: $e');
-
+        debugPrint('❌ Setup callback error: $e');
         Future.delayed(
           Duration(milliseconds: 1000 * (attempt + 1)),
           () => setupNotificationNavigation(attempt + 1),
@@ -185,30 +147,13 @@ void main() async {
 
   WidgetsBinding.instance.addPostFrameCallback((_) {
     setupNotificationNavigation(0);
-
-    final ctx = navigatorKey.currentContext;
-
-    if (ctx != null) {
-      final notif = Provider.of<NotificationProvider>(
-        ctx,
-        listen: false,
-      );
-
-      // =====================================================
-      // H-3 REMINDER CHECK
-      // =====================================================
-      ReminderService
-          .runThreeDayTelegramRemindersIfNeeded(
-        notif,
-      );
-    }
   });
 }
 
 // =========================================================
 // APP
 // =========================================================
-class MyApp extends StatelessWidget {
+class MyApp extends StatefulWidget {
   final bool isLoggedIn;
 
   const MyApp({
@@ -217,37 +162,83 @@ class MyApp extends StatelessWidget {
   });
 
   @override
+  State<MyApp> createState() => _MyAppState();
+}
+
+class _MyAppState extends State<MyApp> {
+  final _appLinks = AppLinks();
+
+  @override
+  void initState() {
+    super.initState();
+    _initDeepLinks();
+  }
+
+  void _initDeepLinks() {
+    _appLinks.uriLinkStream.listen((uri) {
+      debugPrint('🔗 Deep link masuk: $uri');
+      if (uri.scheme == 'plnjagagrid' && uri.host == 'pohon') {
+        final idPohon = uri.pathSegments.isNotEmpty
+            ? uri.pathSegments.first
+            : null;
+        if (idPohon != null) {
+          _navigateToPohon(idPohon);
+        }
+      }
+    });
+  }
+
+  Future<void> _navigateToPohon(String idPohon) async {
+    try {
+      final snap = await FirebaseFirestore.instance
+          .collection('data_pohon')
+          .where('id_pohon', isEqualTo: idPohon)
+          .limit(1)
+          .get();
+
+      if (snap.docs.isEmpty) {
+        debugPrint('❌ Pohon tidak ditemukan: $idPohon');
+        return;
+      }
+
+      final pohon = DataPohon.fromMap({
+        ...snap.docs.first.data(),
+        'id': snap.docs.first.id,
+      });
+
+      navigatorKey.currentState?.push(
+        MaterialPageRoute(
+          builder: (_) => TreeMappingDetailPage(pohon: pohon),
+        ),
+      );
+
+      debugPrint('✅ Deep link navigasi ke pohon: $idPohon');
+    } catch (e) {
+      debugPrint('❌ Error deep link: $e');
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
     return MultiProvider(
       providers: [
-        ChangeNotifierProvider(
-          create: (_) => DataPohonProvider(),
-        ),
-        ChangeNotifierProvider(
-          create: (_) => EksekusiProvider(),
-        ),
-        ChangeNotifierProvider(
-          create: (_) => NotificationProvider(),
-        ),
-        ChangeNotifierProvider(
-          create: (_) => GrowthPredictionProvider(),
-        ),
-        ChangeNotifierProvider(
-          create: (_) => TreeGrowthProvider(),
-        ),
+        ChangeNotifierProvider(create: (_) => DataPohonProvider()),
+        ChangeNotifierProvider(create: (_) => EksekusiProvider()),
+        ChangeNotifierProvider(create: (_) => NotificationProvider()),
+        ChangeNotifierProvider(create: (_) => GrowthPredictionProvider()),
+        ChangeNotifierProvider(create: (_) => TreeGrowthProvider()),
       ],
       child: MaterialApp(
         navigatorKey: navigatorKey,
         debugShowCheckedModeBanner: false,
-        home: isLoggedIn
+        home: widget.isLoggedIn
             ? const NavigationMenu()
             : const SplashScreen(),
         routes: {
           '/map': (context) => MapPage(),
           '/addData': (context) => AddDataPage(),
           '/report': (context) => TreeMappingReportPage(),
-          '/treeGrowth': (context) =>
-              const TreeGrowthListPage(),
+          '/treeGrowth': (context) => const TreeGrowthListPage(),
           '/login': (context) => const LoginPage(),
         },
       ),

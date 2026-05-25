@@ -31,9 +31,11 @@ class _EksekusiPageState extends State<EksekusiPage> {
   final ImagePicker _picker = ImagePicker();
   bool _isLoading = false;
   DateTime? _latestPlannedDate;
-  DateTime? _selectedDate; // ← tambahan untuk simpan DateTime asli
+  DateTime? _selectedDate;
+  DateTime? _nextPrediction;
   bool _accessChecked = false;
   bool _isAllowed = true;
+  bool _isLoadingDate = true;
 
   @override
   void initState() {
@@ -72,11 +74,13 @@ class _EksekusiPageState extends State<EksekusiPage> {
       });
       if (!allowed && mounted) {
         WidgetsBinding.instance.addPostFrameCallback((_) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-                content: Text('Akses ditolak: pohon bukan dalam unit Anda')),
+          _showErrorAlert(
+            icon: Icons.lock_outline_rounded,
+            iconColor: Colors.orange,
+            title: 'Akses Ditolak',
+            message: 'Pohon ini tidak termasuk dalam unit kerja Anda.',
+            onClose: () => Navigator.of(context).maybePop(),
           );
-          Navigator.of(context).maybePop();
         });
       }
     } catch (_) {
@@ -109,25 +113,32 @@ class _EksekusiPageState extends State<EksekusiPage> {
       setState(() {
         _latestPlannedDate = planned;
         _selectedDate = planned;
+        _nextPrediction = planned;
         _dateController.text = _formatDisplay(planned);
+        _isLoadingDate = false;
       });
     } catch (_) {
       setState(() {
         _latestPlannedDate = widget.pohon.scheduleDate;
         _selectedDate = widget.pohon.scheduleDate;
+        _nextPrediction = widget.pohon.scheduleDate;
         _dateController.text = _formatDisplay(widget.pohon.scheduleDate);
+        _isLoadingDate = false;
       });
     }
   }
 
-  // Format tampilan di field: DD/MM/YYYY
+  /// Format tampilan di field: DD/MM/YYYY
   String _formatDisplay(DateTime date) {
     return DateFormat('dd/MM/yyyy').format(date);
   }
 
-  // Format untuk disimpan ke Eksekusi model: DD/MM/YYYY HH:MM WITA
+  /// Format untuk disimpan: DD/MM/YYYY HH:mm WITA
+  /// Tanggal dari user, jam dari waktu aktual saat simpan
   String _formatForSave(DateTime date) {
-    return '${DateFormat('dd/MM/yyyy').format(date)} 09:00 WITA';
+    final nowWita = DateTime.now().toUtc().add(const Duration(hours: 8));
+    final timeStr = DateFormat('HH:mm').format(nowWita);
+    return '${DateFormat('dd/MM/yyyy').format(date)} $timeStr WITA';
   }
 
   // ── Date Picker ──
@@ -207,20 +218,194 @@ class _EksekusiPageState extends State<EksekusiPage> {
     );
   }
 
+  // ════════════════════════════════════════════════
+  // ALERT HELPERS
+  // ════════════════════════════════════════════════
+
+  void _showErrorAlert({
+    IconData icon = Icons.cancel_rounded,
+    Color iconColor = Colors.red,
+    required String title,
+    required String message,
+    VoidCallback? onClose,
+  }) {
+    if (!mounted) return;
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        contentPadding: const EdgeInsets.fromLTRB(24, 28, 24, 20),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: iconColor.withOpacity(0.1),
+                shape: BoxShape.circle,
+              ),
+              child: Icon(icon, color: iconColor, size: 52),
+            ),
+            const SizedBox(height: 16),
+            Text(
+              title,
+              style: const TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.black87),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 8),
+            Text(
+              message,
+              textAlign: TextAlign.center,
+              style: const TextStyle(fontSize: 13, color: Colors.black54),
+            ),
+            const SizedBox(height: 24),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton(
+                onPressed: () {
+                  Navigator.of(ctx).pop();
+                  onClose?.call();
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: iconColor,
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(vertical: 12),
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8)),
+                ),
+                child: const Text('Tutup',
+                    style: TextStyle(fontWeight: FontWeight.w600)),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showSuccessAlert() {
+    if (!mounted) return;
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        contentPadding: const EdgeInsets.fromLTRB(24, 28, 24, 20),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: const Color(0xFF125E72).withOpacity(0.1),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(Icons.check_circle_rounded,
+                  color: Color(0xFF125E72), size: 52),
+            ),
+            const SizedBox(height: 16),
+            const Text(
+              'Eksekusi Berhasil!',
+              style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.black87),
+            ),
+            const SizedBox(height: 8),
+            const Text(
+              'Data eksekusi berhasil disimpan.\nNotifikasi telah dikirim.',
+              textAlign: TextAlign.center,
+              style: TextStyle(fontSize: 13, color: Colors.black54),
+            ),
+            const SizedBox(height: 24),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton(
+                onPressed: () {
+                  Navigator.of(ctx).pop();
+                  Navigator.of(context).pop();
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF125E72),
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(vertical: 12),
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8)),
+                ),
+                child: const Text('OK',
+                    style: TextStyle(fontWeight: FontWeight.w600)),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  /// Klasifikasi error → pesan human-friendly
+  String _humanError(Object e) {
+    final msg = e.toString().toLowerCase();
+
+    if (msg.contains('unauthenticated') ||
+        msg.contains('permission-denied') ||
+        msg.contains('session')) {
+      return 'Sesi login Anda telah habis.\nSilakan login ulang untuk melanjutkan.';
+    }
+    if (msg.contains('network') ||
+        msg.contains('socket') ||
+        msg.contains('connection') ||
+        msg.contains('timeout') ||
+        msg.contains('host lookup')) {
+      return 'Koneksi internet bermasalah.\nPastikan Anda terhubung ke internet lalu coba lagi.';
+    }
+    if (msg.contains('imagekit') ||
+        msg.contains('upload') ||
+        msg.contains('statuscode')) {
+      return 'Gagal mengunggah foto.\nPeriksa koneksi internet atau coba ganti foto.';
+    }
+    if (msg.contains('image file not found') ||
+        msg.contains('foto')) {
+      return 'File foto tidak ditemukan.\nCoba ambil foto ulang.';
+    }
+    if (msg.contains('invalid datapohonid') ||
+        msg.contains('no matching')) {
+      return 'Data pohon tidak ditemukan.\nCoba muat ulang halaman ini.';
+    }
+    if (msg.contains('firestore') ||
+        msg.contains('cloud') ||
+        msg.contains('unavailable')) {
+      return 'Server sedang tidak dapat dijangkau.\nCoba beberapa saat lagi.';
+    }
+
+    return 'Data gagal tersimpan.\nCoba lagi atau hubungi administrator jika masalah berlanjut.';
+  }
+
   Future<void> _saveEksekusi() async {
     if (!_formKey.currentState!.validate()) return;
 
+    // ── Validasi foto ──
     if (_selectedImage == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Foto setelah eksekusi wajib diisi')),
+      _showErrorAlert(
+        icon: Icons.photo_camera_outlined,
+        iconColor: Colors.orange,
+        title: 'Foto Belum Dipilih',
+        message:
+            'Foto setelah eksekusi wajib dilampirkan.\nSilakan ambil atau pilih foto terlebih dahulu.',
       );
       return;
     }
 
-    // Validasi tanggal sudah dipilih
+    // ── Validasi tanggal ──
     if (_selectedDate == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Tanggal eksekusi wajib dipilih')),
+      _showErrorAlert(
+        icon: Icons.calendar_today_outlined,
+        iconColor: Colors.orange,
+        title: 'Tanggal Belum Dipilih',
+        message: 'Tanggal eksekusi wajib diisi.\nSilakan pilih tanggal eksekusi.',
       );
       return;
     }
@@ -228,10 +413,24 @@ class _EksekusiPageState extends State<EksekusiPage> {
     setState(() => _isLoading = true);
 
     try {
+      // Tanggal dari user pilih, jam dari waktu aktual WITA saat simpan
       final formattedTanggalEksekusi = _formatForSave(_selectedDate!);
 
       final prefs = await SharedPreferences.getInstance();
       final creatorId = prefs.getString('session_id') ?? '';
+
+      // Cek sesi login
+      if (creatorId.isEmpty) {
+        setState(() => _isLoading = false);
+        _showErrorAlert(
+          icon: Icons.login_rounded,
+          iconColor: Colors.orange,
+          title: 'Sesi Login Habis',
+          message:
+              'Sesi login Anda telah habis.\nSilakan login ulang untuk melanjutkan.',
+        );
+        return;
+      }
 
       final eksekusi = Eksekusi(
         id: '',
@@ -253,119 +452,12 @@ class _EksekusiPageState extends State<EksekusiPage> {
       );
 
       if (!mounted) return;
-
-      // ── Alert Sukses ──
-      showDialog(
-        context: context,
-        barrierDismissible: false,
-        builder: (ctx) => AlertDialog(
-          shape:
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-          contentPadding: const EdgeInsets.fromLTRB(24, 28, 24, 20),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Container(
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: const Color.fromARGB(255, 37, 95, 116).withOpacity(0.1),
-                  shape: BoxShape.circle,
-                ),
-                child: const Icon(Icons.check_circle_rounded,
-                    color: Color.fromARGB(255, 18, 52, 53), size: 52),
-              ),
-              const SizedBox(height: 16),
-              const Text(
-                'Berhasil!',
-                style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.black87),
-              ),
-              const SizedBox(height: 8),
-              const Text(
-                'Data eksekusi berhasil disimpan.',
-                textAlign: TextAlign.center,
-                style: TextStyle(fontSize: 13, color: Colors.black54),
-              ),
-              const SizedBox(height: 24),
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton(
-                  onPressed: () {
-                    Navigator.of(ctx).pop();
-                    Navigator.of(context).pop();
-                  },
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color.fromARGB(255, 34, 72, 87),
-                    foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(vertical: 12),
-                    shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(8)),
-                  ),
-                  child: const Text('OK',
-                      style: TextStyle(fontWeight: FontWeight.w600)),
-                ),
-              ),
-            ],
-          ),
-        ),
-      );
+      _showSuccessAlert();
     } catch (e) {
       if (!mounted) return;
-
-      // ── Alert Gagal ──
-      showDialog(
-        context: context,
-        builder: (ctx) => AlertDialog(
-          shape:
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-          contentPadding: const EdgeInsets.fromLTRB(24, 28, 24, 20),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Container(
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: Colors.red.withOpacity(0.1),
-                  shape: BoxShape.circle,
-                ),
-                child: const Icon(Icons.cancel_rounded,
-                    color: Colors.red, size: 52),
-              ),
-              const SizedBox(height: 16),
-              const Text(
-                'Gagal!',
-                style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.black87),
-              ),
-              const SizedBox(height: 8),
-              Text(
-                'Terjadi kesalahan saat menyimpan data:\n${e.toString()}',
-                textAlign: TextAlign.center,
-                style: const TextStyle(fontSize: 13, color: Colors.black54),
-              ),
-              const SizedBox(height: 24),
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton(
-                  onPressed: () => Navigator.of(ctx).pop(),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.red,
-                    foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(vertical: 12),
-                    shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(8)),
-                  ),
-                  child: const Text('Tutup',
-                      style: TextStyle(fontWeight: FontWeight.w600)),
-                ),
-              ),
-            ],
-          ),
-        ),
+      _showErrorAlert(
+        title: 'Gagal Menyimpan',
+        message: _humanError(e),
       );
     } finally {
       if (mounted) setState(() => _isLoading = false);
@@ -375,8 +467,7 @@ class _EksekusiPageState extends State<EksekusiPage> {
   @override
   Widget build(BuildContext context) {
     if (!_accessChecked) {
-      return const Scaffold(
-          body: Center(child: CircularProgressIndicator()));
+      return const Scaffold(body: Center(child: CircularProgressIndicator()));
     }
     if (!_isAllowed) {
       return const Scaffold(
@@ -462,18 +553,22 @@ class _EksekusiPageState extends State<EksekusiPage> {
                           _infoRow('KMS Aset', widget.pohon.kmsAset.isNotEmpty ? widget.pohon.kmsAset : '-', screenWidth),
                           _infoRow('Vendor', widget.pohon.vendor.isNotEmpty ? widget.pohon.vendor : '-', screenWidth),
                           _infoRow('Koordinat', widget.pohon.koordinat.isNotEmpty ? widget.pohon.koordinat : '-', screenWidth),
-                          _infoRow('Tanggal Penjadwalan',
-                              _latestPlannedDate != null
-                                  ? _formatDisplay(_latestPlannedDate!)
-                                  : _formatDisplay(widget.pohon.scheduleDate),
-                              screenWidth),
-                          _infoRow('Tujuan Penjadwalan',
-                              widget.pohon.tujuanPenjadwalan == 1
-                                  ? 'Tebang Pangkas'
-                                  : widget.pohon.tujuanPenjadwalan == 2
-                                      ? 'Tebang Habis'
-                                      : 'Tidak diketahui',
-                              screenWidth),
+                          _infoRow(
+                            'Tanggal Penjadwalan',
+                            _latestPlannedDate != null
+                                ? _formatDisplay(_latestPlannedDate!)
+                                : _formatDisplay(widget.pohon.scheduleDate),
+                            screenWidth,
+                          ),
+                          _infoRow(
+                            'Tujuan Penjadwalan',
+                            widget.pohon.tujuanPenjadwalan == 1
+                                ? 'Tebang Pangkas'
+                                : widget.pohon.tujuanPenjadwalan == 2
+                                    ? 'Tebang Habis'
+                                    : 'Tidak diketahui',
+                            screenWidth,
+                          ),
                           _infoRow('Laju Pertumbuhan', '${widget.pohon.growthRate} cm/tahun', screenWidth),
                           _infoRow('Tinggi Awal', '${widget.pohon.initialHeight} m', screenWidth),
                           _infoRow('Catatan', widget.pohon.catatan.isNotEmpty ? widget.pohon.catatan : '-', screenWidth),
@@ -537,7 +632,7 @@ class _EksekusiPageState extends State<EksekusiPage> {
                           ),
                           const SizedBox(height: 12),
 
-                          // ── Tanggal Eksekusi — Date Picker ──
+                          // ── Tanggal Eksekusi ──
                           Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
@@ -569,17 +664,38 @@ class _EksekusiPageState extends State<EksekusiPage> {
                                   child: Row(
                                     children: [
                                       Expanded(
-                                        child: Text(
-                                          _dateController.text.isEmpty
-                                              ? 'Pilih tanggal eksekusi'
-                                              : _dateController.text,
-                                          style: TextStyle(
-                                            fontSize: 14,
-                                            color: _dateController.text.isEmpty
-                                                ? Colors.grey.shade500
-                                                : Colors.black87,
-                                          ),
-                                        ),
+                                        child: _isLoadingDate
+                                            ? Row(
+                                                children: [
+                                                  const SizedBox(
+                                                    width: 14,
+                                                    height: 14,
+                                                    child: CircularProgressIndicator(
+                                                      strokeWidth: 2,
+                                                      color: Color(0xFF125E72),
+                                                    ),
+                                                  ),
+                                                  const SizedBox(width: 8),
+                                                  Text(
+                                                    'Memuat jadwal...',
+                                                    style: TextStyle(
+                                                      fontSize: 14,
+                                                      color: Colors.grey.shade500,
+                                                    ),
+                                                  ),
+                                                ],
+                                              )
+                                            : Text(
+                                                _dateController.text.isEmpty
+                                                    ? 'Pilih tanggal eksekusi'
+                                                    : _dateController.text,
+                                                style: TextStyle(
+                                                  fontSize: 14,
+                                                  color: _dateController.text.isEmpty
+                                                      ? Colors.grey.shade500
+                                                      : Colors.black87,
+                                                ),
+                                              ),
                                       ),
                                       const Icon(Icons.calendar_month,
                                           color: Color(0xFF125E72), size: 20),
@@ -587,11 +703,44 @@ class _EksekusiPageState extends State<EksekusiPage> {
                                   ),
                                 ),
                               ),
+
+                              // ── Info prediksi berikutnya ──
+                              // Hanya tampil untuk Tebang Pangkas
+                              if (_nextPrediction != null &&
+                                  _selectedAction == 'Tebang Pangkas') ...[
+                                const SizedBox(height: 6),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 10, vertical: 7),
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFFE8F4F8),
+                                    borderRadius: BorderRadius.circular(6),
+                                    border: Border.all(
+                                        color: const Color(0xFF125E72)
+                                            .withOpacity(0.25)),
+                                  ),
+                                  child: Row(
+                                    children: [
+                                      const Icon(Icons.info_outline,
+                                          size: 14, color: Color(0xFF125E72)),
+                                      const SizedBox(width: 6),
+                                      Text(
+                                        'Prediksi eksekusi berikutnya: ${_formatDisplay(_nextPrediction!)}',
+                                        style: const TextStyle(
+                                          fontSize: 12,
+                                          color: Color(0xFF125E72),
+                                          fontStyle: FontStyle.italic,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
                             ],
                           ),
                           const SizedBox(height: 12),
 
-                          // Foto
+                          // ── Foto ──
                           Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
@@ -650,7 +799,7 @@ class _EksekusiPageState extends State<EksekusiPage> {
                           ),
                           const SizedBox(height: 12),
 
-                          // Aksi dropdown
+                          // ── Aksi dropdown ──
                           _ActionDropdown(
                             value: _selectedAction,
                             onChanged: (val) => setState(
@@ -667,12 +816,10 @@ class _EksekusiPageState extends State<EksekusiPage> {
                     children: [
                       Expanded(
                         child: OutlinedButton(
-                          onPressed: _isLoading
-                              ? null
-                              : () => Navigator.pop(context),
+                          onPressed:
+                              _isLoading ? null : () => Navigator.pop(context),
                           style: OutlinedButton.styleFrom(
-                            padding:
-                                const EdgeInsets.symmetric(vertical: 16),
+                            padding: const EdgeInsets.symmetric(vertical: 16),
                             side: const BorderSide(color: Color(0xFF125E72)),
                             shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(8)),
@@ -688,8 +835,7 @@ class _EksekusiPageState extends State<EksekusiPage> {
                           style: ElevatedButton.styleFrom(
                             backgroundColor: const Color(0xFF125E72),
                             foregroundColor: Colors.white,
-                            padding:
-                                const EdgeInsets.symmetric(vertical: 16),
+                            padding: const EdgeInsets.symmetric(vertical: 16),
                             shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(8)),
                           ),
@@ -710,6 +856,8 @@ class _EksekusiPageState extends State<EksekusiPage> {
               ),
             ),
           ),
+
+          // ── Loading overlay ──
           if (_isLoading)
             Container(
               color: Colors.black.withOpacity(0.5),
@@ -749,8 +897,8 @@ class _EksekusiPageState extends State<EksekusiPage> {
         TextFormField(
           controller: controller,
           decoration: InputDecoration(
-            border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(8)),
+            border:
+                OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
             hintText: hintText,
             suffixText: suffix,
             contentPadding:
@@ -770,12 +918,10 @@ class _EksekusiPageState extends State<EksekusiPage> {
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            label,
-            style: TextStyle(
-                fontSize: screenWidth * 0.035,
-                fontWeight: FontWeight.bold),
-          ),
+          Text(label,
+              style: TextStyle(
+                  fontSize: screenWidth * 0.035,
+                  fontWeight: FontWeight.bold)),
           const SizedBox(width: 12),
           Flexible(
             child: Text(
@@ -791,7 +937,9 @@ class _EksekusiPageState extends State<EksekusiPage> {
   }
 }
 
-// ── Action Dropdown (sama seperti sebelumnya) ──
+// ════════════════════════════════════════════════
+// ACTION DROPDOWN
+// ════════════════════════════════════════════════
 class _ActionDropdown extends StatefulWidget {
   final String? value;
   final ValueChanged<String?> onChanged;

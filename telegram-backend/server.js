@@ -23,6 +23,30 @@ try {
   console.error("❌ FIREBASE_KEY ERROR:", e.message);
 }
 
+// ✅ BUILD REPLY MARKUP — DIUBAH: tambah parameter idPohon
+function buildReplyMarkup(koordinat, idPohon) {
+  const buttons = [];
+
+  if (koordinat) {
+    const parts = koordinat.split(',');
+    if (parts.length === 2) {
+      buttons.push([{
+        text: '🗺 Lihat Lokasi',
+        url: `https://maps.google.com/?q=${parts[0].trim()},${parts[1].trim()}`,
+      }]);
+    }
+  }
+
+  if (idPohon) {
+    buttons.push([{
+      text: '📱 Buka di PLN JagaGRID',
+      url: `plnjagagrid://pohon/${idPohon}`,
+    }]);
+  }
+
+  return buttons.length > 0 ? { inline_keyboard: buttons } : null;
+}
+
 // ✅ TEST ENDPOINT
 app.get("/webhook", (req, res) => {
   res.send("Webhook aktif ✅");
@@ -34,32 +58,27 @@ app.post("/webhook", async (req, res) => {
     const message = req.body.message;
     if (!message) return res.send("ok");
 
-    // ✅ FIX: simpan sebagai integer, bukan string
-    // String(message.chat.id) menyebabkan chat_id tersimpan sebagai string
-    // Telegram API butuh integer → error 400 kalau string
-    const chatId = message.chat.id; // ✅ integer langsung dari Telegram
+    const chatId = message.chat.id;
     const username = message.from.username || "";
     const text = message.text;
 
     console.log("📩 Message:", text, "dari:", username);
 
-    // ✅ Simpan ke Firestore sebagai integer
     if (db && username) {
       await db.collection("telegram_users").doc(username).set({
         username_telegram: username,
-        chat_id: chatId, // ✅ integer, bukan string
+        chat_id: chatId,
         last_message: text,
         updated_at: admin.firestore.FieldValue.serverTimestamp(),
       }, { merge: true });
       console.log("✅ Tersimpan:", username, chatId);
     }
 
-    // ✅ Balas ke Telegram
     await fetch(`https://api.telegram.org/bot${TELEGRAM_TOKEN}/sendMessage`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        chat_id: chatId, // ✅ integer
+        chat_id: chatId,
         text: "✅ Kamu sudah terhubung ke PLN JagaGRID!",
       }),
     });
@@ -67,6 +86,19 @@ app.post("/webhook", async (req, res) => {
     res.send("ok");
   } catch (err) {
     console.error("❌ Error:", err);
+    res.status(500).send("error");
+  }
+});
+
+// ✅ SEND TELEGRAM — DIUBAH: tambah id_pohon dari req.body
+app.post("/send-telegram", async (req, res) => {
+  try {
+    const { message, up3, ulp, koordinat, id_pohon } = req.body; // DIUBAH
+    const replyMarkup = buildReplyMarkup(koordinat, id_pohon);   // DIUBAH
+
+    // ... logika kirim pesan ke Telegram tetap sama
+  } catch (err) {
+    console.error("❌ Error /send-telegram:", err);
     res.status(500).send("error");
   }
 });
